@@ -63,10 +63,11 @@ scripts/install.sh       # build and install on the TV over network ADB
 - Feature behaviour is described in [`docs/specs/`](docs/specs/README.md); conventions and architecture notes for contributors (and coding agents) are in [`CLAUDE.md`](CLAUDE.md).
 - `./gradlew testDebugUnitTest` runs the UI tests on the JVM with Robolectric and writes screenshots, no TV needed. One suite uses a snapshot of your own library (`snapshot/`, never committed) and is skipped without it.
 
-## Fonts and licences
+## Fonts, logo and licences
 
 - [DM Sans](https://fonts.google.com/specimen/DM+Sans) for the interface and [Fraunces](https://fonts.google.com/specimen/Fraunces) for the wordmark, both under the SIL Open Font License; see [`licenses/`](licenses/).
 - Background photos for apps come from Bing's photo of the day, credited on screen.
+- Logo: [`docs/images/logo.png`](docs/images/logo.png) (square, on its background) and [`docs/images/logo-mark.png`](docs/images/logo-mark.png) (transparent mark).
 
 Masal is an independent project and is not affiliated with or endorsed by Plex, Inc. or NVIDIA.
 
