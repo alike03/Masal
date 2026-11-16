@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -403,14 +404,19 @@ fun formatClock(ms: Long): String {
     else String.format(java.util.Locale.US, "%d:%02d", s / 60, s % 60)
 }
 
-/** Swaps hero text with a short fade and rise whenever [key] changes. */
+/**
+ * Swaps hero text with a short fade and rise whenever [key] changes. With [cut] the old text
+ * goes at once (used when the focus moved to another row, whose info slot is just opening).
+ */
 @Composable
-fun <T> HeroSwap(target: T, key: (T) -> Any?, modifier: Modifier = Modifier, content: @Composable (T) -> Unit) {
+fun <T> HeroSwap(target: T, key: (T) -> Any?, modifier: Modifier = Modifier, cut: Boolean = false, content: @Composable (T) -> Unit) {
+    val cutNow by androidx.compose.runtime.rememberUpdatedState(cut)
     AnimatedContent(
         targetState = target,
         modifier = modifier,
         transitionSpec = {
-            (fadeIn(tween(380, delayMillis = 60)) + slideInVertically(tween(380)) { it / 12 }) togetherWith fadeOut(tween(140))
+            (fadeIn(tween(380, delayMillis = 60)) + slideInVertically(tween(380)) { it / 12 }) togetherWith
+                fadeOut(if (cutNow) androidx.compose.animation.core.snap() else tween(140))
         },
         contentKey = key,
         contentAlignment = Alignment.TopStart,

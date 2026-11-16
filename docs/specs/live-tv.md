@@ -7,7 +7,10 @@ IPTV channels (Xtream or M3U, XMLTV guide) in a TV tab and a full-screen live pl
 - TV tab: categories, then the channels of a category with logo, name and current programme;
   favourites are marked. A small live preview plays the focused channel; before its picture
   starts it shows only a gradient (no "Tuning in" text).
-- Live player: full-screen channel with an overlay for the channel list.
+- Live player: full-screen channel with an overlay for the channel list. The info banner shows
+  logo, number, name, now and next on the left and, on the right, the current programme's
+  description from the guide, or "No guide information for this channel." / "No description for
+  this programme." No key hints.
 - Opening a channel whose preview is already running hands that stream to the player: no
   restart, no new connection. From Home the picture zooms from its frame to full screen; leaving
   the player (Back) zooms it back into the frame on Home, and when the channel is still the one

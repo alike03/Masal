@@ -15,6 +15,7 @@ Play Plex films and episodes with Plex-style controls, subtitles and audio choic
   position. Choices are saved to Plex.
 - Audio panel: the file's audio tracks; choice saved to Plex.
 - Starts with the subtitle and audio stream Plex has selected.
+- Subtitle look: white, bold DM Sans, black outline, no box, 21 dp, 7 % above the bottom.
 - Requests audio focus: other apps (e.g. YouTube) pause; Masal pauses when another app takes it.
 - The screen stays on only while playing or buffering; paused or failed, the TV may dim and sleep.
 

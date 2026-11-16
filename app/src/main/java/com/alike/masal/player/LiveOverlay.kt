@@ -127,7 +127,14 @@ private fun InfoBanner(number: Int, ch: Channel, programmes: List<Programme>?, m
                         overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
                 }
             }
-            Text("OK  channel list    ◀ ▶ ▲ ▼  switch", color = TextDim, fontSize = 11.sp)
+            // Right: what the current programme is about, from the guide, or that the guide has nothing.
+            val about = now?.desc?.trim()?.takeIf { it.isNotEmpty() }
+            Text(
+                about ?: if (now == null) "No guide information for this channel." else "No description for this programme.",
+                color = if (about != null) TextMain else TextDim, fontSize = 13.sp, lineHeight = 18.sp,
+                maxLines = 4, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 24.dp).width(460.dp),
+            )
         }
     }
 }

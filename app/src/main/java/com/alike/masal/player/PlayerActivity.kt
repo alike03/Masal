@@ -49,8 +49,6 @@ class PlayerActivity : ComponentActivity() {
     private var fromHome = false
     /** The channel opened with; only that one goes back to Home's preview. */
     private var openedKey: String? = null
-    /** Back pressed with the opened channel still on: Home's preview takes the stream once this window is gone. */
-    private var giveBack = false
     /** The player now belongs to Home's preview again: do not stop or release it here. */
     private var handedBack = false
     private lateinit var listener: Player.Listener
@@ -100,7 +98,7 @@ class PlayerActivity : ComponentActivity() {
                 val font = runCatching { ResourcesCompat.getFont(context, R.font.dm_sans) }.getOrNull()
                 setStyle(CaptionStyleCompat(Color.WHITE, Color.TRANSPARENT, Color.TRANSPARENT,
                     CaptionStyleCompat.EDGE_TYPE_OUTLINE, Color.BLACK, Typeface.create(font ?: Typeface.SANS_SERIF, Typeface.BOLD)))
-                setFixedTextSize(TypedValue.COMPLEX_UNIT_DIP, 30f)
+                setFixedTextSize(TypedValue.COMPLEX_UNIT_DIP, 21f)
                 setApplyEmbeddedFontSizes(false)
                 setBottomPaddingFraction(0.07f)
             }
@@ -294,9 +292,15 @@ class PlayerActivity : ComponentActivity() {
      */
     private fun leaveLive() {
         val ch = state.current
-        // The picture stays here during the zoom out; the stream moves to Home in onStop, once this window is gone.
-        giveBack = fromHome && ch != null && ch.key == openedKey && player.playerError == null &&
-            player.playbackState != Player.STATE_IDLE && player.playbackState != Player.STATE_ENDED
+        // The stream moves to Home's frame right away, where it plays on under the shrinking window
+        // (which keeps its last picture), so the end of the zoom out has no gap.
+        if (fromHome && ch != null && ch.key == openedKey && player.playerError == null &&
+            player.playbackState != Player.STATE_IDLE && player.playbackState != Player.STATE_ENDED) {
+            handler.removeCallbacksAndMessages(null)
+            player.removeListener(listener)
+            handedBack = true
+            Playback.giveBack("live:" + ch.key, player)
+        }
         finish()
         if (fromHome) {
             @Suppress("DEPRECATION") // overrideActivityTransition needs API 34
@@ -622,15 +626,8 @@ class PlayerActivity : ComponentActivity() {
         handler.removeCallbacks(progressTick)
         handler.removeCallbacks(retryTune)
         reportPlex("stopped")
-        if (giveBack && !handedBack) state.current?.let { ch ->
-            handler.removeCallbacksAndMessages(null)
-            player.removeListener(listener)
-            view.player = null
-            handedBack = true
-            Playback.giveBack("live:" + ch.key, player)
-        }
-        // Given back to Home's preview, the stream keeps playing there: leave it alone.
-        if (handedBack) { finish(); return }
+        // Given back to Home's preview, the stream keeps playing there: only let go of it.
+        if (handedBack) { view.player = null; finish(); return }
         player.pause()
         // Live TV makes no sense in the background; release the stream at once (providers often allow one
         // connection, and the Home preview reconnects right after Back) and close.

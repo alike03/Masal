@@ -87,11 +87,6 @@ fun SideRail(
 ) {
     var open by remember { mutableStateOf(false) }
     val p by animateFloatAsState(if (open) 1f else 0f, tween(300, easing = FastOutSlowInEasing), label = "rail")
-    var clock by remember { mutableStateOf("") }
-    LaunchedEffect(Unit) {
-        val fmt = SimpleDateFormat("HH:mm", Locale.getDefault())
-        while (true) { clock = fmt.format(Date()); delay(15_000) }
-    }
 
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize().graphicsLayer { alpha = p }.background(Color.Black.copy(alpha = 0.55f)))
@@ -117,9 +112,8 @@ fun SideRail(
                 .padding(top = 22.dp, bottom = 22.dp),
         ) {
             Row(Modifier.padding(start = 14.dp).clipToBounds(), verticalAlignment = Alignment.CenterVertically) {
-                Text(clock, color = TextMain, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
                 Row(
-                    Modifier.padding(start = 12.dp).graphicsLayer { alpha = p; translationX = (1f - p) * -24f },
+                    Modifier.graphicsLayer { alpha = p; translationX = (1f - p) * -24f },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     androidx.compose.foundation.Image(

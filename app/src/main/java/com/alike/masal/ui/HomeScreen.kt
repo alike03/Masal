@@ -224,19 +224,31 @@ fun HomeScreen(
     }
 
     // The hero text follows the focus once it rests for a moment, so holding a key does not flicker.
+    // Moving to another row it follows at once: that row's info slot opens right away and must not
+    // show the previous row's text, not even for a frame.
+    val rowsState = rememberRowsState()
     var heroShown by remember { mutableStateOf(shown) }
-    LaunchedEffect(shown) { delay(HeroSettle); heroShown = shown }
+    var heroRow by remember { mutableStateOf<String?>(null) }
+    var rowJump by remember { mutableStateOf(false) }
+    LaunchedEffect(shown) {
+        val row = rowsState.focusedKey
+        val jump = row != heroRow
+        if (!jump) delay(HeroSettle)
+        rowJump = jump; heroRow = row; heroShown = shown
+    }
 
-    FoldingRows(rows, RowsTop) {
+    FoldingRows(rows, RowsTop, rowsState) {
         HeroSwap(
-            heroShown, { h -> when (h) { is Hero.Plex -> h.item.ratingKey; is Hero.Live -> h.channel.key; is Hero.App -> h.app.pkg; Hero.EditApps -> "edit"; null -> null } },
+            // All apps share one key: the clock above them stays put while moving along the row.
+            heroShown, { h -> when (h) { is Hero.Plex -> h.item.ratingKey; is Hero.Live -> h.channel.key; is Hero.App, Hero.EditApps -> "apps"; null -> null } },
             Modifier.fillMaxSize().padding(start = EdgePadding, top = 56.dp),
+            cut = rowJump,
         ) { h ->
             when (h) {
                 is Hero.Plex -> HeroPlex(h.item)
                 is Hero.Live -> HeroChannel(h.channel, h.channel.epgId?.let { epg[it] })
-                // Apps: only the photo behind, no name and no photo credit.
-                is Hero.App, Hero.EditApps -> Unit
+                // Apps: only the photo behind and the time, no name and no photo credit.
+                is Hero.App, Hero.EditApps -> HomeClock()
                 null -> {
                     val status = (iptvErrors + listOfNotNull(plexError)).firstOrNull()
                     if (status != null) Text(status, color = Accent, fontSize = 13.sp, maxLines = 2)
@@ -277,4 +289,15 @@ fun AddAppsCard(label: String, onClick: () -> Unit, onFocus: () -> Unit, cardMod
             }
         }
     }
+}
+
+/** The time above the apps row (Home only); updates on the minute. */
+@Composable
+private fun HomeClock() {
+    val now by androidx.compose.runtime.produceState(System.currentTimeMillis()) {
+        while (true) { delay(60_000 - System.currentTimeMillis() % 60_000); value = System.currentTimeMillis() }
+    }
+    val fmt = remember { java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()) }
+    Text(fmt.format(java.util.Date(now)), color = TextMain, fontSize = 52.sp, fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.padding(top = 16.dp))
 }

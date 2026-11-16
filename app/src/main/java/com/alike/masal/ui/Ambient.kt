@@ -308,25 +308,34 @@ private class PreviewPlayer(private val context: android.content.Context, privat
     var player: ExoPlayer = buildPlayer(context).also { it.addListener(listener) }
         private set
     private var texture: TextureView? = null
+    /** False after a handover: the surface still shows the handed-off player's last picture. */
+    private var attached = false
 
-    fun attach(view: TextureView) { texture = view; player.setVideoTextureView(view) }
+    fun attach(view: TextureView) { texture = view; player.setVideoTextureView(view); attached = true }
 
-    /** Gives the running player away and continues with a fresh one. */
+    /** Before loading something new: the surface back to this preview's own player. */
+    fun ensureAttached() { if (!attached) texture?.let { player.setVideoTextureView(it); attached = true } }
+
+    /**
+     * Gives the running player away and continues with a fresh one. The surface is left to the
+     * running player until the full-screen player takes it over, so the frame keeps its picture
+     * (two players on one surface would clash).
+     */
     fun handOff(): ExoPlayer {
         val p = player
         p.removeListener(listener)
-        texture?.let { p.clearVideoTextureView(it) }
         player = buildPlayer(context).also { it.addListener(listener) }
-        texture?.let { player.setVideoTextureView(it) }
+        attached = false
         return p
     }
 
-    /** Continues with a player given back by the full-screen player. */
+    /** Continues with a player given back by the full-screen player: its picture moves into this frame. */
     fun adopt(p: ExoPlayer) {
         player.removeListener(listener)
         player.release()
         player = p.also { it.addListener(listener) }
         texture?.let { p.setVideoTextureView(it) }
+        attached = texture != null
     }
 
     /** Average colours of the current picture's quarters, for the colour fill (null before a picture). */
@@ -416,6 +425,7 @@ fun PreviewVideo(
         state = "idle"
         if (source?.key != held) held = null
         if (source == null || !active || source.key == held) return@LaunchedEffect
+        pp.ensureAttached()
         delay(source.delayMs)
         state = "loading"
         val (item, start) = runCatching { source.load() }.getOrNull() ?: run { state = "none"; return@LaunchedEffect }

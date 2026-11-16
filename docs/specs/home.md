@@ -29,7 +29,12 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
     rating), two-line summary, top three cast. Smaller and lower, like Plex.
   - Channel: logo, LIVE chip, name, current programme with time and progress, next programme.
     The channel plays in the picture frame (see look.md); OK zooms it to full screen (live-tv.md).
-  - App and "Edit" card: no info block, only the photo behind (no app name, no photo credit).
+  - App and "Edit" card: only the time (HH:mm, large) top left, and the photo behind; no app name,
+    no photo credit. Moving along the apps the time stays put (no animation). This is the only
+    clock in Masal outside the player; the side menu has none.
+- The info block follows the focus after 90 ms within a row. Moving to another row it changes at
+  once and the old text disappears without fading: the new row's slot opens right away and must
+  never show the previous row's text.
 - Background: see look.md. Resting 2.5 s on a Plex title plays its trailer if Plex has one;
   the title itself never plays from Home.
 - Back from the player, another app or standby, the preview that was showing does not start
@@ -62,4 +67,4 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
 - Start the device with the network cable out, plug it in: channels and Plex rows appear.
 
 ## Open points
-- Plex shows the clock top right; Masal shows it in the side menu (not changed yet).
+- None at the moment.
