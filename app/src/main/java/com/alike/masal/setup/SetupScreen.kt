@@ -60,8 +60,14 @@ fun SetupScreen(autoFocus: Boolean) {
 
     DisposableEffect(key, running) {
         if (!running) return@DisposableEffect onDispose { }
-        val icon = runCatching { context.resources.openRawResource(com.alike.masal.R.raw.favicon).use { it.readBytes() } }.getOrNull()
-        val server = SetupServer(Graph.settings, key, { Graph.settings.changed() }, icon)
+        fun res(id: Int) = runCatching { context.resources.openRawResource(id).use { it.readBytes() } }.getOrNull()
+        val assets = listOfNotNull(
+            res(com.alike.masal.R.raw.favicon)?.let { "favicon.png" to ("image/png" to it) },
+            res(com.alike.masal.R.drawable.masal_mark)?.let { "logo.png" to ("image/png" to it) },
+            res(com.alike.masal.R.font.dm_sans)?.let { "dm-sans.ttf" to ("font/ttf" to it) },
+            res(com.alike.masal.R.font.fraunces)?.let { "fraunces.ttf" to ("font/ttf" to it) },
+        ).toMap()
+        val server = SetupServer(Graph.settings, key, { Graph.settings.changed() }, assets)
         runCatching { server.start(NanoHTTPD.SOCKET_READ_TIMEOUT, true) }
             .onFailure { serverError = "Setup page could not start: ${it.message}" }
         onDispose { server.stop() }

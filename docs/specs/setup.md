@@ -11,9 +11,14 @@ Enter Plex and IPTV logins with the phone instead of the remote.
   full playlist address, which often contains the login.
 - Plex link: the token is saved as soon as plex.tv confirms the code; a failing server lookup
   only asks for the server URL instead of losing the link.
-- Plex: server URL and token, or linking through plex.tv/link with a PIN.
-- IPTV: M3U playlist (with optional XMLTV guide) or Xtream login; several sources possible.
+- Look: Masal's style (logo, "Masal" in Fraunces, DM Sans, amber on dark, cards). Logo and fonts are
+  served by the TV itself, so the page loads nothing from the internet.
+- Live TV sources: list with type badge, name and host, Remove per source. "+ Add source" opens a
+  dialog: first the type (Xtream login or M3U playlist), then only that type's fields.
+  Several sources are possible.
 - Home live TV row: channel category and row title.
+- Plex: status chip (Connected / Not connected) with the server host; the hint to use the code on
+  the TV at plex.tv/link; manual server URL and token folded away below.
 - Changes apply on the TV at once. The page shows the Masal favicon.
 - Logins stay in the app's private storage, excluded from cloud backup and device transfer;
   never hardcode, log or print them.
