@@ -46,7 +46,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 @Composable
-fun SetupScreen(autoFocus: Boolean) {
+fun SetupScreen(autoFocus: Boolean, channelGroups: () -> List<String> = { emptyList() }) {
     // The page and the Plex link poll run only while the app is in the foreground; after Home or
     // standby the old address stops working and a new one is shown on return.
     val lifecycleState by androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateAsState()
@@ -67,7 +67,7 @@ fun SetupScreen(autoFocus: Boolean) {
             res(com.alike.masal.R.font.dm_sans)?.let { "dm-sans.ttf" to ("font/ttf" to it) },
             res(com.alike.masal.R.font.fraunces)?.let { "fraunces.ttf" to ("font/ttf" to it) },
         ).toMap()
-        val server = SetupServer(Graph.settings, key, { Graph.settings.changed() }, assets)
+        val server = SetupServer(Graph.settings, key, { Graph.settings.changed() }, assets, channelGroups)
         runCatching { server.start(NanoHTTPD.SOCKET_READ_TIMEOUT, true) }
             .onFailure { serverError = "Setup page could not start: ${it.message}" }
         onDispose { server.stop() }

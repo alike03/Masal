@@ -25,6 +25,8 @@ class SetupServer(
     private val onChanged: () -> Unit,
     /** Files the page uses (logo, favicon, fonts) by name: MIME type and bytes. Served under the same secret path. */
     private val assets: Map<String, Pair<String, ByteArray>> = emptyMap(),
+    /** Channel categories of the loaded sources, in provider order, for the Home row select. */
+    private val channelGroups: () -> List<String> = { emptyList() },
 ) : NanoHTTPD(SETUP_PORT) {
 
     override fun serve(session: IHTTPSession): Response {
@@ -116,6 +118,22 @@ class SetupServer(
         val plexDetail = if (plexLinked) """<p class="muted">Server ${esc(hostOf(settings.plexUrl))}</p>"""
             else """<p class="muted">Easiest: open <strong>plex.tv/link</strong> and enter the code shown on the TV.</p>"""
         val tokenHint = if (settings.plexToken.isNotBlank()) "Saved. Leave empty to keep it." else "Not set"
+        // Home row: pick one of the loaded categories. A saved category that is not (yet) in the list
+        // stays selectable, so loading sources late or a renamed category never clears the setting.
+        val groups = channelGroups()
+        val saved = settings.homeLiveGroup
+        val savedNorm = com.alike.masal.MasalViewModel.normGroup(saved)
+        val savedInList = saved.isNotBlank() && groups.any { com.alike.masal.MasalViewModel.normGroup(it) == savedNorm }
+        val groupOptions = buildString {
+            append("<option value=\"\"${if (saved.isBlank()) " selected" else ""}>None (row hidden)</option>")
+            if (saved.isNotBlank() && !savedInList) append("<option value=\"${esc(saved)}\" selected>${esc(saved)} (not in the loaded channels)</option>")
+            groups.forEach { g ->
+                val sel = saved.isNotBlank() && com.alike.masal.MasalViewModel.normGroup(g) == savedNorm
+                append("<option value=\"${esc(g)}\"${if (sel) " selected" else ""}>${esc(g)}</option>")
+            }
+        }
+        val groupHint = if (groups.isEmpty()) "No channels loaded yet. Add a source first, then reopen this page."
+            else "${groups.size} categories from your sources."
         return """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Masal setup</title>
 <link rel="icon" type="image/png" href="$base/favicon.png"><meta name="theme-color" content="#121110">
@@ -148,8 +166,10 @@ h2{font-size:18px;font-weight:700;margin:0}
 label{display:block;font-size:14px;color:var(--dim);margin:0 0 6px}
 .field{display:flex;flex-direction:column}
 .fields{display:flex;flex-direction:column;gap:12px}
-input[type=text],input[type=url],input[type=password]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit}
-input:focus-visible,button:focus-visible,summary:focus-visible,.type:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),linear-gradient(135deg,var(--dim) 50%,transparent 50%);background-position:calc(100% - 20px) 55%,calc(100% - 14px) 55%;background-size:6px 6px;background-repeat:no-repeat;padding-right:40px}
+.hint{color:var(--dim);font-size:13px;margin:6px 0 0}
+input[type=text],input[type=url],input[type=password],select{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background-color:var(--bg);color:var(--text);font:inherit}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible,.type:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 .btn{appearance:none;border:0;border-radius:999px;padding:11px 20px;background:var(--accent);color:var(--on-accent);font:inherit;font-weight:700;cursor:pointer}
 .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
 .btn.small{padding:7px 14px;font-size:14px;font-weight:600}
@@ -183,7 +203,7 @@ $sourceList
 <h2 id="h-row">Home live TV row</h2>
 <p class="muted">One channel category from your sources, shown as a row on Home.</p>
 <form method="post" action="$base" class="fields"><input type="hidden" name="action" value="home">
-<div class="field"><label for="row-group">Channel category (as in the TV tab; empty hides the row)</label><input type="text" id="row-group" name="group" value="${esc(settings.homeLiveGroup)}" placeholder="News HD" autocapitalize="off"></div>
+<div class="field"><label for="row-group">Channel category</label><select id="row-group" name="group">$groupOptions</select><p class="hint">$groupHint</p></div>
 <div class="field"><label for="row-title">Row title</label><input type="text" id="row-title" name="title" value="${esc(settings.homeLiveTitle)}" placeholder="Live TV"></div>
 <div class="actions"><button class="btn">Save row</button></div>
 </form>

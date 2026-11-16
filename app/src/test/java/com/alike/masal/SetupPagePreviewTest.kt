@@ -33,7 +33,8 @@ class SetupPagePreviewTest {
         settings.homeLiveGroup = "News HD"
         settings.homeLiveTitle = "Live TV"
         val key = SetupServer.randomKey()
-        val server = SetupServer(settings, key, {})
+        val groups = listOf("[XX] News HD", "[XX] Sport HD", "[XX] Kids", "[XX] Movies FHD")
+        val server = SetupServer(settings, key, {}, channelGroups = { groups })
         server.start(NanoHTTPD.SOCKET_READ_TIMEOUT, true)
         try {
             val html = OkHttpClient().newCall(Request.Builder().url("http://127.0.0.1:$SETUP_PORT/$key").build()).execute()
@@ -41,6 +42,7 @@ class SetupPagePreviewTest {
             File("build/setup-preview.html").writeText(html)
             assertTrue("no password on the page", "demo-pass" !in html)
             assertTrue("no full user name on the page", "demo-user" !in html)
+            assertTrue("saved category is preselected", Regex("<option value=\"\\[XX] News HD\" selected>").containsMatchIn(html))
         } finally {
             server.stop()
         }

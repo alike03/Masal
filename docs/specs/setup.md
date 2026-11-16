@@ -16,7 +16,9 @@ Enter Plex and IPTV logins with the phone instead of the remote.
 - Live TV sources: list with type badge, name and host, Remove per source. "+ Add source" opens a
   dialog: first the type (Xtream login or M3U playlist), then only that type's fields.
   Several sources are possible.
-- Home live TV row: channel category and row title.
+- Home live TV row: a select of the channel categories from the loaded sources (in provider order,
+  plus "None" to hide the row) and the row title. A saved category that is not in the loaded list
+  stays selected and marked, so a late load never clears it.
 - Plex: status chip (Connected / Not connected) with the server host; the hint to use the code on
   the TV at plex.tv/link; manual server URL and token folded away below.
 - Changes apply on the TV at once. The page shows the Masal favicon.
