@@ -36,6 +36,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import com.alike.masal.R
 import com.alike.masal.data.Channel
 import com.alike.masal.data.Programme
 import com.alike.masal.data.nowAndNext
@@ -111,7 +113,7 @@ private fun InfoBanner(number: Int, ch: Channel, programmes: List<Programme>?, m
                     Text("$number", color = Accent, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Text(ch.name, color = TextMain, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1,
                         overflow = TextOverflow.Ellipsis)
-                    Chip("LIVE", highlight = true)
+                    Chip(stringResource(R.string.live_badge), highlight = true)
                 }
                 if (now != null) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
@@ -123,14 +125,14 @@ private fun InfoBanner(number: Int, ch: Channel, programmes: List<Programme>?, m
                     Text(ch.group, color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
                 }
                 if (next != null) {
-                    Text("Next ${fmt.format(Date(next.start))}  ${next.title}", color = TextDim, fontSize = 12.sp, maxLines = 1,
+                    Text(stringResource(R.string.live_next, fmt.format(Date(next.start)), next.title), color = TextDim, fontSize = 12.sp, maxLines = 1,
                         overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
                 }
             }
             // Right: what the current programme is about, from the guide, or that the guide has nothing.
             val about = now?.desc?.trim()?.takeIf { it.isNotEmpty() }
             Text(
-                about ?: if (now == null) "No guide information for this channel." else "No description for this programme.",
+                about ?: stringResource(if (now == null) R.string.live_no_guide else R.string.live_no_description),
                 color = if (about != null) TextMain else TextDim, fontSize = 13.sp, lineHeight = 18.sp,
                 maxLines = 4, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 24.dp).width(460.dp),
@@ -173,7 +175,7 @@ private fun ChannelPanel(state: LiveState, onPick: (String, List<Channel>, Int) 
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(horizontal = 10.dp))
                 Text("›", color = TextDim, fontSize = 22.sp)
             }
-            Text("${list.size} channels   ◀ ▶ category", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp, bottom = 8.dp))
+            Text(stringResource(R.string.live_channels_hint, list.size), color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp, bottom = 8.dp))
             LazyColumn(
                 state = listState,
                 contentPadding = PaddingValues(bottom = 24.dp),

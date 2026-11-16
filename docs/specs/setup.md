@@ -13,6 +13,9 @@ Enter Plex and IPTV logins with the phone instead of the remote.
   only asks for the server URL instead of losing the link.
 - Look: Masal's style (logo, "Masal" in Fraunces, DM Sans, amber on dark, cards). Logo and fonts are
   served by the TV itself, so the page loads nothing from the internet.
+- Language: a card at the top with a select (Device language, English, Deutsch, Türkçe), the same
+  choice as on the TV (`docs/specs/language.md`). The page and its notices switch at once; the TV
+  follows the next time Settings opens (the page cannot redraw the TV).
 - Live TV sources: list with type badge, name and host, Remove per source. "+ Add source" opens a
   dialog: first the type (Xtream login or M3U playlist), then only that type's fields.
   Several sources are possible.
@@ -28,6 +31,8 @@ Enter Plex and IPTV logins with the phone instead of the remote.
 - Left: the QR code and address of the phone page, for logins, sources and the Plex server.
 - Right, a list moved with the remote:
   - Plex: status and link code, "Link Plex again", "Android settings" (the device's own settings).
+  - Language (after Plex): "Language" shows the current choice and opens a list (Device language,
+    English, Deutsch, Türkçe); OK picks and redraws the app in it, Back returns without change.
   - Live TV row on Home: "Channel category" opens a list of the loaded categories plus "None";
     OK picks, Back returns without change. "Row title" opens a text field with the TV keyboard;
     Done saves, Back cancels.
@@ -41,4 +46,5 @@ Enter Plex and IPTV logins with the phone instead of the remote.
 ## Checks
 - Scan the QR code, save Plex settings, Home shows Continue Watching.
 - On the TV, switch a collection on: it is checked on the phone page after a reload, and on Home.
+- Pick Deutsch on the phone page: the page is German at once; reopen Settings on the TV: German.
 - Pick a category on the TV, Back: the setting is unchanged; OK: the live TV row shows it.

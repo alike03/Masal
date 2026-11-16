@@ -15,6 +15,7 @@ go straight into the code; update the spec afterwards if the behaviour changed.
 | [player.md](player.md) | Plex player: controls, time, subtitles, audio |
 | [apps.md](apps.md) | Apps page and the Home apps row |
 | [setup.md](setup.md) | QR setup page for Plex and IPTV |
+| [language.md](language.md) | App language: English, German, Turkish |
 
 Each spec has: purpose, behaviour, remote keys, checks (what to verify on the TV or in the
 JVM tests) and open points. The remote is a TV remote over HDMI-CEC: D-pad, OK, Back and

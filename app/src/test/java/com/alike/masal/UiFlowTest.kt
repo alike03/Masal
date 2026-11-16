@@ -37,7 +37,11 @@ class UiFlowTest {
     companion object {
         @JvmStatic
         @BeforeClass
-        fun noVideo() { VideoPreviews.enabled = false; com.alike.masal.ui.ImageFades.enabled = false }
+        fun noVideo() {
+            VideoPreviews.enabled = false; com.alike.masal.ui.ImageFades.enabled = false
+            // The app loads the photo of the day and asks plex.tv for codes: never leave the machine.
+            com.alike.masal.data.Backdrops.base = "http://127.0.0.1:9"
+        }
     }
 
     @get:Rule
@@ -154,6 +158,8 @@ class UiFlowTest {
         rule.mainClock.advanceTimeBy(1_000)
         rule.waitForIdle()
         expectFocus("first button", "Plex")
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        expectFocus("language row", "Language")
         press(KeyEvent.KEYCODE_DPAD_DOWN)
         expectFocus("category row", "Channel category")
         shot("09-settings")

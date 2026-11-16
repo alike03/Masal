@@ -33,10 +33,12 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import com.alike.masal.Graph
 import com.alike.masal.MasalViewModel
+import com.alike.masal.R
 import com.alike.masal.data.Backdrop
 import com.alike.masal.data.Channel
 import com.alike.masal.data.PlexItem
@@ -124,15 +126,15 @@ fun HomeScreen(
     val rows = buildList {
         if (nothingSetUp) add(RowSpec("setup", BannerRowHeight) {
             Column {
-                RowTitle("Get started")
+                RowTitle(stringResource(R.string.home_get_started))
                 LazyRow(contentPadding = PaddingValues(horizontal = EdgePadding, vertical = 10.dp)) {
-                    item { LibraryCard("Set up Masal", "Add IPTV and Plex with your phone", null, onOpenSettings) }
+                    item { LibraryCard(stringResource(R.string.home_setup_title), stringResource(R.string.home_setup_text), null, onOpenSettings) }
                 }
             }
         })
         if (allApps.isNotEmpty()) add(RowSpec("apps", BannerRowHeight) {
             Column {
-                RowTitle(if (moving != null) "Apps   ◀ ▶ move, OK done" else "Apps")
+                RowTitle(stringResource(if (moving != null) R.string.home_apps_moving else R.string.common_apps))
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = EdgePadding, vertical = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -160,14 +162,14 @@ fun HomeScreen(
                         )
                     }
                     item(key = "app:add") {
-                        AddAppsCard(if (apps.isEmpty()) "Choose apps for Home" else "Edit", onEditApps,
+                        AddAppsCard(stringResource(if (apps.isEmpty()) R.string.home_choose_apps else R.string.common_edit), onEditApps,
                             { hero = Hero.EditApps }, focus.modifier("app:add"))
                     }
                 }
             }
         })
         if (onDeck.isNotEmpty()) add(RowSpec("deck", PosterRowHeight) {
-            PosterRow("Continue Watching") {
+            PosterRow(stringResource(R.string.home_continue_watching)) {
                 // Keyed by position: when a finished episode is replaced by the next one after a refresh,
                 // the focused slot stays and keeps focus instead of being removed.
                 itemsIndexed(onDeck, key = { i, _ -> "deck:$i" }) { i, item ->
@@ -203,8 +205,9 @@ fun HomeScreen(
                 }
             }
         })
+        val recentTitle = stringResource(R.string.home_recently_added)
         val plexRows = hubs.ifEmpty {
-            if (recentlyAdded.isNotEmpty()) listOf(com.alike.masal.data.PlexHub("recent", "Recently Added", recentlyAdded)) else emptyList()
+            if (recentlyAdded.isNotEmpty()) listOf(com.alike.masal.data.PlexHub("recent", recentTitle, recentlyAdded)) else emptyList()
         }
         plexRows.forEach { hub ->
             add(RowSpec("hub:${hub.id}", PosterRowHeight) {

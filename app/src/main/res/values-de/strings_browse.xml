@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Library tabs -->
+    <string name="browse_tab_recommended">Empfohlen</string>
+    <string name="browse_tab_browse">Durchsuchen</string>
+    <string name="browse_tab_collections">Sammlungen</string>
+    <string name="browse_tab_categories">Kategorien</string>
+    <!-- Loading states -->
+    <string name="browse_loading">Wird geladen</string>
+    <string name="browse_load_failed">Konnte nicht geladen werden: %1$s</string>
+    <string name="browse_nothing_recommended">Noch keine Empfehlungen</string>
+    <string name="browse_no_collections">Keine Sammlungen</string>
+    <string name="browse_no_categories">Keine Kategorien</string>
+    <string name="browse_empty">Leer</string>
+    <!-- Browse tab: sorting -->
+    <string name="browse_sort">Sortieren</string>
+    <string name="browse_sort_title">Titel</string>
+    <string name="browse_sort_year">Jahr</string>
+    <string name="browse_sort_released">Erscheinungsdatum</string>
+    <string name="browse_sort_added">Hinzugefügt</string>
+    <string name="browse_sort_rating">Bewertung</string>
+    <plurals name="browse_movies_count">
+        <item quantity="one">%d Film</item>
+        <item quantity="other">%d Filme</item>
+    </plurals>
+    <plurals name="browse_shows_count">
+        <item quantity="one">%d Serie</item>
+        <item quantity="other">%d Serien</item>
+    </plurals>
+    <plurals name="browse_titles_count">
+        <item quantity="one">%d Titel</item>
+        <item quantity="other">%d Titel</item>
+    </plurals>
+    <!-- Detail page -->
+    <string name="browse_resume">Weiter ab %1$s</string>
+    <string name="browse_play_episode">S%1$d F%2$d abspielen</string>
+    <string name="browse_play">Abspielen</string>
+    <string name="browse_from_start">Von vorne</string>
+    <string name="browse_trailer">Trailer</string>
+    <string name="browse_season">Staffel %1$d</string>
+    <string name="browse_episode_short">F%1$d</string>
+
+    <!-- Search -->
+    <string name="search_title">Suche</string>
+    <string name="search_hint">Gib einen Titel oder einen Sender ein.</string>
+    <string name="search_searching">Suche läuft</string>
+    <string name="search_failed">Plex-Suche fehlgeschlagen: %1$s</string>
+    <string name="search_nothing_found">Nichts gefunden für «%1$s».</string>
+    <string name="search_live_tv">Live-TV</string>
+    <string name="search_field_focused">OK drücken, um zu tippen oder zu sprechen</string>
+    <string name="search_field_placeholder">Filme, Serien, Sender</string>
+
+    <!-- TV tab -->
+    <string name="tv_last_watched">Zuletzt gesehen</string>
+    <string name="tv_favourites">Favoriten</string>
+    <string name="tv_loading_channels">Sender werden geladen</string>
+    <string name="tv_no_channels">Noch keine Sender. Füge in den Einstellungen eine IPTV-Quelle hinzu.</string>
+    <string name="tv_preview_hint">Wähle einen Sender für die Vorschau</string>
+    <plurals name="tv_channels_count">
+        <item quantity="one">%d Sender</item>
+        <item quantity="other">%d Sender</item>
+    </plurals>
+    <string name="tv_favourite_hint">▶ auf einem Sender setzt den Favoriten-Stern</string>
+    <string name="tv_no_guide">Keine Programminfos</string>
+    <string name="tv_next">Danach %1$s</string>
+    <string name="tv_remove_favourite">Aus Favoriten entfernen</string>
+    <string name="tv_add_favourite">Zu Favoriten hinzufügen</string>
+
+    <!-- Apps page -->
+    <string name="appspage_title">Apps</string>
+    <string name="appspage_hint_moving">◀ ▶ verschieben   OK fertig</string>
+    <string name="appspage_hint_editing">OK fügt eine App zur Startseite hinzu oder entfernt sie. OK auf einer App der Startseite, um sie zu verschieben.</string>
+    <string name="appspage_hint">OK öffnet   ▶❚❚ fügt zur Startseite hinzu</string>
+    <string name="appspage_done">Fertig</string>
+    <string name="appspage_edit">Apps der Startseite bearbeiten</string>
+    <string name="appspage_on_home">Auf der Startseite</string>
+    <string name="appspage_all_apps">Alle Apps</string>
+</resources>

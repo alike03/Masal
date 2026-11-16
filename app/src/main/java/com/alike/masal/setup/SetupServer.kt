@@ -1,17 +1,24 @@
 package com.alike.masal.setup
 
+import android.content.Context
+import android.content.res.Configuration
+import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.os.LocaleList
+import com.alike.masal.R
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import com.alike.masal.data.HomeRowOption
 import com.alike.masal.data.IptvSource
+import com.alike.masal.data.Language
 import com.alike.masal.data.Settings
 import fi.iki.elonen.NanoHTTPD
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.security.SecureRandom
+import java.util.Locale
 import java.util.UUID
 
 const val SETUP_PORT = 8765
@@ -21,6 +28,8 @@ const val SETUP_PORT = 8765
  * screen is open and only answers under a random path that is shown in the QR code.
  */
 class SetupServer(
+    /** For the page's texts, in the language stored in the preferences (see [texts]). */
+    private val context: Context,
     private val settings: Settings,
     private val key: String,
     private val onChanged: () -> Unit,
@@ -39,7 +48,7 @@ class SetupServer(
                 .apply { addHeader("Cache-Control", "max-age=3600") }
         }
         if (session.uri.trimEnd('/') != base) {
-            return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "Not found")
+            return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain; charset=utf-8", str(R.string.setup_not_found))
         }
         var notice: String? = null
         if (session.method == Method.POST) {
@@ -57,25 +66,37 @@ class SetupServer(
         return newFixedLengthResponse(Response.Status.OK, "text/html; charset=utf-8", page(base, notice))
     }
 
-    /** "http://host:port" of a URL, without path, query or user info. */
-    private fun hostOf(url: String): String = runCatching {
+    /** A text in the current language (read again each time: the page itself can change the language). */
+    private fun str(id: Int, vararg args: Any): String = texts(context).getString(id, *args)
+
+    /** "http://host:port" of a URL, without path, query or user info; null when it cannot be read. */
+    private fun hostOf(url: String): String? = runCatching {
         val u = java.net.URI(url.trim())
         "${u.scheme}://${u.host}" + if (u.port > 0) ":${u.port}" else ""
-    }.getOrDefault("(address hidden)")
+    }.getOrNull()
 
     /** Applies a form; returns the notice and whether data must reload (false: only Home's layout changed). */
     private fun handle(p: Map<String, String>, all: Map<String, List<String>>): Pair<String, Boolean> = when (p["action"]) {
+        "language" -> {
+            // Stored like Language.set does; the TV activity switches when Settings opens again.
+            val code = p["language"].orEmpty()
+            if (Language.choices.any { it.first == code } && code != Language.stored(context)) {
+                context.getSharedPreferences("masal", Context.MODE_PRIVATE).edit().putString("language", code).commit()
+                if (code.isBlank()) Locale.setDefault(context.applicationContext.resources.configuration.locales[0])
+            }
+            str(R.string.setup_language_saved) to false
+        }
         "home" -> {
             settings.homeLiveGroup = p["group"].orEmpty()
             settings.homeLiveTitle = p["title"].orEmpty()
-            "Home row saved." to false
+            str(R.string.setup_saved_home_row) to false
         }
         "rows" -> {
             // Unchecked boxes are not sent: every row listed on the page comes along as "all".
             val listed = all["all"].orEmpty().toSet()
             val checked = all["row"].orEmpty().toSet()
             homeRows().filter { it.id in listed }.forEach { settings.setHomeRowShown(it, it.id in checked) }
-            "Home rows saved." to false
+            str(R.string.setup_saved_home_rows) to false
         }
         else -> handleData(p) to true
     }
@@ -84,21 +105,21 @@ class SetupServer(
         "plex" -> {
             if (p["url"].orEmpty().isNotBlank()) settings.plexUrl = p["url"]!!
             if (p["token"].orEmpty().isNotBlank()) settings.plexToken = p["token"]!!
-            "Plex settings saved."
+            str(R.string.setup_saved_plex)
         }
         "add_m3u" -> {
-            if (p["url"].isNullOrBlank()) "Playlist URL is missing."
+            if (p["url"].isNullOrBlank()) str(R.string.setup_m3u_url_missing)
             else {
                 settings.sources = settings.sources + IptvSource(
                     id = UUID.randomUUID().toString().take(8),
-                    name = p["name"].orEmpty().ifBlank { "Playlist" },
+                    name = p["name"].orEmpty().ifBlank { str(R.string.setup_m3u_default_name) },
                     type = "m3u", url = p["url"]!!, epgUrl = p["epg"].orEmpty(),
                 )
-                "Playlist added."
+                str(R.string.setup_m3u_added)
             }
         }
         "add_xtream" -> {
-            if (p["server"].isNullOrBlank() || p["user"].isNullOrBlank()) "Server and username are required."
+            if (p["server"].isNullOrBlank() || p["user"].isNullOrBlank()) str(R.string.setup_xtream_missing)
             else {
                 settings.sources = settings.sources + IptvSource(
                     id = UUID.randomUUID().toString().take(8),
@@ -106,35 +127,39 @@ class SetupServer(
                     type = "xtream", server = p["server"]!!, user = p["user"]!!, pass = p["pass"].orEmpty(),
                     epgUrl = p["epg"].orEmpty(),
                 )
-                "Xtream login added."
+                str(R.string.setup_xtream_added)
             }
         }
         "delete" -> {
             settings.sources = settings.sources.filterNot { it.id == p["id"] }
-            "Source removed."
+            str(R.string.setup_source_removed)
         }
-        else -> "Nothing changed."
+        else -> str(R.string.setup_nothing_changed)
     }
 
     private fun esc(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
 
     private fun page(base: String, notice: String?): String {
+        val r = texts(context)
+        /** A text from the resources, escaped for HTML. */
+        fun t(id: Int, vararg args: Any): String = esc(r.getString(id, *args))
+        fun host(url: String): String = hostOf(url) ?: r.getString(R.string.setup_address_hidden)
         val sources = settings.sources.joinToString("") { s ->
             // Only the host: playlist URLs and user names are half of the login, and anyone who sees the QR code can open this page.
             val xtream = s.type == "xtream"
-            val detail = if (xtream) "${esc(hostOf(s.server))} &middot; user ${esc(s.user.take(2))}&hellip;" else esc(hostOf(s.url))
+            val detail = if (xtream) "${esc(host(s.server))} &middot; ${t(R.string.setup_user)} ${esc(s.user.take(2))}&hellip;" else esc(host(s.url))
             """<li><span class="badge">${if (xtream) "Xtream" else "M3U"}</span>
 <div class="src"><strong>${esc(s.name)}</strong><span>$detail</span></div>
 <form method="post" action="$base"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="${esc(s.id)}">
-<button class="btn ghost small" aria-label="Remove ${esc(s.name)}">Remove</button></form></li>"""
+<button class="btn ghost small" aria-label="${t(R.string.setup_remove_named, s.name)}">${t(R.string.setup_remove)}</button></form></li>"""
         }
-        val sourceList = if (sources.isEmpty()) """<p class="empty">No sources yet. Add the Xtream login or M3U playlist from your IPTV provider.</p>"""
+        val sourceList = if (sources.isEmpty()) """<p class="empty">${t(R.string.setup_no_sources)}</p>"""
             else """<ul class="list">$sources</ul>"""
         val plexLinked = settings.plexToken.isNotBlank() && settings.plexUrl.isNotBlank()
-        val plexChip = if (plexLinked) """<span class="chip on">Connected</span>""" else """<span class="chip">Not connected</span>"""
-        val plexDetail = if (plexLinked) """<p class="muted">Server ${esc(hostOf(settings.plexUrl))}</p>"""
-            else """<p class="muted">Easiest: open <strong>plex.tv/link</strong> and enter the code shown on the TV.</p>"""
-        val tokenHint = if (settings.plexToken.isNotBlank()) "Saved. Leave empty to keep it." else "Not set"
+        val plexChip = if (plexLinked) """<span class="chip on">${t(R.string.setup_connected)}</span>""" else """<span class="chip">${t(R.string.setup_not_connected)}</span>"""
+        val plexDetail = if (plexLinked) """<p class="muted">${t(R.string.setup_plex_server, host(settings.plexUrl))}</p>"""
+            else """<p class="muted">${t(R.string.setup_plex_easiest, "\u0001").replace("\u0001", "<strong>plex.tv/link</strong>")}</p>"""
+        val tokenHint = t(if (settings.plexToken.isNotBlank()) R.string.setup_token_saved else R.string.setup_token_not_set)
         // Home row: pick one of the loaded categories. A saved category that is not (yet) in the list
         // stays selectable, so loading sources late or a renamed category never clears the setting.
         val groups = channelGroups()
@@ -142,15 +167,15 @@ class SetupServer(
         val savedNorm = com.alike.masal.MasalViewModel.normGroup(saved)
         val savedInList = saved.isNotBlank() && groups.any { com.alike.masal.MasalViewModel.normGroup(it) == savedNorm }
         val groupOptions = buildString {
-            append("<option value=\"\"${if (saved.isBlank()) " selected" else ""}>None (row hidden)</option>")
-            if (saved.isNotBlank() && !savedInList) append("<option value=\"${esc(saved)}\" selected>${esc(saved)} (not in the loaded channels)</option>")
+            append("<option value=\"\"${if (saved.isBlank()) " selected" else ""}>${t(R.string.settings_category_none)}</option>")
+            if (saved.isNotBlank() && !savedInList) append("<option value=\"${esc(saved)}\" selected>${t(R.string.settings_category_missing, saved)}</option>")
             groups.forEach { g ->
                 val sel = saved.isNotBlank() && com.alike.masal.MasalViewModel.normGroup(g) == savedNorm
                 append("<option value=\"${esc(g)}\"${if (sel) " selected" else ""}>${esc(g)}</option>")
             }
         }
         val rowOptions = homeRows()
-        val rowsBody = if (rowOptions.isEmpty()) """<p class="empty">Connect Plex first. Its rows and collections appear here once loaded; reopen this page then.</p>"""
+        val rowsBody = if (rowOptions.isEmpty()) """<p class="empty">${t(R.string.setup_rows_empty)}</p>"""
         else buildString {
             append("<form method=\"post\" action=\"$base\" class=\"fields\"><input type=\"hidden\" name=\"action\" value=\"rows\">")
             rowOptions.groupBy { it.group }.forEach { (group, options) ->
@@ -163,12 +188,15 @@ class SetupServer(
                 }
                 append("</fieldset>")
             }
-            append("<div class=\"actions\"><button class=\"btn\">Save rows</button></div></form>")
+            append("<div class=\"actions\"><button class=\"btn\">${t(R.string.setup_save_rows)}</button></div></form>")
         }
-        val groupHint = if (groups.isEmpty()) "No channels loaded yet. Add a source first, then reopen this page."
-            else "${groups.size} categories from your sources."
-        return """<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>Masal setup</title>
+        val groupHint = if (groups.isEmpty()) t(R.string.setup_groups_empty) else t(R.string.setup_groups_count, groups.size)
+        val storedLanguage = Language.stored(context)
+        val languageOptions = Language.choices.joinToString("") { (code, name) ->
+            "<option value=\"${esc(code)}\"${if (code == storedLanguage) " selected" else ""}>${esc(name ?: r.getString(R.string.language_device))}</option>"
+        }
+        return """<!doctype html><html lang="${t(R.string.setup_lang_code)}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>${t(R.string.setup_page_title)}</title>
 <link rel="icon" type="image/png" href="$base/favicon.png"><meta name="theme-color" content="#121110">
 <style>
 @font-face{font-family:"DM Sans";src:url("$base/dm-sans.ttf") format("truetype");font-weight:400 800;font-display:swap}
@@ -230,58 +258,66 @@ fieldset.group[disabled]{display:none}
 @media (max-width:380px){.types{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:no-preference){dialog[open]{animation:rise .18s ease-out}@keyframes rise{from{opacity:0;transform:translateY(8px)}}}
 </style></head><body><main>
-<header class="top"><img src="$base/logo.png" alt=""><div><div class="word">Masal</div><div class="sub">Setup</div></div></header>
-<p class="lead">Changes reach the TV at once. This page works only while Settings is open on the TV.</p>
+<header class="top"><img src="$base/logo.png" alt=""><div><div class="word">Masal</div><div class="sub">${t(R.string.setup_subtitle)}</div></div></header>
+<p class="lead">${t(R.string.setup_lead)}</p>
 ${notice?.let { "<div class=\"notice\" role=\"status\">${esc(it)}</div>" } ?: ""}
+<section class="card" aria-labelledby="h-lang">
+<h2 id="h-lang">${t(R.string.language_title)}</h2>
+<p class="muted">${t(R.string.setup_language_lead)}</p>
+<form method="post" action="$base" class="fields"><input type="hidden" name="action" value="language">
+<select id="lang" name="language" aria-labelledby="h-lang">$languageOptions</select>
+<div class="actions"><button class="btn">${t(R.string.setup_save_language)}</button></div>
+</form>
+</section>
 <section class="card" aria-labelledby="h-src">
-<div class="head"><h2 id="h-src">Live TV sources</h2><button type="button" class="btn small" id="open-add">+ Add source</button></div>
+<div class="head"><h2 id="h-src">${t(R.string.settings_sources_heading)}</h2><button type="button" class="btn small" id="open-add">${t(R.string.setup_add_source_button)}</button></div>
 $sourceList
 </section>
 <section class="card" aria-labelledby="h-row">
-<h2 id="h-row">Home live TV row</h2>
-<p class="muted">One channel category from your sources, shown as a row on Home.</p>
+<h2 id="h-row">${t(R.string.setup_home_row_heading)}</h2>
+<p class="muted">${t(R.string.setup_home_row_lead)}</p>
 <form method="post" action="$base" class="fields"><input type="hidden" name="action" value="home">
-<div class="field"><label for="row-group">Channel category</label><select id="row-group" name="group">$groupOptions</select><p class="hint">$groupHint</p></div>
-<div class="field"><label for="row-title">Row title</label><input type="text" id="row-title" name="title" value="${esc(settings.homeLiveTitle)}" placeholder="Live TV"></div>
-<div class="actions"><button class="btn">Save row</button></div>
+<div class="field"><label for="row-group">${t(R.string.settings_channel_category)}</label><select id="row-group" name="group">$groupOptions</select><p class="hint">$groupHint</p></div>
+<div class="field"><label for="row-title">${t(R.string.settings_row_title)}</label><input type="text" id="row-title" name="title" value="${esc(settings.homeLiveTitle)}" placeholder="${t(R.string.setup_row_title_placeholder)}"></div>
+<div class="actions"><button class="btn">${t(R.string.setup_save_row)}</button></div>
 </form>
 </section>
 <section class="card" aria-labelledby="h-rows">
-<h2 id="h-rows">Home rows</h2>
-<p class="muted">Plex rows and collections shown on Home. Also adjustable in Settings on the TV.</p>
+<h2 id="h-rows">${t(R.string.settings_home_rows)}</h2>
+<p class="muted">${t(R.string.setup_home_rows_lead)}</p>
 $rowsBody
 </section>
 <section class="card" aria-labelledby="h-plex">
 <div class="head"><h2 id="h-plex">Plex</h2>$plexChip</div>
 $plexDetail
-<details><summary>Enter server and token manually</summary>
+<details><summary>${t(R.string.setup_plex_manual)}</summary>
 <form method="post" action="$base" class="fields"><input type="hidden" name="action" value="plex">
-<div class="field"><label for="plex-url">Server URL</label><input type="url" id="plex-url" name="url" value="${esc(settings.plexUrl)}" placeholder="http://plex-server:32400" autocapitalize="off"></div>
-<div class="field"><label for="plex-token">Token</label><input type="password" id="plex-token" name="token" placeholder="$tokenHint"></div>
-<div class="actions"><button class="btn">Save Plex</button></div>
+<div class="field"><label for="plex-url">${t(R.string.setup_server_url)}</label><input type="url" id="plex-url" name="url" value="${esc(settings.plexUrl)}" placeholder="http://plex-server:32400" autocapitalize="off"></div>
+<div class="field"><label for="plex-token">${t(R.string.setup_token)}</label><input type="password" id="plex-token" name="token" placeholder="$tokenHint"></div>
+<div class="actions"><button class="btn">${t(R.string.setup_save_plex)}</button></div>
 </form></details>
 </section>
 </main>
 <dialog id="add" aria-labelledby="h-add">
 <form method="post" action="$base">
-<h2 id="h-add">Add source</h2>
-<fieldset class="types"><legend>What did your provider give you?</legend>
-<label class="type"><input type="radio" name="action" value="add_xtream" checked><strong>Xtream login</strong><span>Server, user name and password</span></label>
-<label class="type"><input type="radio" name="action" value="add_m3u"><strong>M3U playlist</strong><span>A playlist link, optionally a guide</span></label>
+<h2 id="h-add">${t(R.string.setup_add_source)}</h2>
+<fieldset class="types"><legend>${t(R.string.setup_types_legend)}</legend>
+<label class="type"><input type="radio" name="action" value="add_xtream" checked><strong>${t(R.string.setup_xtream_title)}</strong><span>${t(R.string.setup_xtream_detail)}</span></label>
+<label class="type"><input type="radio" name="action" value="add_m3u"><strong>${t(R.string.setup_m3u_title)}</strong><span>${t(R.string.setup_m3u_detail)}</span></label>
 </fieldset>
 <fieldset class="group fields" data-for="add_xtream">
-<div class="field"><label for="xt-name">Name</label><input type="text" id="xt-name" name="name" placeholder="My provider"></div>
-<div class="field"><label for="xt-server">Server URL</label><input type="url" id="xt-server" name="server" placeholder="http://provider.example:8080" autocapitalize="off" autocorrect="off" required></div>
-<div class="field"><label for="xt-user">User name</label><input type="text" id="xt-user" name="user" autocapitalize="off" autocorrect="off" autocomplete="off" required></div>
-<div class="field"><label for="xt-pass">Password</label><input type="password" id="xt-pass" name="pass" autocomplete="off" required></div>
-<div class="field"><label for="xt-epg">Guide URL (optional, default is the provider's xmltv.php)</label><input type="url" id="xt-epg" name="epg" autocapitalize="off"></div>
+<div class="field"><label for="xt-name">${t(R.string.setup_name)}</label><input type="text" id="xt-name" name="name" placeholder="${t(R.string.setup_name_provider_placeholder)}"></div>
+<div class="field"><label for="xt-server">${t(R.string.setup_server_url)}</label><input type="url" id="xt-server" name="server" placeholder="http://provider.example:8080" autocapitalize="off" autocorrect="off" required></div>
+<div class="field"><label for="xt-user">${t(R.string.setup_user_name)}</label><input type="text" id="xt-user" name="user" autocapitalize="off" autocorrect="off" autocomplete="off" required></div>
+<div class="field"><label for="xt-pass">${t(R.string.setup_password)}</label><input type="password" id="xt-pass" name="pass" autocomplete="off" required></div>
+<div class="field"><label for="xt-epg">${t(R.string.setup_xtream_epg)}</label><input type="url" id="xt-epg" name="epg" autocapitalize="off"></div>
 </fieldset>
 <fieldset class="group fields" data-for="add_m3u" disabled>
-<div class="field"><label for="m3u-name">Name</label><input type="text" id="m3u-name" name="name" placeholder="My playlist"></div>
-<div class="field"><label for="m3u-url">Playlist URL</label><input type="url" id="m3u-url" name="url" placeholder="http://server:port/playlist.m3u" autocapitalize="off" autocorrect="off" required></div>
-<div class="field"><label for="m3u-epg">Guide (XMLTV) URL, optional</label><input type="url" id="m3u-epg" name="epg" placeholder="http://server:port/epg.xml" autocapitalize="off"></div>
+<div class="field"><label for="m3u-name">${t(R.string.setup_name)}</label><input type="text" id="m3u-name" name="name" placeholder="${t(R.string.setup_name_playlist_placeholder)}"></div>
+<div class="field"><label for="m3u-url">${t(R.string.setup_playlist_url)}</label><input type="url" id="m3u-url" name="url" placeholder="http://server:port/playlist.m3u" autocapitalize="off" autocorrect="off" required></div>
+<div class="field"><label for="m3u-epg">${t(R.string.setup_m3u_epg)}</label><input type="url" id="m3u-epg" name="epg" placeholder="http://server:port/epg.xml" autocapitalize="off"></div>
 </fieldset>
-<div class="actions"><button type="button" class="btn ghost" id="close-add">Cancel</button><button class="btn">Add source</button></div>
+<div class="actions"><button type="button" class="btn ghost" id="close-add">${t(R.string.settings_cancel)}</button><button class="btn">${t(R.string.setup_add_source)}</button></div>
 </form>
 </dialog>
 <script>
@@ -306,6 +342,17 @@ $plexDetail
     }
 
     companion object {
+        /**
+         * [context] in the language stored in the preferences ("": the device's language). Unlike
+         * the activity's own context it follows a change made on the phone page at once.
+         */
+        fun texts(context: Context): Context {
+            val code = Language.stored(context)
+            val locale = if (code.isBlank()) Resources.getSystem().configuration.locales[0] else Locale.forLanguageTag(code)
+            val config = Configuration(context.resources.configuration).apply { setLocales(LocaleList(locale)) }
+            return context.createConfigurationContext(config)
+        }
+
         fun randomKey(): String {
             val chars = "abcdefghjkmnpqrstuvwxyz23456789"
             val rnd = SecureRandom()

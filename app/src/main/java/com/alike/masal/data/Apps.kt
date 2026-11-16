@@ -6,6 +6,7 @@ import android.provider.Settings
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
+import com.alike.masal.R
 
 data class TvApp(val pkg: String, val label: String, val banner: ImageBitmap, val isBanner: Boolean)
 
@@ -44,7 +45,8 @@ object Apps {
         runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
 
-    const val SettingsLabel = "Android settings"
+    /** Name of the device settings tile, in the app's language. */
+    val SettingsLabel: String get() = Language.text(R.string.apps_android_settings)
 
     fun launch(context: Context, pkg: String) {
         val pm = context.packageManager

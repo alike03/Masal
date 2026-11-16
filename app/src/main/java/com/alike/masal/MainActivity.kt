@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.KeyEvent
 import com.alike.masal.player.logKey
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -44,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -92,17 +94,19 @@ import java.util.Locale
 
 sealed interface NavTab {
     val key: String
-    val title: String
+    /** Menu label as a string resource; 0 for libraries, which show the Plex section's own title. */
+    @get:StringRes val titleRes: Int
 
-    data object Search : NavTab { override val key = "search"; override val title = "Search" }
-    data object Home : NavTab { override val key = "home"; override val title = "Home" }
-    data object Tv : NavTab { override val key = "tv"; override val title = "TV" }
+    data object Search : NavTab { override val key = "search"; override val titleRes = R.string.common_search }
+    data object Home : NavTab { override val key = "home"; override val titleRes = R.string.common_home }
+    data object Tv : NavTab { override val key = "tv"; override val titleRes = R.string.common_tv }
     data class Library(val section: PlexSection) : NavTab {
         override val key get() = "lib:" + section.key
-        override val title get() = section.title
+        override val titleRes get() = 0
+        val title get() = section.title
     }
-    data object Apps : NavTab { override val key = "apps"; override val title = "Apps" }
-    data object Settings : NavTab { override val key = "settings"; override val title = "Settings" }
+    data object Apps : NavTab { override val key = "apps"; override val titleRes = R.string.common_apps }
+    data object Settings : NavTab { override val key = "settings"; override val titleRes = R.string.common_settings }
 }
 
 /** Pages opened on top of a tab: a title's details, a collection or a category. */
@@ -234,9 +238,9 @@ class MainActivity : ComponentActivity() {
                                 val detail = remember(key) { stack.lastOrNull { it.key == key } }
                                 val t = tabs.firstOrNull { it.key == key }
                                 when {
-                                    detail != null && detail.kind == "collection" -> ListPage(detail.title, "Collection", autoFocus,
+                                    detail != null && detail.kind == "collection" -> ListPage(detail.title, stringResource(R.string.common_collection), autoFocus,
                                         { Graph.plex.collectionItems(detail.ratingKey) }, openItem)
-                                    detail != null && detail.kind == "genre" -> ListPage(detail.title, "Category", autoFocus,
+                                    detail != null && detail.kind == "genre" -> ListPage(detail.title, stringResource(R.string.common_category), autoFocus,
                                         { Graph.plex.genreItems(detail.section, detail.ratingKey) }, openItem)
                                     detail != null -> DetailScreen(detail.ratingKey, detail.season, autoFocus) { item, fromStart ->
                                         playPlex(item, fromStart)
@@ -268,7 +272,7 @@ class MainActivity : ComponentActivity() {
                     AnimatedVisibility(top == null, enter = fadeIn(tween(250)), exit = fadeOut(tween(120))) {
                         SideRail(
                             entries = tabs.map { t ->
-                                RailEntry(t.title, when (t) {
+                                RailEntry(if (t is NavTab.Library) t.title else stringResource(t.titleRes), when (t) {
                                     NavTab.Search -> MasalIcons.Search
                                     NavTab.Home -> MasalIcons.Home
                                     NavTab.Tv -> MasalIcons.Tv
@@ -293,6 +297,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.alike.masal.data.Language.wrap(newBase))
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         logKey(event)
         return super.dispatchKeyEvent(event)
@@ -314,7 +322,14 @@ class MainActivity : ComponentActivity() {
         resumedOnce = true
     }
 
-    private fun playChannels(name: String, list: List<Channel>, index: Int, fromHome: Boolean = false) {
+    private fun playChannels(listKey: String, list: List<Channel>, index: Int, fromHome: Boolean = false) {
+        // The TV tab and Search pass their lists' English keys; the player shows them in the app's language.
+        val name = when (listKey) {
+            "Last watched" -> getString(R.string.common_last_watched)
+            "Favourites" -> getString(R.string.common_favourites)
+            "Search" -> getString(R.string.common_search)
+            else -> listKey
+        }
         val ch = list.getOrNull(index)
         // The preview already playing this channel hands its stream over: no restart, no second connection.
         Playback.handedOver?.release()
@@ -326,8 +341,8 @@ class MainActivity : ComponentActivity() {
         val favs = all.filter { it.key in vm.favorites.value }
         Playback.groups = buildList {
             add(name to list)
-            if (recent.isNotEmpty()) add("Last watched" to recent)
-            if (favs.isNotEmpty()) add("Favourites" to favs)
+            if (recent.isNotEmpty()) add(getString(R.string.common_last_watched) to recent)
+            if (favs.isNotEmpty()) add(getString(R.string.common_favourites) to favs)
             addAll(all.groupBy { it.group }.toList())
         }.distinctBy { it.first }
         Playback.listName = name
@@ -347,7 +362,7 @@ class MainActivity : ComponentActivity() {
                 runCatching { Graph.plex.metadata(item.ratingKey) }.getOrNull()
             }
             if (full?.partKey == null) {
-                Toast.makeText(this@MainActivity, "This item has no playable file.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MainActivity, getString(R.string.common_no_playable_file), Toast.LENGTH_LONG).show()
                 return@launch
             }
             val offset = if (fromStart) 0L else item.viewOffset.takeIf { it > 0 } ?: full.viewOffset

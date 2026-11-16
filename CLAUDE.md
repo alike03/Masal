@@ -9,6 +9,7 @@ Android TV app: a home interface with IPTV live TV, Plex playback and app shortc
 - Local settings (device address, toolchain paths, optional Home Assistant fallback, test values) live in `.env` (gitignored, template `.env.dist`). Never commit machine-specific values, IPs or paths.
 - Credentials (Plex, IPTV) are entered on the device through the setup page and stay in the app's private storage. Never hardcode, log or print them.
 - `snapshot/` holds personal library data for the real-data tests: gitignored, never commit it.
+- Texts: every user-visible text is a string resource in `res/values*/strings_<area>.xml` (English default, `values-de` Swiss spelling with "ss", `values-tr`), keys prefixed by area. Composables use `stringResource`, activities `getString`, other code `Language.text()`. Keep the English texts stable: the JVM tests assert on them.
 - `scripts/install.sh` installs, compiles and opens Masal, but only on an awake TV: it never wakes the TV and never starts other apps (`NO_START=1` installs only).
 
 ## Stack
@@ -27,6 +28,7 @@ Kotlin, Compose for TV (`androidx.tv:tv-material`), Media3 ExoPlayer, OkHttp, Co
 - `RealDataScreensTest`: your own library from `snapshot/snapshot.zip` served by `SnapshotServer` (MockWebServer acting as Plex, Xtream and Bing); skipped without a snapshot. Shots: `.../real-shots/`. Images load asynchronously, so a background photo can be missing in a shot without an app bug. Menu entries are reached with Back + Up/Down (focusing a rail label by text does not work).
 - `PlayerOverlayTest`: Plex player controls and subtitle panel. Shots: `.../player-shots/`.
 - `LiveOverlayTest`: the live player's info banner (with and without guide) and channel list, fictitious channels. Shots: `.../live-shots/`.
+- `GermanScreensTest` / `TurkishScreensTest` (`LocaleScreensTest.kt`): Home and Settings with the device in German and Turkish. Shots: `.../locale-shots/`. UI tests stay offline: `Backdrops.base` and `Graph.plex.accountBase` point at a closed port.
 - `AmbientSeamTest`: the colour fill meets the picture frame without a line (pixel columns at the frame edge).
 
 Snapshot: made on the device by the debug-only `SnapshotReceiver`, which drives the app's own `PlexClient` through a recording interceptor; responses are keyed with `debug.key()` (path + sorted query without token), so new Plex calls must also be made in the receiver (Plex search is not recorded yet). Run `adb shell cmd deviceidle tempwhitelist -d 300000 com.alike.masal` (needed while the device sleeps) and `adb shell am broadcast -n com.alike.masal/.debug.SnapshotReceiver`, wait for `snapshot.done` in the app's files folder, pull `snapshot.zip` into `snapshot/`, delete the device copy and scan it for credentials. Logins are replaced by [x] on the device.

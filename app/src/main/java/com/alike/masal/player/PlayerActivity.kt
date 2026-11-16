@@ -71,6 +71,10 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.alike.masal.data.Language.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         live = intent.getStringExtra("mode") != "plex"
@@ -131,7 +135,7 @@ class PlayerActivity : ComponentActivity() {
                 updateScreenOn()
                 // Live streams drop now and then (provider closes the connection, HLS falls behind): reconnect.
                 if (live && retryLive()) return
-                Toast.makeText(this@PlayerActivity, "Playback failed: ${error.errorCodeName}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@PlayerActivity, getString(R.string.player_playback_failed, error.errorCodeName), Toast.LENGTH_LONG).show()
             }
 
             override fun onPlaybackStateChanged(s: Int) {
@@ -463,7 +467,7 @@ class PlayerActivity : ComponentActivity() {
         streamFor(g, type)?.title?.takeIf { it.isNotBlank() }?.let { return it }
         val f = g.getTrackFormat(0)
         val lang = f.language?.let { Locale.forLanguageTag(it).displayLanguage }?.takeIf { it.isNotBlank() && it != "und" }
-        return listOfNotNull(lang, f.label).joinToString(" ").ifBlank { "Track" }
+        return listOfNotNull(lang, f.label).joinToString(" ").ifBlank { getString(R.string.player_track) }
     }
 
     private fun onPlexTracks(tracks: Tracks) {
@@ -475,7 +479,7 @@ class PlayerActivity : ComponentActivity() {
         pendingSubtitle?.let { id ->
             groups(C.TRACK_TYPE_TEXT).firstOrNull { plexId(it) == id }?.let { selectText(it); pendingSubtitle = null }
         }
-        plex.subtitleLabel = groups(C.TRACK_TYPE_TEXT).firstOrNull { it.isSelected }?.let { shortLabel(label(it, 3)) } ?: "Off"
+        plex.subtitleLabel = groups(C.TRACK_TYPE_TEXT).firstOrNull { it.isSelected }?.let { shortLabel(label(it, 3)) } ?: getString(R.string.player_off)
         plex.audioLabel = groups(C.TRACK_TYPE_AUDIO).firstOrNull { it.isSelected }?.let { shortLabel(label(it, 2)) } ?: ""
     }
 
@@ -513,18 +517,18 @@ class PlayerActivity : ComponentActivity() {
     private fun openSubtitles() {
         val text = groups(C.TRACK_TYPE_TEXT)
         val anySelected = text.any { it.isSelected }
-        plex.panel = Panel("Subtitles", buildList {
-            add(PanelOption("Off", selected = !anySelected) {
+        plex.panel = Panel(getString(R.string.player_subtitles), buildList {
+            add(PanelOption(getString(R.string.player_off), selected = !anySelected) {
                 selectText(null); remember("subtitleStreamID", 0); plex.panel = null; setControls(true)
             })
             text.forEach { g ->
                 val s = streamFor(g, 3)
-                add(PanelOption(label(g, 3), detail = listOfNotNull(s?.codec?.uppercase(), if (s?.forced == true) "Forced" else null,
-                    if (s?.key != null) "External" else null).joinToString("  "), selected = g.isSelected) {
+                add(PanelOption(label(g, 3), detail = listOfNotNull(s?.codec?.uppercase(), if (s?.forced == true) getString(R.string.player_forced) else null,
+                    if (s?.key != null) getString(R.string.player_external) else null).joinToString("  "), selected = g.isSelected) {
                     selectText(g); s?.let { remember("subtitleStreamID", it.id) }; plex.panel = null; setControls(true)
                 })
             }
-            add(PanelOption("Search for subtitles…", detail = "OpenSubtitles through your Plex server") { openLanguages() })
+            add(PanelOption(getString(R.string.player_search_for_subtitles), detail = getString(R.string.player_search_detail)) { openLanguages() })
         })
     }
 
@@ -546,24 +550,24 @@ class PlayerActivity : ComponentActivity() {
     private fun settingsPanel(focus: Int? = null): Panel {
         val s = Graph.settings
         val p = PlayerSettings
-        fun pct(v: Int) = "$v %"
-        fun sec(v: Int) = "$v s"
+        fun pct(v: Int) = getString(R.string.player_percent, v)
+        fun sec(v: Int) = getString(R.string.player_seconds, v)
         val lines = listOf(
-            Triple("Subtitle size", pct(s.subtitleSize)) { i: Int ->
-                choose(i, "Subtitle size", p.sizes.map { pct(it) to it }, s.subtitleSize) { s.subtitleSize = it } },
-            Triple("Subtitle colour", with(p) { colors.of(s.subtitleColor).label }) { i: Int ->
-                choose(i, "Subtitle colour", p.colors.map { it.label to it.key }, s.subtitleColor) { s.subtitleColor = it } },
-            Triple("Subtitle background", with(p) { backgrounds.of(s.subtitleBackground).label }) { i: Int ->
-                choose(i, "Subtitle background", p.backgrounds.map { it.label to it.key }, s.subtitleBackground) { s.subtitleBackground = it } },
-            Triple("Subtitle position", with(p) { positions.of(s.subtitlePosition).label }) { i: Int ->
-                choose(i, "Subtitle position", p.positions.map { it.label to it.key }, s.subtitlePosition) { s.subtitlePosition = it } },
-            Triple("Skip back", sec(s.skipBackSeconds)) { i: Int ->
-                choose(i, "Skip back", p.skipBack.map { sec(it) to it }, s.skipBackSeconds) { s.skipBackSeconds = it } },
-            Triple("Skip forward", sec(s.skipForwardSeconds)) { i: Int ->
-                choose(i, "Skip forward", p.skipForward.map { sec(it) to it }, s.skipForwardSeconds) { s.skipForwardSeconds = it } },
+            Triple(getString(R.string.player_subtitle_size), pct(s.subtitleSize)) { i: Int ->
+                choose(i, getString(R.string.player_subtitle_size), p.sizes.map { pct(it) to it }, s.subtitleSize) { s.subtitleSize = it } },
+            Triple(getString(R.string.player_subtitle_colour), getString(with(p) { colors.of(s.subtitleColor).label })) { i: Int ->
+                choose(i, getString(R.string.player_subtitle_colour), p.colors.map { getString(it.label) to it.key }, s.subtitleColor) { s.subtitleColor = it } },
+            Triple(getString(R.string.player_subtitle_background), getString(with(p) { backgrounds.of(s.subtitleBackground).label })) { i: Int ->
+                choose(i, getString(R.string.player_subtitle_background), p.backgrounds.map { getString(it.label) to it.key }, s.subtitleBackground) { s.subtitleBackground = it } },
+            Triple(getString(R.string.player_subtitle_position), getString(with(p) { positions.of(s.subtitlePosition).label })) { i: Int ->
+                choose(i, getString(R.string.player_subtitle_position), p.positions.map { getString(it.label) to it.key }, s.subtitlePosition) { s.subtitlePosition = it } },
+            Triple(getString(R.string.player_skip_back), sec(s.skipBackSeconds)) { i: Int ->
+                choose(i, getString(R.string.player_skip_back), p.skipBack.map { sec(it) to it }, s.skipBackSeconds) { s.skipBackSeconds = it } },
+            Triple(getString(R.string.player_skip_forward), sec(s.skipForwardSeconds)) { i: Int ->
+                choose(i, getString(R.string.player_skip_forward), p.skipForward.map { sec(it) to it }, s.skipForwardSeconds) { s.skipForwardSeconds = it } },
         )
-        return Panel("Settings", lines.mapIndexed { i, (label, value, open) -> PanelOption(label, value) { open(i) } },
-            note = "Saved on this TV for all titles.", focus = focus)
+        return Panel(getString(R.string.player_settings), lines.mapIndexed { i, (label, value, open) -> PanelOption(label, value) { open(i) } },
+            note = getString(R.string.player_settings_note), focus = focus)
     }
 
     /** The choices of one setting; picking applies it at once and returns to the settings list. */
@@ -574,38 +578,38 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun openAudio() {
-        plex.panel = Panel("Audio", groups(C.TRACK_TYPE_AUDIO).map { g ->
+        plex.panel = Panel(getString(R.string.player_audio), groups(C.TRACK_TYPE_AUDIO).map { g ->
             PanelOption(label(g, 2), selected = g.isSelected) {
                 selectTrack(g); streamFor(g, 2)?.let { remember("audioStreamID", it.id) }; plex.panel = null; setControls(true)
             }
-        }.ifEmpty { listOf(PanelOption("Only one audio track") { plex.panel = null }) })
+        }.ifEmpty { listOf(PanelOption(getString(R.string.player_only_one_audio)) { plex.panel = null }) })
     }
 
     private fun openLanguages() {
         val device = Locale.getDefault().language
         val langs = (listOf(device) + listOf("de", "en", "tr")).distinct()
-        plex.panel = Panel("Search subtitles", langs.map { code ->
+        plex.panel = Panel(getString(R.string.player_search_subtitles), langs.map { code ->
             PanelOption(Locale.forLanguageTag(code).getDisplayLanguage(Locale.forLanguageTag(code)).replaceFirstChar { it.uppercase() }) {
                 search(code)
             }
-        }, note = "Language")
+        }, note = getString(R.string.player_language))
     }
 
     private fun search(lang: String) {
         val item = current ?: return
-        plex.panel = Panel("Search subtitles", note = "Searching…")
+        plex.panel = Panel(getString(R.string.player_search_subtitles), note = getString(R.string.player_searching))
         thread {
             val found = runCatching { Graph.plex.searchSubtitles(item.ratingKey, lang) }
             runOnUiThread {
-                if (plex.panel?.title != "Search subtitles") return@runOnUiThread
+                if (plex.panel?.title != getString(R.string.player_search_subtitles)) return@runOnUiThread
                 val list = found.getOrNull().orEmpty()
                 plex.panel = when {
-                    found.isFailure -> Panel("Search subtitles", note = "Search failed: ${found.exceptionOrNull()?.message}")
-                    list.isEmpty() -> Panel("Search subtitles", note = "Nothing found")
-                    else -> Panel("Search subtitles", list.map { r ->
-                        PanelOption(r.title, detail = listOfNotNull(r.language, r.provider, if (r.hearingImpaired) "Hearing impaired" else null,
-                            if (r.forced) "Forced" else null).joinToString("  ")) { download(r) }
-                    }, note = "${list.size} found, best matches first")
+                    found.isFailure -> Panel(getString(R.string.player_search_subtitles), note = getString(R.string.player_search_failed, found.exceptionOrNull()?.message.toString()))
+                    list.isEmpty() -> Panel(getString(R.string.player_search_subtitles), note = getString(R.string.player_nothing_found))
+                    else -> Panel(getString(R.string.player_search_subtitles), list.map { r ->
+                        PanelOption(r.title, detail = listOfNotNull(r.language, r.provider, if (r.hearingImpaired) getString(R.string.player_hearing_impaired) else null,
+                            if (r.forced) getString(R.string.player_forced) else null).joinToString("  ")) { download(r) }
+                    }, note = getString(R.string.player_found, list.size))
                 }
             }
         }
@@ -613,7 +617,7 @@ class PlayerActivity : ComponentActivity() {
 
     private fun download(r: com.alike.masal.data.SubtitleResult) {
         val item = current ?: return
-        plex.panel = Panel("Search subtitles", note = "Downloading…")
+        plex.panel = Panel(getString(R.string.player_search_subtitles), note = getString(R.string.player_downloading))
         val before = item.streams.filter { it.type == 3 }.map { it.id }.toSet()
         thread {
             val result = runCatching {
@@ -625,19 +629,19 @@ class PlayerActivity : ComponentActivity() {
                     val m = Graph.plex.metadata(item.ratingKey)
                     if (m.streams.any { it.type == 3 && it.id !in before }) { fresh = m; break }
                 }
-                fresh ?: error("Plex did not finish the download")
+                fresh ?: error(getString(R.string.player_download_unfinished))
             }
             runOnUiThread {
                 val fresh = result.getOrNull()
                 if (fresh == null) {
-                    plex.panel = Panel("Search subtitles", note = "Download failed: ${result.exceptionOrNull()?.message}")
+                    plex.panel = Panel(getString(R.string.player_search_subtitles), note = getString(R.string.player_download_failed, result.exceptionOrNull()?.message.toString()))
                     return@runOnUiThread
                 }
                 val added = fresh.streams.first { it.type == 3 && it.id !in before }
                 pendingSubtitle = added.id
                 remember("subtitleStreamID", added.id)
                 plex.panel = null
-                plex.message = "Subtitle added: ${added.title}"
+                plex.message = getString(R.string.player_subtitle_added, added.title)
                 // Reload with the new side-loaded track; playback continues where it was.
                 load(fresh.copy(viewOffset = player.currentPosition), player.currentPosition)
                 tracksApplied = true

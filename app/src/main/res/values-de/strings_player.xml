@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Plex player -->
+    <string name="player_playback_failed">Wiedergabe fehlgeschlagen: %1$s</string>
+    <string name="player_track">Spur</string>
+    <string name="player_off">Aus</string>
+    <string name="player_subtitles">Untertitel</string>
+    <string name="player_audio">Audio</string>
+    <string name="player_settings">Einstellungen</string>
+    <string name="player_forced">Erzwungen</string>
+    <string name="player_external">Extern</string>
+    <string name="player_hearing_impaired">Für Hörgeschädigte</string>
+    <string name="player_search_for_subtitles">Untertitel suchen…</string>
+    <string name="player_search_detail">OpenSubtitles über deinen Plex-Server</string>
+    <string name="player_search_subtitles">Untertitel suchen</string>
+    <string name="player_language">Sprache</string>
+    <string name="player_searching">Suche läuft…</string>
+    <string name="player_search_failed">Suche fehlgeschlagen: %1$s</string>
+    <string name="player_nothing_found">Nichts gefunden</string>
+    <string name="player_found">%1$d gefunden, beste Treffer zuerst</string>
+    <string name="player_downloading">Wird heruntergeladen…</string>
+    <string name="player_download_failed">Download fehlgeschlagen: %1$s</string>
+    <string name="player_download_unfinished">Plex hat den Download nicht abgeschlossen</string>
+    <string name="player_subtitle_added">Untertitel hinzugefügt: %1$s</string>
+    <string name="player_only_one_audio">Nur eine Tonspur</string>
+    <string name="player_selected">ausgewählt</string>
+    <string name="player_ends_at">Endet um %1$s</string>
+    <!-- Staffel, Folge, Episodentitel -->
+    <string name="player_episode">"S%1$d · F%2$d   %3$s"</string>
+
+    <!-- Player settings panel -->
+    <string name="player_settings_note">Auf diesem TV für alle Titel gespeichert.</string>
+    <string name="player_percent">%1$d %%</string>
+    <string name="player_seconds">%1$d s</string>
+    <string name="player_subtitle_size">Untertitelgrösse</string>
+    <string name="player_subtitle_colour">Untertitelfarbe</string>
+    <string name="player_subtitle_background">Untertitelhintergrund</string>
+    <string name="player_subtitle_position">Untertitelposition</string>
+    <string name="player_skip_back">Zurückspringen</string>
+    <string name="player_skip_forward">Vorspringen</string>
+    <string name="player_colour_white">Weiss</string>
+    <string name="player_colour_yellow">Gelb</string>
+    <string name="player_colour_grey">Hellgrau</string>
+    <string name="player_colour_cyan">Cyan</string>
+    <string name="player_background_none">Keiner (Kontur)</string>
+    <string name="player_background_half">Halbtransparente Box</string>
+    <string name="player_background_solid">Deckende Box</string>
+    <string name="player_position_low">Tief</string>
+    <string name="player_position_normal">Normal</string>
+    <string name="player_position_high">Hoch</string>
+    <string name="player_position_higher">Höher</string>
+
+    <!-- Live TV -->
+    <string name="live_badge">LIVE</string>
+    <string name="live_next">"Danach %1$s  %2$s"</string>
+    <string name="live_no_guide">Keine Programminfos für diesen Sender.</string>
+    <string name="live_no_description">Keine Beschreibung für diese Sendung.</string>
+    <string name="live_channels_hint">"%1$d Sender   ◀ ▶ Kategorie"</string>
+</resources>

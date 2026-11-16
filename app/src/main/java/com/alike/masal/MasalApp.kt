@@ -13,8 +13,13 @@ import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
 class MasalApp : Application() {
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(com.alike.masal.data.Language.wrap(base))
+    }
+
     override fun onCreate() {
         super.onCreate()
+        com.alike.masal.data.Language.init(this)
         Graph.init(this)
     }
 }

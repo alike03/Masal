@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Library tabs -->
+    <string name="browse_tab_recommended">Recommended</string>
+    <string name="browse_tab_browse">Browse</string>
+    <string name="browse_tab_collections">Collections</string>
+    <string name="browse_tab_categories">Categories</string>
+    <!-- Loading states -->
+    <string name="browse_loading">Loading</string>
+    <string name="browse_load_failed">Could not load: %1$s</string>
+    <string name="browse_nothing_recommended">Nothing to recommend yet</string>
+    <string name="browse_no_collections">No collections</string>
+    <string name="browse_no_categories">No categories</string>
+    <string name="browse_empty">Empty</string>
+    <!-- Browse tab: sorting -->
+    <string name="browse_sort">Sort</string>
+    <string name="browse_sort_title">Title</string>
+    <string name="browse_sort_year">Year</string>
+    <string name="browse_sort_released">Release date</string>
+    <string name="browse_sort_added">Date added</string>
+    <string name="browse_sort_rating">Rating</string>
+    <plurals name="browse_movies_count">
+        <item quantity="one">%d Movie</item>
+        <item quantity="other">%d Movies</item>
+    </plurals>
+    <plurals name="browse_shows_count">
+        <item quantity="one">%d Show</item>
+        <item quantity="other">%d Shows</item>
+    </plurals>
+    <plurals name="browse_titles_count">
+        <item quantity="one">%d title</item>
+        <item quantity="other">%d titles</item>
+    </plurals>
+    <!-- Detail page -->
+    <string name="browse_resume">Resume %1$s</string>
+    <string name="browse_play_episode">Play S%1$d E%2$d</string>
+    <string name="browse_play">Play</string>
+    <string name="browse_from_start">From start</string>
+    <string name="browse_trailer">Trailer</string>
+    <string name="browse_season">Season %1$d</string>
+    <string name="browse_episode_short">E%1$d</string>
+
+    <!-- Search -->
+    <string name="search_title">Search</string>
+    <string name="search_hint">Type a title or a channel.</string>
+    <string name="search_searching">Searching</string>
+    <string name="search_failed">Plex search failed: %1$s</string>
+    <string name="search_nothing_found">Nothing found for \"%1$s\".</string>
+    <string name="search_live_tv">Live TV</string>
+    <string name="search_field_focused">Press OK to type or speak</string>
+    <string name="search_field_placeholder">Movies, shows, channels</string>
+
+    <!-- TV tab -->
+    <string name="tv_last_watched">Last watched</string>
+    <string name="tv_favourites">Favourites</string>
+    <string name="tv_loading_channels">Loading channels</string>
+    <string name="tv_no_channels">No channels yet. Add an IPTV source in Settings.</string>
+    <string name="tv_preview_hint">Move to a channel to preview it</string>
+    <plurals name="tv_channels_count">
+        <item quantity="one">%d channel</item>
+        <item quantity="other">%d channels</item>
+    </plurals>
+    <string name="tv_favourite_hint">press ▶ on a channel for the favourite star</string>
+    <string name="tv_no_guide">No guide information</string>
+    <string name="tv_next">Next %1$s</string>
+    <string name="tv_remove_favourite">Remove favourite</string>
+    <string name="tv_add_favourite">Add favourite</string>
+
+    <!-- Apps page -->
+    <string name="appspage_title">Apps</string>
+    <string name="appspage_hint_moving">◀ ▶ move   OK done</string>
+    <string name="appspage_hint_editing">OK adds or removes an app on Home. OK on a Home app to move it.</string>
+    <string name="appspage_hint">OK opens   ▶❚❚ adds to Home</string>
+    <string name="appspage_done">Done</string>
+    <string name="appspage_edit">Edit Home apps</string>
+    <string name="appspage_on_home">On Home</string>
+    <string name="appspage_all_apps">All apps</string>
+</resources>

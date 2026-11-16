@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Plex player -->
+    <string name="player_playback_failed">Oynatma başarısız: %1$s</string>
+    <string name="player_track">Parça</string>
+    <string name="player_off">Kapalı</string>
+    <string name="player_subtitles">Altyazı</string>
+    <string name="player_audio">Ses</string>
+    <string name="player_settings">Ayarlar</string>
+    <string name="player_forced">Zorunlu</string>
+    <string name="player_external">Harici</string>
+    <string name="player_hearing_impaired">İşitme engelliler için</string>
+    <string name="player_search_for_subtitles">Altyazı ara…</string>
+    <string name="player_search_detail">Plex sunucun üzerinden OpenSubtitles</string>
+    <string name="player_search_subtitles">Altyazı ara</string>
+    <string name="player_language">Dil</string>
+    <string name="player_searching">Aranıyor…</string>
+    <string name="player_search_failed">Arama başarısız: %1$s</string>
+    <string name="player_nothing_found">Hiçbir şey bulunamadı</string>
+    <string name="player_found">%1$d sonuç bulundu, en iyi eşleşmeler önce</string>
+    <string name="player_downloading">İndiriliyor…</string>
+    <string name="player_download_failed">İndirme başarısız: %1$s</string>
+    <string name="player_download_unfinished">Plex indirmeyi tamamlamadı</string>
+    <string name="player_subtitle_added">Altyazı eklendi: %1$s</string>
+    <string name="player_only_one_audio">Yalnızca bir ses parçası var</string>
+    <string name="player_selected">seçili</string>
+    <string name="player_ends_at">Bitiş %1$s</string>
+    <!-- Sezon, Bölüm, bölüm adı -->
+    <string name="player_episode">"S%1$d · B%2$d   %3$s"</string>
+
+    <!-- Player settings panel -->
+    <string name="player_settings_note">Bu TV\'de tüm içerikler için kaydedilir.</string>
+    <string name="player_percent">%%%1$d</string>
+    <string name="player_seconds">%1$d sn</string>
+    <string name="player_subtitle_size">Altyazı boyutu</string>
+    <string name="player_subtitle_colour">Altyazı rengi</string>
+    <string name="player_subtitle_background">Altyazı arka planı</string>
+    <string name="player_subtitle_position">Altyazı konumu</string>
+    <string name="player_skip_back">Geri atla</string>
+    <string name="player_skip_forward">İleri atla</string>
+    <string name="player_colour_white">Beyaz</string>
+    <string name="player_colour_yellow">Sarı</string>
+    <string name="player_colour_grey">Açık gri</string>
+    <string name="player_colour_cyan">Camgöbeği</string>
+    <string name="player_background_none">Yok (kontur)</string>
+    <string name="player_background_half">Yarı saydam kutu</string>
+    <string name="player_background_solid">Dolu kutu</string>
+    <string name="player_position_low">Alçak</string>
+    <string name="player_position_normal">Normal</string>
+    <string name="player_position_high">Yüksek</string>
+    <string name="player_position_higher">Daha yüksek</string>
+
+    <!-- Live TV -->
+    <string name="live_badge">CANLI</string>
+    <string name="live_next">"Sonra %1$s  %2$s"</string>
+    <string name="live_no_guide">Bu kanal için yayın akışı bilgisi yok.</string>
+    <string name="live_no_description">Bu program için açıklama yok.</string>
+    <string name="live_channels_hint">"%1$d kanal   ◀ ▶ kategori"</string>
+</resources>

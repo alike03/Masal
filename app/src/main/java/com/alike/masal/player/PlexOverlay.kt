@@ -34,7 +34,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,6 +48,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -60,6 +60,8 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -69,6 +71,7 @@ import androidx.tv.material3.Glow
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import com.alike.masal.R
 import com.alike.masal.data.PlexItem
 import com.alike.masal.ui.Accent
 import com.alike.masal.ui.Bg
@@ -111,7 +114,8 @@ class PlexUiState {
     /** Position being scrubbed to; the player jumps there once the remote rests. */
     var seekTarget by mutableStateOf<Long?>(null)
     var panel by mutableStateOf<Panel?>(null)
-    var subtitleLabel by mutableStateOf("Off")
+    /** Blank shows "Off". */
+    var subtitleLabel by mutableStateOf("")
     var audioLabel by mutableStateOf("")
     var message by mutableStateOf<String?>(null)
     /** Bumped to move focus back into the bar (after a panel closes). */
@@ -162,6 +166,7 @@ private fun Controls(state: PlexUiState, actions: PlexActions) {
         runCatching { if (state.focusTarget == "seek") seek.requestFocus() else play.requestFocus() }
     }
     val clock = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    val context = LocalContext.current
     Box(Modifier.fillMaxSize()) {
         // Top: title artwork, episode, clock.
         Box(Modifier.fillMaxWidth().height(170.dp).background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.75f), Color.Transparent))))
@@ -169,7 +174,7 @@ private fun Controls(state: PlexUiState, actions: PlexActions) {
             if (item != null) {
                 TitleArt(item, width = 300.dp, height = 70.dp, textSize = 28)
                 if (item.type == "episode") {
-                    Text("S${item.parentIndex} · E${item.index}   ${item.episodeTitle.orEmpty()}", color = TextMain, fontSize = 15.sp,
+                    Text(stringResource(R.string.player_episode, item.parentIndex, item.index, item.episodeTitle.orEmpty()), color = TextMain, fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
                 }
             }
@@ -188,23 +193,25 @@ private fun Controls(state: PlexUiState, actions: PlexActions) {
                 Text(formatClock(pos), color = TextMain, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Spacer(Modifier.weight(1f))
                 val left = (dur - pos).coerceAtLeast(0)
-                TickingText({ "Ends at ${clock.format(Date(it + left))}" }, Modifier, color = TextDim, fontSize = 13)
+                TickingText({ context.getString(R.string.player_ends_at, clock.format(Date(it + left))) }, Modifier, color = TextDim, fontSize = 13)
                 Spacer(Modifier.width(16.dp))
                 Text("-" + formatClock(left), color = TextMain, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             }
             Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                RoundButton(PlayerIcons.Back, "${state.skipBack}", actions.touch, onClick = { actions.seekBy(-state.skipBack * 1000L) })
+                val off = stringResource(R.string.player_off)
+                val audio = stringResource(R.string.player_audio)
+                SkipButton(forward = false, state.skipBack, actions.touch) { actions.seekBy(-state.skipBack * 1000L) }
                 Spacer(Modifier.width(14.dp))
                 RoundButton(if (state.playing) PlayerIcons.Pause else Icons.Filled.PlayArrow, null, actions.touch,
                     big = true, modifier = Modifier.focusRequester(play), onClick = actions.playPause)
                 Spacer(Modifier.width(14.dp))
-                RoundButton(PlayerIcons.Forward, "${state.skipForward}", actions.touch, onClick = { actions.seekBy(state.skipForward * 1000L) })
+                SkipButton(forward = true, state.skipForward, actions.touch) { actions.seekBy(state.skipForward * 1000L) }
                 Spacer(Modifier.weight(1f))
-                PillButton(PlayerIcons.Subtitles, state.subtitleLabel, actions.touch, actions.subtitles)
+                PillButton(PlayerIcons.Subtitles, state.subtitleLabel.ifBlank { off }, actions.touch, actions.subtitles)
                 Spacer(Modifier.width(12.dp))
-                PillButton(PlayerIcons.Audio, state.audioLabel.ifBlank { "Audio" }, actions.touch, actions.audio)
+                PillButton(PlayerIcons.Audio, state.audioLabel.ifBlank { audio }, actions.touch, actions.audio)
                 Spacer(Modifier.width(12.dp))
-                PillButton(Icons.Filled.Settings, "Settings", actions.touch, actions.settings)
+                PillButton(PlayerIcons.Settings, stringResource(R.string.player_settings), actions.touch, actions.settings)
             }
         }
     }
@@ -270,6 +277,64 @@ private fun RoundButton(
     }
 }
 
+/** Skip back / forward: an open circle with an arrowhead at the top and the seconds in its centre. */
+@Composable
+private fun SkipButton(forward: Boolean, seconds: Int, touch: () -> Unit, onClick: () -> Unit) {
+    Surface(
+        onClick = { touch(); onClick() },
+        modifier = Modifier.size(48.dp).onFocusChanged { if (it.isFocused) touch() },
+        shape = ClickableSurfaceDefaults.shape(CircleShape),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = Color.White.copy(alpha = 0.1f), contentColor = TextMain,
+            focusedContainerColor = TextMain, focusedContentColor = OnAccent,
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
+        glow = ClickableSurfaceDefaults.glow(focusedGlow = Glow(Accent.copy(alpha = 0.5f), 12.dp)),
+    ) {
+        val color = androidx.tv.material3.LocalContentColor.current
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            androidx.compose.foundation.Canvas(Modifier.size(32.dp)) {
+                val stroke = 1.8.dp.toPx()
+                val r = size.minDimension / 2 - stroke
+                val c = center
+                // Mirror for forward, so both arrows point away from the play button.
+                scale(if (forward) -1f else 1f, 1f, c) {
+                    // Arc from just right of the top, clockwise round to the upper left; the gap is the arrow's way.
+                    drawArc(color, startAngle = -62f, sweepAngle = 292f, useCenter = false,
+                        topLeft = androidx.compose.ui.geometry.Offset(c.x - r, c.y - r),
+                        size = androidx.compose.ui.geometry.Size(2 * r, 2 * r),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+                    // Arrowhead at the arc's start, pointing back along the circle (anticlockwise, to the left).
+                    val a = Math.toRadians(-62.0)
+                    val tip = androidx.compose.ui.geometry.Offset((c.x + r * kotlin.math.cos(a)).toFloat(), (c.y + r * kotlin.math.sin(a)).toFloat())
+                    val head = 4.dp.toPx()
+                    val dir = androidx.compose.ui.geometry.Offset(kotlin.math.sin(a).toFloat(), -kotlin.math.cos(a).toFloat()) // anticlockwise tangent
+                    val norm = androidx.compose.ui.geometry.Offset(-dir.y, dir.x)
+                    val path = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(tip.x + dir.x * head, tip.y + dir.y * head)
+                        lineTo(tip.x - dir.x * head * 0.4f + norm.x * head, tip.y - dir.y * head * 0.4f + norm.y * head)
+                        lineTo(tip.x - dir.x * head * 0.4f - norm.x * head, tip.y - dir.y * head * 0.4f - norm.y * head)
+                        close()
+                    }
+                    drawPath(path, color)
+                }
+            }
+            // Centred exactly: no font padding, line box trimmed to the glyphs.
+            Text(
+                "$seconds",
+                style = androidx.compose.ui.text.TextStyle(
+                    color = color, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                    platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false),
+                    lineHeightStyle = androidx.compose.ui.text.style.LineHeightStyle(
+                        androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center,
+                        androidx.compose.ui.text.style.LineHeightStyle.Trim.Both,
+                    ),
+                ),
+            )
+        }
+    }
+}
+
 @Composable
 private fun PillButton(icon: ImageVector, label: String, touch: () -> Unit, onClick: () -> Unit) {
     Surface(
@@ -321,7 +386,7 @@ private fun SidePanel(panel: Panel, touch: () -> Unit) {
                 ) {
                     Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.width(26.dp)) {
-                            if (o.selected) Icon(Icons.Filled.Check, contentDescription = "selected", modifier = Modifier.size(18.dp))
+                            if (o.selected) Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.player_selected), modifier = Modifier.size(18.dp))
                         }
                         Column {
                             Text(o.label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -362,6 +427,19 @@ object PlayerIcons {
         moveTo(3f, 5f); horizontalLineTo(21f); verticalLineTo(19f); horizontalLineTo(3f); close()
         moveTo(7f, 12f); horizontalLineTo(11f); moveTo(13f, 12f); horizontalLineTo(17f)
         moveTo(7f, 15.5f); horizontalLineTo(14f)
+    }
+    /** Outline gear, same line weight as the other pill icons: eight rounded teeth and a hub. */
+    val Settings = icon("settings") {
+        val teeth = 8
+        for (i in 0 until teeth * 4) {
+            // Per tooth: outer edge (2 points), then inner valley (2 points).
+            val a = Math.toRadians(i * 360.0 / (teeth * 4) - 90.0 + 360.0 / (teeth * 8))
+            val r = if (i % 4 < 2) 9.6 else 7.2
+            val x = (12 + r * kotlin.math.cos(a)).toFloat(); val y = (12 + r * kotlin.math.sin(a)).toFloat()
+            if (i == 0) moveTo(x, y) else lineTo(x, y)
+        }
+        close()
+        moveTo(15f, 12f); arcTo(3f, 3f, 0f, true, true, 9f, 12f); arcTo(3f, 3f, 0f, true, true, 15f, 12f); close()
     }
     val Audio = icon("audio") {
         moveTo(4f, 9.5f); horizontalLineTo(8f); lineTo(13f, 5f); verticalLineTo(19f); lineTo(8f, 14.5f); horizontalLineTo(4f); close()

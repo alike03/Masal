@@ -100,9 +100,10 @@ class Settings(context: Context) {
         get() = prefs.getString("home_live_group", "") ?: ""
         set(v) = prefs.edit().putString("home_live_group", v.trim()).apply()
 
-    /** Title of that Home row. */
+    /** Title of that Home row; without an own title "Live TV" in the app's language. */
     var homeLiveTitle: String
-        get() = prefs.getString("home_live_title", "")?.ifBlank { null } ?: "Live TV"
+        get() = prefs.getString("home_live_title", "")?.ifBlank { null }
+            ?: runCatching { Language.text(com.alike.masal.R.string.common_live_tv) }.getOrDefault("Live TV")
         set(v) = prefs.edit().putString("home_live_title", v.trim()).apply()
 
     /** Home rows switched on although Plex does not show them on its Home (see [homeRowShown]). */

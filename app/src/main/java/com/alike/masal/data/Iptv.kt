@@ -1,6 +1,7 @@
 package com.alike.masal.data
 
 import android.net.Uri
+import com.alike.masal.R
 import android.util.Xml
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -239,7 +240,7 @@ class IptvRepository(private val http: OkHttpClient, private val settings: Setti
                 if (!file.exists() || now - file.lastModified() > 6 * 3600_000L) http.download(url, file)
                 Epg.open(file).use { Epg.parse(it, wanted, now - 3600_000L, now + 24 * 3600_000L) }
             }.onSuccess { result.putAll(it) }
-                .onFailure { errors += "${s.name} guide: ${it.message ?: it.javaClass.simpleName}" }
+                .onFailure { errors += Language.text(R.string.common_guide_error, s.name, it.message ?: it.javaClass.simpleName) }
         }
         return LoadResult(result, errors)
     }

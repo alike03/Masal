@@ -27,11 +27,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -41,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import com.alike.masal.Graph
+import com.alike.masal.R
 import com.alike.masal.data.Channel
 import com.alike.masal.data.PlexItem
 import com.alike.masal.data.Programme
@@ -176,16 +180,17 @@ fun releaseDate(iso: String?): String? = runCatching {
 }.getOrNull()
 
 /** "S1 • E5   27 Oct 2026   45m   [TV-14]" or "2008   2h 6m   Action, Adventure   [12]". */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun MetaLine(item: PlexItem, modifier: Modifier = Modifier) {
     val parts = buildList {
         when (item.type) {
-            "episode" -> { add("S${item.parentIndex} • E${item.index}"); releaseDate(item.released)?.let { add(it) } }
+            "episode" -> { add(stringResource(R.string.common_season_episode, item.parentIndex, item.index)); releaseDate(item.released)?.let { add(it) } }
             "season" -> add(item.subtitle)
             else -> item.year?.let { add("$it") }
         }
         if (item.duration > 0 && item.type != "show") add(formatDuration(item.duration))
-        if (item.type == "show" && item.childCount > 0) add(if (item.childCount == 1) "1 Season" else "${item.childCount} Seasons")
+        if (item.type == "show" && item.childCount > 0) add(pluralStringResource(R.plurals.common_seasons, item.childCount, item.childCount))
         if (item.type != "episode" && item.genres.isNotEmpty()) add(item.genres.take(2).joinToString(", "))
     }
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -230,7 +235,7 @@ fun HeroChannel(channel: Channel, programmes: List<Programme>?, modifier: Modifi
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.padding(top = 10.dp)) {
-            Chip("LIVE", highlight = true)
+            Chip(stringResource(R.string.common_live), highlight = true)
             Text(channel.name, color = TextMain, fontSize = 19.sp, fontWeight = FontWeight.Bold, maxLines = 1,
                 overflow = TextOverflow.Ellipsis)
         }
@@ -246,7 +251,7 @@ fun HeroChannel(channel: Channel, programmes: List<Programme>?, modifier: Modifi
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
             }
             if (next != null) {
-                Text("Next ${fmt.format(Date(next.start))}  ${next.title}", color = TextDim, fontSize = 12.sp, maxLines = 1,
+                Text(stringResource(R.string.common_next, fmt.format(Date(next.start)), next.title), color = TextDim, fontSize = 12.sp, maxLines = 1,
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
             }
         }

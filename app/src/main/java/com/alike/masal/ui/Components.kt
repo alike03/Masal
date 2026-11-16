@@ -26,12 +26,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -301,7 +304,7 @@ fun EpisodeCard(
                 }
             }
         }
-        Text("E${item.index}  ${item.episodeTitle.orEmpty()}", color = TextMain, fontSize = 12.sp, maxLines = 1,
+        Text(stringResource(R.string.common_episode_title, item.index, item.episodeTitle.orEmpty()), color = TextMain, fontSize = 12.sp, maxLines = 1,
             overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
         Text(formatDuration(item.duration), color = TextDim, fontSize = 11.sp)
     }
@@ -379,6 +382,7 @@ fun Chip(text: String, highlight: Boolean = false) {
     )
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun MetaChips(item: PlexItem) {
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -387,15 +391,17 @@ fun MetaChips(item: PlexItem) {
         if (item.type == "movie" || item.type == "episode") {
             if (item.duration > 0) Chip(formatDuration(item.duration))
         }
-        if (item.type == "show" && item.childCount > 0) Chip(if (item.childCount == 1) "1 season" else "${item.childCount} seasons")
+        if (item.type == "show" && item.childCount > 0) Chip(pluralStringResource(R.plurals.common_seasons_chip, item.childCount, item.childCount))
         item.rating?.let { Chip(String.format(java.util.Locale.US, "%.1f", it), highlight = true) }
     }
 }
 
-/** Plex style: "2h 6m", "45m". */
+/** Plex style: "2h 6m", "45m" (in the app's language). */
+@Composable
 fun formatDuration(ms: Long): String {
-    val min = ms / 60_000
-    return if (min >= 60) "${min / 60}h ${min % 60}m" else "${min}m"
+    val min = (ms / 60_000).toInt()
+    return if (min >= 60) stringResource(R.string.common_duration_hours, min / 60, min % 60)
+    else stringResource(R.string.common_duration_minutes, min)
 }
 
 fun formatClock(ms: Long): String {
@@ -470,7 +476,7 @@ fun HeroLive(channel: Channel, programmes: List<Programme>?, modifier: Modifier 
     val fmt = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
     Column(modifier.width(400.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip("LIVE", highlight = true)
+            Chip(stringResource(R.string.common_live), highlight = true)
             Text(channel.group, color = TextDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Text(channel.name, color = TextMain, fontSize = 28.sp, fontWeight = FontWeight.Bold, maxLines = 1,
@@ -487,10 +493,10 @@ fun HeroLive(channel: Channel, programmes: List<Programme>?, modifier: Modifier 
                     lineHeight = 17.sp, modifier = Modifier.padding(top = 6.dp))
             }
         } else {
-            Text("No guide information", color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+            Text(stringResource(R.string.common_no_guide), color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
         }
         if (next != null) {
-            Text("Next ${fmt.format(java.util.Date(next.start))}  ${next.title}", color = TextDim, fontSize = 12.sp,
+            Text(stringResource(R.string.common_next, fmt.format(java.util.Date(next.start)), next.title), color = TextDim, fontSize = 12.sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
         }
     }

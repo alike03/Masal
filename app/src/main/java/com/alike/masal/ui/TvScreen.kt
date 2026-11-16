@@ -28,7 +28,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import android.util.Log
 import androidx.compose.material.icons.Icons
@@ -55,15 +58,18 @@ import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.alike.masal.MasalViewModel
+import com.alike.masal.R
 import com.alike.masal.data.Channel
 import com.alike.masal.data.nowAndNext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+// Internal keys of the two own lists (saved selection, focus keys); shown through their string resources.
 private const val RECENT = "Last watched"
 private const val FAVOURITES = "Favourites"
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun TvScreen(vm: MasalViewModel, autoFocus: Boolean, onPlay: (String, List<Channel>, Int) -> Unit) {
     val channels by vm.channels.collectAsState()
@@ -71,6 +77,15 @@ fun TvScreen(vm: MasalViewModel, autoFocus: Boolean, onPlay: (String, List<Chann
     val recentKeys by vm.recentChannels.collectAsState()
     val epg by vm.epg.collectAsState()
     val loading by vm.loadingChannels.collectAsState()
+    val recentLabel = stringResource(R.string.tv_last_watched)
+    val favouritesLabel = stringResource(R.string.tv_favourites)
+    val label = { name: String? ->
+        when (name) {
+            RECENT -> recentLabel
+            FAVOURITES -> favouritesLabel
+            else -> name.orEmpty()
+        }
+    }
 
     val groups = remember(channels, favorites, recentKeys) {
         val byKey = channels.associateBy { it.key }
@@ -113,7 +128,7 @@ fun TvScreen(vm: MasalViewModel, autoFocus: Boolean, onPlay: (String, List<Chann
         Spacer(Modifier.height(NavHeight))
         if (groups.isEmpty()) {
             Text(
-                if (loading) "Loading channels" else "No channels yet. Add an IPTV source in Settings.",
+                stringResource(if (loading) R.string.tv_loading_channels else R.string.tv_no_channels),
                 color = TextDim, modifier = Modifier.padding(start = EdgePadding, top = 24.dp),
             )
             return
@@ -127,7 +142,7 @@ fun TvScreen(vm: MasalViewModel, autoFocus: Boolean, onPlay: (String, List<Chann
             ) {
                 items(groups, key = { "cat:" + it.first }) { (name, list) ->
                     CategoryItem(
-                        name = name,
+                        name = label(name),
                         count = list.size,
                         selected = name == current?.first,
                         onFocus = { selected = name },
@@ -145,7 +160,7 @@ fun TvScreen(vm: MasalViewModel, autoFocus: Boolean, onPlay: (String, List<Chann
                         if (focused != null) {
                             LivePreview(focused, Modifier.fillMaxSize())
                         } else {
-                            Text("Move to a channel to preview it", color = TextDim, fontSize = 12.sp,
+                            Text(stringResource(R.string.tv_preview_hint), color = TextDim, fontSize = 12.sp,
                                 modifier = Modifier.align(Alignment.Center))
                         }
                     }
@@ -153,8 +168,10 @@ fun TvScreen(vm: MasalViewModel, autoFocus: Boolean, onPlay: (String, List<Chann
                     focused?.let { HeroLive(it, it.epgId?.let { id -> epg[id] }, Modifier.fillMaxHeight()) }
                 }
                 Row(Modifier.padding(top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(current?.first.orEmpty(), color = TextMain, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    Text("  ${current?.second?.size ?: 0} channels   press ▶ on a channel for the favourite star", color = TextDim, fontSize = 11.sp)
+                    Text(label(current?.first), color = TextMain, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    val count = current?.second?.size ?: 0
+                    Text("  " + pluralStringResource(R.plurals.tv_channels_count, count, count) + "   " + stringResource(R.string.tv_favourite_hint),
+                        color = TextDim, fontSize = 11.sp)
                 }
                 val list = current?.second.orEmpty()
                 LazyColumn(
@@ -179,7 +196,7 @@ fun TvScreen(vm: MasalViewModel, autoFocus: Boolean, onPlay: (String, List<Chann
                             epgList = ch.epgId?.let { epg[it] },
                             favorite = ch.key in favorites,
                             onFocus = { focused = ch },
-                            onClick = { onPlay(current?.first.orEmpty(), list, i) },
+                            onClick = { onPlay(label(current?.first), list, i) },
                             onLongClick = { vm.toggleFavorite(ch) },
                             modifier = focus.modifier("ch:${ch.key}"),
                         )
@@ -252,14 +269,14 @@ private fun ChannelRow(
                             overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                         if (favorite) Box(Modifier.padding(start = 6.dp).size(6.dp).background(Accent, RoundedCornerShape(3.dp)))
                     }
-                    Text(now?.title ?: "No guide information", color = TextDim, fontSize = 11.sp, maxLines = 1,
+                    Text(now?.title ?: stringResource(R.string.tv_no_guide), color = TextDim, fontSize = 11.sp, maxLines = 1,
                         overflow = TextOverflow.Ellipsis)
                 }
                 if (now != null) {
                     Column(Modifier.width(150.dp), horizontalAlignment = Alignment.End) {
                         Text("${fmt.format(Date(now.start))}–${fmt.format(Date(now.stop))}", color = TextDim, fontSize = 11.sp)
                         ProgrammeBar(now, Modifier.padding(top = 4.dp).fillMaxWidth().clip(RoundedCornerShape(2.dp)), track = Line)
-                        if (next != null) Text("Next ${next.title}", color = TextDim, fontSize = 10.sp, maxLines = 1,
+                        if (next != null) Text(stringResource(R.string.tv_next, next.title), color = TextDim, fontSize = 10.sp, maxLines = 1,
                             overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
                     }
                 }
@@ -285,7 +302,7 @@ private fun FavouriteButton(favorite: Boolean, onToggle: () -> Unit) {
         glow = ClickableSurfaceDefaults.glow(focusedGlow = androidx.tv.material3.Glow(Accent.copy(alpha = 0.5f), 10.dp)),
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            androidx.tv.material3.Icon(Icons.Filled.Star, contentDescription = if (favorite) "Remove favourite" else "Add favourite",
+            androidx.tv.material3.Icon(Icons.Filled.Star, contentDescription = stringResource(if (favorite) R.string.tv_remove_favourite else R.string.tv_add_favourite),
                 modifier = Modifier.size(18.dp))
         }
     }

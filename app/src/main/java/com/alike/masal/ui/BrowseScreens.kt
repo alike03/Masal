@@ -42,6 +42,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.clip
@@ -54,6 +55,8 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -64,6 +67,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.alike.masal.Graph
 import com.alike.masal.MasalViewModel
+import com.alike.masal.R
 import com.alike.masal.data.PlexHub
 import com.alike.masal.data.PlexItem
 import com.alike.masal.data.PlexSection
@@ -74,8 +78,12 @@ import kotlinx.coroutines.withContext
 import java.text.Collator
 import java.text.Normalizer
 import java.util.Locale
+import androidx.annotation.StringRes
 
-enum class LibTab(val title: String) { Recommended("Recommended"), Browse("Browse"), Collections("Collections"), Categories("Categories") }
+enum class LibTab(@StringRes val title: Int) {
+    Recommended(R.string.browse_tab_recommended), Browse(R.string.browse_tab_browse),
+    Collections(R.string.browse_tab_collections), Categories(R.string.browse_tab_categories),
+}
 
 /** A Plex library like in Plex: Recommended rows, Browse (sortable, A–Z), Collections, Categories. */
 @Composable
@@ -119,7 +127,7 @@ fun LibraryScreen(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             LibTab.entries.forEach { t ->
-                TabPill(t.title, t == pending, onFocus = { pending = t })
+                TabPill(stringResource(t.title), t == pending, onFocus = { pending = t })
             }
         }
     }
@@ -193,9 +201,9 @@ private fun RecommendedTab(
             if (h != null) HeroPlex(h, logoHeight = 60.dp)
             else Text(
                 when {
-                    state == null -> "Loading"
-                    state?.isFailure == true -> "Could not load: ${state?.exceptionOrNull()?.message}"
-                    else -> "Nothing to recommend yet"
+                    state == null -> stringResource(R.string.browse_loading)
+                    state?.isFailure == true -> stringResource(R.string.browse_load_failed, state?.exceptionOrNull()?.message.orEmpty())
+                    else -> stringResource(R.string.browse_nothing_recommended)
                 },
                 color = TextDim, fontSize = 14.sp, modifier = Modifier.padding(top = 40.dp),
             )
@@ -208,8 +216,9 @@ private val LibTabsHeight = 58.dp
 
 // ---- Browse ----
 
-enum class SortBy(val label: String, val defaultDesc: Boolean) {
-    Title("Title", false), Year("Year", true), Released("Release date", true), Added("Date added", true), Rating("Rating", true)
+enum class SortBy(@StringRes val label: Int, val defaultDesc: Boolean) {
+    Title(R.string.browse_sort_title, false), Year(R.string.browse_sort_year, true), Released(R.string.browse_sort_released, true),
+    Added(R.string.browse_sort_added, true), Rating(R.string.browse_sort_rating, true)
 }
 
 private val collator: Collator = Collator.getInstance(Locale.ROOT).apply { strength = Collator.PRIMARY }
@@ -220,6 +229,7 @@ fun indexLetter(title: String): Char {
     return if (c in 'A'..'Z') c else '#'
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun BrowseTab(vm: MasalViewModel, section: PlexSection, autoFocus: Boolean, onItem: (PlexItem) -> Unit) {
     val state by produceState<Result<List<PlexItem>>?>(null, section.key) {
@@ -271,11 +281,12 @@ private fun BrowseTab(vm: MasalViewModel, section: PlexSection, autoFocus: Boole
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text("Sort", color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(end = 4.dp))
+            Text(stringResource(R.string.browse_sort), color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(end = 4.dp))
             SortBy.entries.forEach { s ->
                 val active = s == sort
+                val label = stringResource(s.label)
                 TabPill(
-                    if (active) s.label + if (desc) "  ↓" else "  ↑" else s.label, active, onFocus = {},
+                    if (active) label + if (desc) "  ↓" else "  ↑" else label, active, onFocus = {},
                     onClick = {
                         if (active) desc = !desc else { sort = s; desc = s.defaultDesc }
                         scope.launch { grid.scrollToItem(0) }
@@ -284,9 +295,11 @@ private fun BrowseTab(vm: MasalViewModel, section: PlexSection, autoFocus: Boole
             }
             Text(
                 when {
-                    state == null -> "Loading"
-                    state?.isFailure == true -> "Could not load: ${state?.exceptionOrNull()?.message}"
-                    else -> "${items.size} " + if (section.type == "movie") "Movies" else "Shows"
+                    state == null -> stringResource(R.string.browse_loading)
+                    state?.isFailure == true -> stringResource(R.string.browse_load_failed, state?.exceptionOrNull()?.message.orEmpty())
+                    else -> pluralStringResource(
+                        if (section.type == "movie") R.plurals.browse_movies_count else R.plurals.browse_shows_count, items.size, items.size,
+                    )
                 },
                 color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(start = 10.dp),
             )
@@ -350,14 +363,15 @@ private fun LetterKey(letter: Char, active: Boolean, onFocus: () -> Unit, onClic
 
 // ---- Collections and categories ----
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun CollectionsTab(vm: MasalViewModel, section: PlexSection, autoFocus: Boolean, onCollection: (PlexItem) -> Unit) {
     val state by produceState<Result<List<PlexItem>>?>(null, section.key) {
         value = withContext(Dispatchers.IO) { runCatching { vm.collections(section.key) } }
     }
-    val unit = if (section.type == "movie") "Movies" else "Shows"
-    val items = state?.getOrNull().orEmpty().map { it.copy(subtitle = "${it.childCount} $unit") }
-    ItemsGrid(items, state, autoFocus, "collections:" + section.key, top = 66.dp, empty = "No collections", onItem = onCollection)
+    val unit = if (section.type == "movie") R.plurals.browse_movies_count else R.plurals.browse_shows_count
+    val items = state?.getOrNull().orEmpty().map { it.copy(subtitle = pluralStringResource(unit, it.childCount, it.childCount)) }
+    ItemsGrid(items, state, autoFocus, "collections:" + section.key, top = 66.dp, empty = stringResource(R.string.browse_no_collections), onItem = onCollection)
 }
 
 @Composable
@@ -384,7 +398,7 @@ private fun CategoriesTab(vm: MasalViewModel, section: PlexSection, autoFocus: B
     ReportAmbient(Ambient("categories:" + section.key, null))
     Box(Modifier.fillMaxSize()) {
         if (genres.isEmpty()) {
-            Text(if (state == null) "Loading" else "No categories", color = TextDim, fontSize = 14.sp,
+            Text(stringResource(if (state == null) R.string.browse_loading else R.string.browse_no_categories), color = TextDim, fontSize = 14.sp,
                 modifier = Modifier.padding(start = EdgePadding, top = 76.dp))
         }
         LazyVerticalGrid(
@@ -425,8 +439,8 @@ fun ItemsGrid(
         if (items.isEmpty()) {
             Text(
                 when {
-                    state == null -> "Loading"
-                    state.isFailure -> "Could not load: ${state.exceptionOrNull()?.message}"
+                    state == null -> stringResource(R.string.browse_loading)
+                    state.isFailure -> stringResource(R.string.browse_load_failed, state.exceptionOrNull()?.message.orEmpty())
                     else -> empty
                 },
                 color = TextDim, fontSize = 14.sp, modifier = Modifier.padding(start = EdgePadding, top = top + 10.dp),
@@ -454,16 +468,17 @@ fun ItemsGrid(
 }
 
 /** A collection or a category opened from a library: header and all its titles. */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ListPage(title: String, subtitle: String?, autoFocus: Boolean, load: suspend () -> List<PlexItem>, onItem: (PlexItem) -> Unit) {
     val state by produceState<Result<List<PlexItem>>?>(null, title) {
         value = withContext(Dispatchers.IO) { runCatching { load() } }
     }
     val items = state?.getOrNull().orEmpty()
-    ItemsGrid(items, state, autoFocus, "list:$title", top = 0.dp, empty = "Empty", onItem = onItem, header = {
+    ItemsGrid(items, state, autoFocus, "list:$title", top = 0.dp, empty = stringResource(R.string.browse_empty), onItem = onItem, header = {
         Column(Modifier.padding(top = 30.dp, bottom = 8.dp)) {
             Text(title, color = TextMain, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-            val count = if (items.isNotEmpty()) "${items.size} titles" else null
+            val count = if (items.isNotEmpty()) pluralStringResource(R.plurals.browse_titles_count, items.size, items.size) else null
             listOfNotNull(subtitle, count).joinToString("   ").takeIf { it.isNotBlank() }?.let {
                 Text(it, color = TextDim, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 4.dp).width(600.dp))
@@ -513,8 +528,8 @@ fun DetailScreen(ratingKey: String, initialSeason: String?, autoFocus: Boolean, 
     Box(Modifier.fillMaxSize()) {
         val m = meta
         when {
-            m == null -> Text("Loading", color = TextDim, modifier = Modifier.align(Alignment.Center))
-            m.isFailure || item == null -> Text("Could not load: ${m.exceptionOrNull()?.message}", color = Accent,
+            m == null -> Text(stringResource(R.string.browse_loading), color = TextDim, modifier = Modifier.align(Alignment.Center))
+            m.isFailure || item == null -> Text(stringResource(R.string.browse_load_failed, m.exceptionOrNull()?.message.orEmpty()), color = Accent,
                 modifier = Modifier.align(Alignment.Center))
             else -> LazyColumn(
                 state = rememberLazyListState(),
@@ -531,7 +546,7 @@ fun DetailScreen(ratingKey: String, initialSeason: String?, autoFocus: Boolean, 
                         }
                         MetaLine(item, Modifier.padding(top = 8.dp))
                         val ep = focusedEpisode
-                        val text = if (ep != null) "E${ep.index}  ${ep.episodeTitle.orEmpty()}\n${ep.summary.orEmpty()}" else item.summary
+                        val text = if (ep != null) stringResource(R.string.browse_episode_short, ep.index) + "  ${ep.episodeTitle.orEmpty()}\n${ep.summary.orEmpty()}" else item.summary
                         text?.let {
                             Text(it, color = TextMain.copy(alpha = 0.9f), fontSize = 14.sp, lineHeight = 19.sp, maxLines = 4,
                                 overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 10.dp))
@@ -544,17 +559,17 @@ fun DetailScreen(ratingKey: String, initialSeason: String?, autoFocus: Boolean, 
                             val target = playTarget
                             if (target != null && target.playable) {
                                 val label = when {
-                                    target.viewOffset > 0 -> "Resume ${formatClock(target.viewOffset)}"
-                                    isShow -> "Play S${target.parentIndex} E${target.index}"
-                                    else -> "Play"
+                                    target.viewOffset > 0 -> stringResource(R.string.browse_resume, formatClock(target.viewOffset))
+                                    isShow -> stringResource(R.string.browse_play_episode, target.parentIndex, target.index)
+                                    else -> stringResource(R.string.browse_play)
                                 }
                                 MasalButton(label, { onPlay(target, false) }, focus.modifier("play"), Icons.Filled.PlayArrow)
                                 if (target.viewOffset > 0) {
-                                    MasalButton("From start", { onPlay(target, true) }, icon = Icons.Filled.Refresh, primary = false)
+                                    MasalButton(stringResource(R.string.browse_from_start), { onPlay(target, true) }, icon = Icons.Filled.Refresh, primary = false)
                                 }
                             }
                             trailer?.let { t ->
-                                MasalButton("Trailer", { onPlay(t, true) }, icon = Icons.Filled.Info, primary = false)
+                                MasalButton(stringResource(R.string.browse_trailer), { onPlay(t, true) }, icon = Icons.Filled.Info, primary = false)
                             }
                         }
                     }
@@ -566,7 +581,7 @@ fun DetailScreen(ratingKey: String, initialSeason: String?, autoFocus: Boolean, 
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             items(seasons, key = { "s:" + it.ratingKey }) { s ->
-                                SeasonTab(s.subtitle.ifBlank { "Season ${s.index}" }, s.ratingKey == activeSeason?.ratingKey,
+                                SeasonTab(s.subtitle.ifBlank { stringResource(R.string.browse_season, s.index) }, s.ratingKey == activeSeason?.ratingKey,
                                     { seasonKey = s.ratingKey }, focus.modifier("s:${s.ratingKey}"))
                             }
                         }

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Side menu -->
+    <string name="common_search">Ara</string>
+    <string name="common_home">Ana Sayfa</string>
+    <string name="common_tv">TV</string>
+    <string name="common_apps">Uygulamalar</string>
+    <string name="common_settings">Ayarlar</string>
+
+    <!-- Shared words -->
+    <string name="common_edit">Düzenle</string>
+    <string name="common_collection">Koleksiyon</string>
+    <string name="common_category">Kategori</string>
+    <string name="common_last_watched">Son izlenenler</string>
+    <string name="common_favourites">Favoriler</string>
+    <string name="common_no_playable_file">Bu içeriğin oynatılabilir dosyası yok.</string>
+    <string name="common_live">CANLI</string>
+    <string name="common_next">Sonra %1$s  %2$s</string>
+    <string name="common_no_guide">Yayın akışı bilgisi yok</string>
+    <string name="common_tuning_in">Kanal açılıyor</string>
+    <string name="common_preview_unavailable">Önizleme kullanılamıyor</string>
+    <string name="common_guide_error">%1$s yayın akışı: %2$s</string>
+
+    <!-- Episodes, seasons, durations -->
+    <string name="common_season_episode">S%1$d • B%2$d</string>
+    <string name="common_episode_subtitle">S%1$d B%2$d  %3$s</string>
+    <string name="common_episode_title">B%1$d  %2$s</string>
+    <string name="common_duration_hours">%1$d sa %2$d dk</string>
+    <string name="common_duration_minutes">%1$d dk</string>
+    <plurals name="common_seasons">
+        <item quantity="one">%d Sezon</item>
+        <item quantity="other">%d Sezon</item>
+    </plurals>
+    <plurals name="common_seasons_chip">
+        <item quantity="one">%d sezon</item>
+        <item quantity="other">%d sezon</item>
+    </plurals>
+
+    <!-- Home -->
+    <string name="home_get_started">Başlayalım</string>
+    <string name="home_setup_title">Masal\'ı kur</string>
+    <string name="home_setup_text">IPTV ve Plex\'i telefonunla ekle</string>
+    <string name="home_apps_moving">Uygulamalar   ◀ ▶ taşı, OK bitti</string>
+    <string name="home_choose_apps">Ana Sayfa için uygulama seç</string>
+    <string name="home_continue_watching">İzlemeye devam et</string>
+    <string name="home_recently_added">Son eklenenler</string>
+
+    <!-- Apps -->
+    <string name="apps_android_settings">Android ayarları</string>
+    <!-- Default title of the live TV row on Home -->
+    <string name="common_live_tv">Canlı TV</string>
+</resources>

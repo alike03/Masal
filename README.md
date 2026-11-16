@@ -10,14 +10,15 @@ Masal runs as a normal app next to the system launcher, or as the device's home 
 
 ## Features
 
-- **Home**: your pinned apps, Continue Watching, one live TV row of a channel category you choose, and Plex's own Home rows (Recently Added, collections).
+- **Home**: your pinned apps, Continue Watching, one live TV row of a channel category you choose, and the Plex rows and collections you pick in Settings.
 - **Movies and TV Shows**: per Plex library the tabs Recommended, Browse (sort, A–Z jump bar), Collections and Categories, plus detail pages with seasons and episodes.
 - **Search** across all Plex libraries and the IPTV channel names, with the TV keyboard and voice input.
-- **Live TV** from Xtream logins or M3U playlists with an XMLTV guide; channel switching with all four arrow keys.
-- **Plex player** with Plex-style controls, "Ends at" time, subtitle and audio selection, and online subtitle search through your Plex server; choices are saved to Plex.
+- **Live TV** from Xtream logins or M3U playlists with an XMLTV guide; channel switching with all four arrow keys. On Home a channel plays in the picture frame and zooms to full screen without reconnecting.
+- **Plex player** with Plex-style controls, "Ends at" time, subtitle and audio selection, and online subtitle search through your Plex server; choices are saved to Plex. Subtitle look and skip lengths are adjustable.
 - **Trailers** play in the background after resting on a title, when Plex has one.
 - **Apps page** to pin and order the apps shown on Home.
 - **Setup from the phone**: a QR code on the TV opens a setup page in the phone's browser for Plex and IPTV logins. Logins stay on the TV.
+- **English, German and Turkish**, or the TV's own language.
 
 ## Screenshots
 

@@ -48,6 +48,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -57,6 +58,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import com.alike.masal.Graph
 import com.alike.masal.MasalViewModel
+import com.alike.masal.R
 import com.alike.masal.data.Channel
 import com.alike.masal.data.PlexHub
 import com.alike.masal.data.PlexItem
@@ -131,7 +133,7 @@ fun SearchScreen(
     }
 
     Column(Modifier.fillMaxSize().padding(top = 26.dp)) {
-        Text("Search", color = TextMain, fontSize = 30.sp, fontWeight = FontWeight.Bold,
+        Text(stringResource(R.string.search_title), color = TextMain, fontSize = 30.sp, fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = EdgePadding))
         SearchField(
             query, { query = it },
@@ -140,11 +142,11 @@ fun SearchScreen(
         )
 
         val status = when {
-            q.length < 2 -> "Type a title or a channel."
-            !plexDone && hubs.isEmpty() && channelHits.isEmpty() -> "Searching"
+            q.length < 2 -> stringResource(R.string.search_hint)
+            !plexDone && hubs.isEmpty() && channelHits.isEmpty() -> stringResource(R.string.search_searching)
             plex?.isFailure == true && plexQuery == q && channelHits.isEmpty() ->
-                "Plex search failed: ${plex?.exceptionOrNull()?.message}"
-            plexDone && hubs.isEmpty() && channelHits.isEmpty() -> "Nothing found for \"$q\"."
+                stringResource(R.string.search_failed, plex?.exceptionOrNull()?.message.orEmpty())
+            plexDone && hubs.isEmpty() && channelHits.isEmpty() -> stringResource(R.string.search_nothing_found, q)
             else -> null
         }
         if (status != null) {
@@ -172,13 +174,15 @@ fun SearchScreen(
                 }
             }
             if (channelHits.isNotEmpty()) item(key = "channels") {
-                PosterRow("Live TV") {
+                // Name of this list in the live player's channel list.
+                val listName = stringResource(R.string.search_title)
+                PosterRow(stringResource(R.string.search_live_tv)) {
                     itemsIndexed(channelHits, key = { i, c -> "ch:$i|${c.key}" }) { i, ch ->
                         ChannelCard(
                             channel = ch,
                             now = ch.epgId?.let { epg[it] }?.nowAndNext()?.first,
                             favorite = ch.key in favorites,
-                            onClick = { onPlayChannel("Search", channelHits, i) },
+                            onClick = { onPlayChannel(listName, channelHits, i) },
                             onLongClick = { vm.toggleFavorite(ch) },
                             onFocus = { focused = ch },
                             cardModifier = focus.modifier("ch:${ch.key}")
@@ -239,7 +243,7 @@ private fun SearchField(value: String, onChange: (String) -> Unit, onSearch: () 
                 Icon(Icons.Outlined.Search, null, tint = if (hasFocus) Accent else TextDim, modifier = Modifier.size(22.dp))
                 Box(Modifier.padding(start = 12.dp).fillMaxWidth()) {
                     if (value.isEmpty()) {
-                        Text(if (hasFocus) "Press OK to type or speak" else "Movies, shows, channels", color = TextDim, fontSize = 16.sp)
+                        Text(stringResource(if (hasFocus) R.string.search_field_focused else R.string.search_field_placeholder), color = TextDim, fontSize = 16.sp)
                     }
                     inner()
                 }

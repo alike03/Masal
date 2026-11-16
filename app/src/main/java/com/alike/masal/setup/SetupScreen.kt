@@ -1,5 +1,8 @@
 package com.alike.masal.setup
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -50,6 +53,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -65,8 +69,10 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.alike.masal.Graph
 import com.alike.masal.MasalViewModel
+import com.alike.masal.R
 import com.alike.masal.data.Apps
 import com.alike.masal.data.HomeRowOption
+import com.alike.masal.data.Language
 import com.alike.masal.ui.Accent
 import com.alike.masal.ui.EdgePadding
 import com.alike.masal.ui.LocalEntryFocus
@@ -81,7 +87,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-private enum class SettingsPage { Main, Category, Title }
+private enum class SettingsPage { Main, Language, Category, Title }
 
 /**
  * Settings on the TV: the QR code for the phone page (logins, sources, Plex server) on the left,
@@ -99,6 +105,12 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
     val qr = remember(url) { SetupServer.qr(url, 420).asImageBitmap() }
     var serverError by remember { mutableStateOf<String?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
+    // A language picked on the phone page is only stored; the TV follows when Settings opens again.
+    LaunchedEffect(running) {
+        if (running && SetupServer.texts(context).getString(R.string.setup_lang_code) != context.getString(R.string.setup_lang_code)) {
+            context.findActivity()?.recreate()
+        }
+    }
 
     DisposableEffect(key, running) {
         if (!running) return@DisposableEffect onDispose { }
@@ -110,46 +122,47 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
             res(com.alike.masal.R.font.fraunces)?.let { "fraunces.ttf" to ("font/ttf" to it) },
         ).toMap()
         val server = SetupServer(
-            Graph.settings, key, { Graph.settings.changed() }, assets,
+            context, Graph.settings, key, { Graph.settings.changed() }, assets,
             channelGroups = { channelGroups(vm) },
             homeRows = { vm.homeRowOptions.value },
         )
         runCatching { server.start(NanoHTTPD.SOCKET_READ_TIMEOUT, true) }
-            .onFailure { serverError = "Setup page could not start: ${it.message}" }
+            .onFailure { serverError = context.getString(R.string.settings_server_error, it.message.toString()) }
         onDispose { server.stop() }
     }
 
     // Plex link code: the user enters it at plex.tv/link, no token copying needed.
     var plexStatus by remember {
-        mutableStateOf(if (Graph.plex.configured) "Plex is connected." else "Requesting a Plex link code")
+        mutableStateOf(context.getString(if (Graph.plex.configured) R.string.settings_plex_connected else R.string.settings_plex_requesting))
     }
     var plexCode by remember { mutableStateOf<String?>(null) }
     var linkRequest by remember { mutableStateOf(if (Graph.plex.configured) 0 else 1) }
     LaunchedEffect(linkRequest, running) {
         if (linkRequest == 0 || !running) return@LaunchedEffect
-        plexStatus = "Requesting a Plex link code"
+        plexStatus = context.getString(R.string.settings_plex_requesting)
         withContext(Dispatchers.IO) {
             val pin = runCatching { Graph.plex.createPin() }.getOrElse {
-                plexStatus = "plex.tv not reachable: ${it.message}"; return@withContext
+                plexStatus = context.getString(R.string.settings_plex_unreachable, it.message.toString()); return@withContext
             }
             plexCode = pin.code
-            plexStatus = "Waiting for the code to be entered."
+            plexStatus = context.getString(R.string.settings_plex_waiting)
             val until = System.currentTimeMillis() + 15 * 60_000
             while (System.currentTimeMillis() < until) {
                 delay(2_000)
                 val token = runCatching { Graph.plex.checkPin(pin) }.getOrNull() ?: continue
-                plexStatus = "Linked. Looking for your server"
+                plexStatus = context.getString(R.string.settings_plex_searching)
                 Graph.settings.plexToken = token // keep the link even if the server lookup fails
                 val server = if (Graph.settings.plexUrl.isBlank()) runCatching { Graph.plex.findServerUrl(token) }.getOrNull()
                     else Graph.settings.plexUrl
                 if (server != null) Graph.settings.plexUrl = server
                 Graph.settings.changed()
                 plexCode = null
-                plexStatus = if (server != null) "Plex is connected ($server)." else "Linked, but no server found. Enter the server URL on the setup page."
+                plexStatus = if (server != null) context.getString(R.string.settings_plex_connected_server, server)
+                    else context.getString(R.string.settings_plex_no_server)
                 return@withContext
             }
             plexCode = null
-            plexStatus = "The link code expired. Open Settings again for a new one."
+            plexStatus = context.getString(R.string.settings_plex_expired)
         }
     }
 
@@ -167,6 +180,7 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
     var back by remember { mutableStateOf<FocusRequester?>(null) }
     val categoryRow = remember { FocusRequester() }
     val titleRow = remember { FocusRequester() }
+    val languageRow = remember { FocusRequester() }
     val list = rememberLazyListState()
 
     val done = remember { FocusRequester() }
@@ -183,11 +197,11 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
     ) {
         Column(Modifier.width(240.dp)) {
             Box(Modifier.size(220.dp).background(Color.White, RoundedCornerShape(8.dp)).padding(10.dp)) {
-                Image(qr, contentDescription = "QR code for the setup page", modifier = Modifier.fillMaxSize())
+                Image(qr, contentDescription = stringResource(R.string.settings_qr_description), modifier = Modifier.fillMaxSize())
             }
             Text(url, color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
             Text(
-                "Logins, live TV sources and the Plex server: scan the code with your phone (same network).",
+                stringResource(R.string.settings_qr_hint),
                 color = TextDim, fontSize = 14.sp, modifier = Modifier.padding(top = 12.dp),
             )
             serverError?.let { Text(it, color = Accent, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
@@ -209,10 +223,11 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                         runCatching { r.requestFocus() }
                     }
                     MainList(
-                        list, done, categoryRow, titleRow,
+                        list, done, categoryRow, titleRow, languageRow,
                         plexCode, plexStatus, onLink = { linkRequest++ },
                         onAndroidSettings = { Apps.openSystemSettings(context) },
                         liveGroup = liveGroup, liveTitle = liveTitle,
+                        onLanguage = { back = languageRow; page = SettingsPage.Language },
                         onCategory = { back = categoryRow; page = SettingsPage.Category },
                         onTitle = { back = titleRow; page = SettingsPage.Title },
                         options = options,
@@ -223,14 +238,27 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                         sourceNames = sources.map { it.name },
                     )
                 }
+                SettingsPage.Language -> {
+                    val device = stringResource(R.string.language_device)
+                    val choices = Language.choices.map { (code, name) -> code to (name ?: device) }
+                    val current = Language.stored(context)
+                    ChoiceList(
+                        stringResource(R.string.language_title), stringResource(R.string.language_note),
+                        choices, selected = choices.indexOfFirst { it.first == current },
+                    ) { code ->
+                        page = SettingsPage.Main
+                        // Redraws the activity in the new language; an unchanged choice just returns.
+                        context.findActivity()?.let { Language.set(it, code) }
+                    }
+                }
                 SettingsPage.Category -> {
                     val savedNorm = MasalViewModel.normGroup(liveGroup)
-                    val choices = listOf("" to "None (row hidden)") +
+                    val choices = listOf("" to stringResource(R.string.settings_category_none)) +
                         (if (liveGroup.isNotBlank() && groups.none { MasalViewModel.normGroup(it) == savedNorm })
-                            listOf(liveGroup to "$liveGroup (not in the loaded channels)") else emptyList()) +
+                            listOf(liveGroup to stringResource(R.string.settings_category_missing, liveGroup)) else emptyList()) +
                         groups.map { it to it }
                     ChoiceList(
-                        "Channel category", "The live TV row on Home shows the channels of this category.",
+                        stringResource(R.string.settings_channel_category), stringResource(R.string.settings_category_note),
                         choices,
                         selected = choices.indexOfFirst { (g, _) -> if (g.isBlank()) liveGroup.isBlank() else liveGroup.isNotBlank() && MasalViewModel.normGroup(g) == savedNorm },
                     ) { g ->
@@ -249,6 +277,13 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
     }
 }
 
+/** The activity behind a (possibly wrapped) context. */
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
 /** Channel categories of the loaded sources, in provider order. */
 private fun channelGroups(vm: MasalViewModel) = vm.channels.value.map { it.group }.filter { it.isNotBlank() }.distinct()
 
@@ -258,12 +293,14 @@ private fun MainList(
     first: FocusRequester,
     categoryRow: FocusRequester,
     titleRow: FocusRequester,
+    languageRow: FocusRequester,
     plexCode: String?,
     plexStatus: String,
     onLink: () -> Unit,
     onAndroidSettings: () -> Unit,
     liveGroup: String,
     liveTitle: String,
+    onLanguage: () -> Unit,
     onCategory: () -> Unit,
     onTitle: () -> Unit,
     options: List<HomeRowOption>,
@@ -271,38 +308,46 @@ private fun MainList(
     sourceNames: List<String>,
 ) {
     val homeVersion by Graph.settings.homeVersion.collectAsState() // check marks follow every change
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val language = Language.stored(context).let { code ->
+        Language.choices.firstOrNull { it.first == code }?.second ?: stringResource(R.string.language_device)
+    }
+    val categoryNone = stringResource(R.string.settings_category_none)
     LazyColumn(
         state = list,
         modifier = Modifier.widthIn(max = 640.dp),
         contentPadding = PaddingValues(bottom = 48.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        item { Text("Settings", color = TextMain, fontSize = 26.sp, fontWeight = FontWeight.Bold) }
+        item { Text(stringResource(R.string.settings_title), color = TextMain, fontSize = 26.sp, fontWeight = FontWeight.Bold) }
 
         item { Heading("Plex") }
         item {
             Column {
                 plexCode?.let { code ->
-                    Text("Open plex.tv/link and enter", color = TextDim, fontSize = 16.sp)
+                    Text(stringResource(R.string.settings_plex_open_link), color = TextDim, fontSize = 16.sp)
                     Text(code, color = Accent, fontSize = 40.sp, fontWeight = FontWeight.Bold, letterSpacing = 6.sp)
                 }
                 Text(plexStatus, color = TextDim, fontSize = 15.sp)
                 Row(Modifier.padding(top = 12.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    MasalButton(if (Graph.plex.configured) "Link Plex again" else "New Plex code", onLink,
+                    MasalButton(stringResource(if (Graph.plex.configured) R.string.settings_plex_link_again else R.string.settings_plex_new_code), onLink,
                         Modifier.focusRequester(first), Icons.Filled.Refresh)
                     // Network, display, apps: reachable from here when Masal replaces the stock home screen.
-                    MasalButton(Apps.SettingsLabel, onAndroidSettings, icon = Icons.Filled.Settings, primary = false)
+                    MasalButton(stringResource(R.string.settings_android_settings), onAndroidSettings, icon = Icons.Filled.Settings, primary = false)
                 }
             }
         }
 
-        item { Heading("Live TV row on Home") }
-        item { SettingRow("Channel category", liveGroup.ifBlank { "None (row hidden)" }, onCategory, Modifier.focusRequester(categoryRow)) }
-        item { SettingRow("Row title", liveTitle, onTitle, Modifier.focusRequester(titleRow)) }
+        item { Heading(stringResource(R.string.language_title)) }
+        item { SettingRow(stringResource(R.string.language_title), language, onLanguage, Modifier.focusRequester(languageRow)) }
 
-        item { Heading("Home rows") }
+        item { Heading(stringResource(R.string.settings_live_row_heading)) }
+        item { SettingRow(stringResource(R.string.settings_channel_category), liveGroup.ifBlank { categoryNone }, onCategory, Modifier.focusRequester(categoryRow)) }
+        item { SettingRow(stringResource(R.string.settings_row_title), liveTitle, onTitle, Modifier.focusRequester(titleRow)) }
+
+        item { Heading(stringResource(R.string.settings_home_rows)) }
         if (options.isEmpty()) {
-            item { Text("Connect Plex first; its rows and collections appear here once loaded.", color = TextDim, fontSize = 15.sp) }
+            item { Text(stringResource(R.string.settings_home_rows_empty), color = TextDim, fontSize = 15.sp) }
         }
         options.groupBy { it.group }.forEach { (group, rows) ->
             item(key = "group:$group") { Text(group, color = TextDim, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)) }
@@ -312,12 +357,12 @@ private fun MainList(
             }
         }
 
-        item { Heading("Live TV sources") }
+        item { Heading(stringResource(R.string.settings_sources_heading)) }
         item {
             Column {
-                if (sourceNames.isEmpty()) Text("None yet", color = TextDim, fontSize = 15.sp)
+                if (sourceNames.isEmpty()) Text(stringResource(R.string.settings_sources_none), color = TextDim, fontSize = 15.sp)
                 sourceNames.forEach { Text(it, color = TextMain, fontSize = 15.sp, modifier = Modifier.padding(top = 2.dp)) }
-                Text("Add or remove sources on the phone page.", color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                Text(stringResource(R.string.settings_sources_hint), color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
             }
         }
     }
@@ -345,7 +390,7 @@ private fun OptionRow(label: String, detail: String?, checked: Boolean, modifier
     ListSurface(onClick, modifier) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.width(30.dp)) {
-                if (checked) Icon(Icons.Filled.Check, contentDescription = "on", modifier = Modifier.size(20.dp))
+                if (checked) Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.settings_check_on), modifier = Modifier.size(20.dp))
             }
             Column {
                 Text(label, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -395,8 +440,8 @@ private fun TitleEditor(initial: String, onCancel: () -> Unit, onSave: (String) 
     val keyboard = LocalSoftwareKeyboardController.current
     LaunchedEffect(Unit) { delay(80); runCatching { field.requestFocus() }; keyboard?.show() }
     Column(Modifier.widthIn(max = 640.dp)) {
-        Text("Row title", color = TextMain, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-        Text("Shown above the live TV row on Home. Left empty, it reads \"Live TV\".", color = TextDim, fontSize = 15.sp,
+        Text(stringResource(R.string.settings_row_title), color = TextMain, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.settings_title_note), color = TextDim, fontSize = 15.sp,
             modifier = Modifier.padding(top = 4.dp, bottom = 16.dp))
         BasicTextField(
             value = text,
@@ -413,8 +458,8 @@ private fun TitleEditor(initial: String, onCancel: () -> Unit, onSave: (String) 
         )
         Spacer(Modifier.height(20.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            MasalButton("Save", { onSave(text.text) })
-            MasalButton("Cancel", onCancel, primary = false)
+            MasalButton(stringResource(R.string.settings_save), { onSave(text.text) })
+            MasalButton(stringResource(R.string.settings_cancel), onCancel, primary = false)
         }
     }
 }

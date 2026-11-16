@@ -41,7 +41,7 @@ class SetupPagePreviewTest {
             HomeRowOption("collection:12", "Example Saga", "Shows", false),
         )
         var reloads = 0
-        val server = SetupServer(settings, key, { reloads++ }, channelGroups = { groups }, homeRows = { rows })
+        val server = SetupServer(ApplicationProvider.getApplicationContext(), settings, key, { reloads++ }, channelGroups = { groups }, homeRows = { rows })
         server.start(NanoHTTPD.SOCKET_READ_TIMEOUT, true)
         try {
             val html = OkHttpClient().newCall(Request.Builder().url("http://127.0.0.1:$SETUP_PORT/$key").build()).execute()

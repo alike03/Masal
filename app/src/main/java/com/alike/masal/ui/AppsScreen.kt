@@ -31,11 +31,13 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import com.alike.masal.MasalViewModel
+import com.alike.masal.R
 import com.alike.masal.data.TvApp
 
 /**
@@ -70,18 +72,20 @@ fun AppsScreen(vm: MasalViewModel, autoFocus: Boolean, startEditing: Boolean, on
             item(key = "head", span = { GridItemSpan(maxLineSpan) }) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Column {
-                        Text("Apps", color = TextMain, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.appspage_title), color = TextMain, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                         Text(
-                            when {
-                                moving != null -> "◀ ▶ move   OK done"
-                                editing -> "OK adds or removes an app on Home. OK on a Home app to move it."
-                                else -> "OK opens   ▶❚❚ adds to Home"
-                            },
+                            stringResource(
+                                when {
+                                    moving != null -> R.string.appspage_hint_moving
+                                    editing -> R.string.appspage_hint_editing
+                                    else -> R.string.appspage_hint
+                                }
+                            ),
                             color = TextDim, fontSize = 13.sp,
                         )
                     }
                     MasalButton(
-                        if (editing) "Done" else "Edit Home apps",
+                        stringResource(if (editing) R.string.appspage_done else R.string.appspage_edit),
                         { editing = !editing; moving = null },
                         focus.modifier("edit"),
                         icon = if (editing) Icons.Filled.Check else Icons.Filled.Edit,
@@ -91,7 +95,7 @@ fun AppsScreen(vm: MasalViewModel, autoFocus: Boolean, startEditing: Boolean, on
             }
             if (home.isNotEmpty()) {
                 item(key = "homeTitle", span = { GridItemSpan(maxLineSpan) }) {
-                    Text("On Home", color = TextMain, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+                    Text(stringResource(R.string.appspage_on_home), color = TextMain, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
                 }
                 item(key = "homeRow", span = { GridItemSpan(maxLineSpan) }) {
                     LazyRow(
@@ -124,7 +128,7 @@ fun AppsScreen(vm: MasalViewModel, autoFocus: Boolean, startEditing: Boolean, on
                 }
             }
             item(key = "allTitle", span = { GridItemSpan(maxLineSpan) }) {
-                Text("All apps", color = TextMain, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+                Text(stringResource(R.string.appspage_all_apps), color = TextMain, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
             }
             items(all, key = { "all:" + it.pkg }) { app ->
                 AppCard(

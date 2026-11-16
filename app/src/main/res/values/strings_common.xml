@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Side menu -->
+    <string name="common_search">Search</string>
+    <string name="common_home">Home</string>
+    <string name="common_tv">TV</string>
+    <string name="common_apps">Apps</string>
+    <string name="common_settings">Settings</string>
+
+    <!-- Shared words -->
+    <string name="common_edit">Edit</string>
+    <string name="common_collection">Collection</string>
+    <string name="common_category">Category</string>
+    <string name="common_last_watched">Last watched</string>
+    <string name="common_favourites">Favourites</string>
+    <string name="common_no_playable_file">This item has no playable file.</string>
+    <string name="common_live">LIVE</string>
+    <string name="common_next">Next %1$s  %2$s</string>
+    <string name="common_no_guide">No guide information</string>
+    <string name="common_tuning_in">Tuning in</string>
+    <string name="common_preview_unavailable">Preview unavailable</string>
+    <string name="common_guide_error">%1$s guide: %2$s</string>
+
+    <!-- Episodes, seasons, durations -->
+    <string name="common_season_episode">S%1$d • E%2$d</string>
+    <string name="common_episode_subtitle">S%1$d E%2$d  %3$s</string>
+    <string name="common_episode_title">E%1$d  %2$s</string>
+    <string name="common_duration_hours">%1$dh %2$dm</string>
+    <string name="common_duration_minutes">%1$dm</string>
+    <plurals name="common_seasons">
+        <item quantity="one">%d Season</item>
+        <item quantity="other">%d Seasons</item>
+    </plurals>
+    <plurals name="common_seasons_chip">
+        <item quantity="one">%d season</item>
+        <item quantity="other">%d seasons</item>
+    </plurals>
+
+    <!-- Home -->
+    <string name="home_get_started">Get started</string>
+    <string name="home_setup_title">Set up Masal</string>
+    <string name="home_setup_text">Add IPTV and Plex with your phone</string>
+    <string name="home_apps_moving">Apps   ◀ ▶ move, OK done</string>
+    <string name="home_choose_apps">Choose apps for Home</string>
+    <string name="home_continue_watching">Continue Watching</string>
+    <string name="home_recently_added">Recently Added</string>
+
+    <!-- Apps -->
+    <string name="apps_android_settings">Android settings</string>
+    <!-- Default title of the live TV row on Home -->
+    <string name="common_live_tv">Live TV</string>
+</resources>

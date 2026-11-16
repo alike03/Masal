@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Side menu -->
+    <string name="common_search">Suche</string>
+    <string name="common_home">Start</string>
+    <string name="common_tv">TV</string>
+    <string name="common_apps">Apps</string>
+    <string name="common_settings">Einstellungen</string>
+
+    <!-- Shared words -->
+    <string name="common_edit">Bearbeiten</string>
+    <string name="common_collection">Sammlung</string>
+    <string name="common_category">Kategorie</string>
+    <string name="common_last_watched">Zuletzt gesehen</string>
+    <string name="common_favourites">Favoriten</string>
+    <string name="common_no_playable_file">Für diesen Titel gibt es keine abspielbare Datei.</string>
+    <string name="common_live">LIVE</string>
+    <string name="common_next">Danach %1$s  %2$s</string>
+    <string name="common_no_guide">Keine Programminformationen</string>
+    <string name="common_tuning_in">Sender wird geladen</string>
+    <string name="common_preview_unavailable">Vorschau nicht verfügbar</string>
+    <string name="common_guide_error">%1$s TV-Programm: %2$s</string>
+
+    <!-- Episodes, seasons, durations -->
+    <string name="common_season_episode">S%1$d • F%2$d</string>
+    <string name="common_episode_subtitle">S%1$d F%2$d  %3$s</string>
+    <string name="common_episode_title">F%1$d  %2$s</string>
+    <string name="common_duration_hours">%1$d Std. %2$d Min.</string>
+    <string name="common_duration_minutes">%1$d Min.</string>
+    <plurals name="common_seasons">
+        <item quantity="one">%d Staffel</item>
+        <item quantity="other">%d Staffeln</item>
+    </plurals>
+    <plurals name="common_seasons_chip">
+        <item quantity="one">%d Staffel</item>
+        <item quantity="other">%d Staffeln</item>
+    </plurals>
+
+    <!-- Home -->
+    <string name="home_get_started">Los geht\'s</string>
+    <string name="home_setup_title">Masal einrichten</string>
+    <string name="home_setup_text">IPTV und Plex mit deinem Handy hinzufügen</string>
+    <string name="home_apps_moving">Apps   ◀ ▶ verschieben, OK fertig</string>
+    <string name="home_choose_apps">Apps für die Startseite wählen</string>
+    <string name="home_continue_watching">Weiterschauen</string>
+    <string name="home_recently_added">Kürzlich hinzugefügt</string>
+
+    <!-- Apps -->
+    <string name="apps_android_settings">Android-Einstellungen</string>
+    <!-- Default title of the live TV row on Home -->
+    <string name="common_live_tv">Live-TV</string>
+</resources>

@@ -28,6 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,6 +55,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.tv.material3.Text
 import com.alike.masal.Graph
+import com.alike.masal.R
 import com.alike.masal.Playback
 import com.alike.masal.data.Channel
 import com.alike.masal.data.PlexItem
@@ -453,8 +455,8 @@ fun PreviewVideo(
             modifier = Modifier.fillMaxSize().alpha(alpha),
         )
         if (showStatus) when (state) {
-            "loading" -> Text("Tuning in", color = TextDim, fontSize = 13.sp, modifier = Modifier.align(Alignment.Center))
-            "error" -> Text("Preview unavailable", color = TextDim, fontSize = 13.sp, modifier = Modifier.align(Alignment.Center))
+            "loading" -> Text(stringResource(R.string.common_tuning_in), color = TextDim, fontSize = 13.sp, modifier = Modifier.align(Alignment.Center))
+            "error" -> Text(stringResource(R.string.common_preview_unavailable), color = TextDim, fontSize = 13.sp, modifier = Modifier.align(Alignment.Center))
         }
     }
 }

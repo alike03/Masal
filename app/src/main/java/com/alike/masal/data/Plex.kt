@@ -1,6 +1,7 @@
 package com.alike.masal.data
 
 import android.net.Uri
+import com.alike.masal.R
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -86,6 +87,8 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings)
         header("X-Plex-Client-Identifier", settings.clientId)
         header("X-Plex-Platform", "Android")
         header("X-Plex-Device-Name", "Masal on ${android.os.Build.MODEL}")
+        // Plex's own texts (row titles such as "Recently Added Movies") in the app's language, where the server has them.
+        header("X-Plex-Language", Language.tag())
         if (!token.isNullOrBlank()) header("X-Plex-Token", token)
     }
 
@@ -110,7 +113,7 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings)
         when (type) {
             "episode" -> {
                 title = o.optString("grandparentTitle")
-                subtitle = "S${o.optInt("parentIndex")} E${o.optInt("index")}  ${o.optString("title")}"
+                subtitle = Language.text(R.string.common_episode_subtitle, o.optInt("parentIndex"), o.optInt("index"), o.optString("title"))
             }
             "season" -> {
                 title = o.optString("parentTitle").ifBlank { o.optString("title") }
