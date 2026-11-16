@@ -26,8 +26,12 @@ text #F2EEE8, dim text #A8A29A. Focus frame on cards is amber.
   top-left to top-right, bottom edge bottom-left to bottom-right), so next to the picture the
   fill has the picture's own edge colour and the fade has no dark band.
 - The fill is drawn once with a soft hole for the picture; trailers play in the same frame.
+- Live channels play in the same frame too. Until their picture starts the frame shows a calm
+  gradient (no logo placeholder) and the fill a neutral dark tone; once the picture runs, the
+  fill takes the colours of its first frames (four quarters, as for pictures).
+- The fill is always there while a frame is shown and fades together with the frame: its colours
+  glide over the same 450 ms as the picture's cross-fade, so frame and fill never change apart.
 - Apps use one Bing photo of the day for all apps, never movie artwork.
-- Live channels show only a calm gradient until their picture starts: no logo placeholder.
 
 ## Motion
 - Rows and lazy lists move with a critically damped spring (no bounce, no lag on key repeat).
@@ -38,4 +42,5 @@ text #F2EEE8, dim text #A8A29A. Focus frame on cards is amber.
 ## Checks
 - Fast D-pad repeat along a row: the row follows smoothly and stops with the focus.
 - Between two titles the background never flashes dark.
+- From a title to a live channel and back: frame and colour fill change together, no visible edge.
 - No visible edge where the picture meets the colour fill.

@@ -8,6 +8,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -50,6 +51,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.tv.material3.Text
 import com.alike.masal.Graph
 import com.alike.masal.Playback
@@ -123,8 +125,19 @@ fun plexAmbient(item: PlexItem): Ambient {
 @Composable
 fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier) {
     val image = ambient?.image
+    // A live channel: no artwork, its stream plays in the frame.
+    val live = ambient != null && image == null && (ambient.video != null || ambient.logo != null)
+    // Colours of the running live picture, per channel (neutral until its picture runs).
+    var videoCorners by remember(ambient?.key) { mutableStateOf<List<Int>?>(null) }
     // Plex's own tint when it has one, otherwise colours read from the picture.
-    val corners = image?.let { ambient.colors.takeIf { c -> c.size == 4 } ?: rememberImageCorners(it) }
+    val corners = when {
+        image != null -> ambient.colors.takeIf { c -> c.size == 4 } ?: rememberImageCorners(image)
+        live -> videoCorners ?: LiveTint
+        else -> null
+    }
+    // The fill appears, changes and disappears together with the frame (same 450 ms).
+    val framed = image != null || live
+    val fill by animateFloatAsState(if (framed) 1f else 0f, tween(450), label = "fill")
     Box(modifier.fillMaxSize().background(Bg)) {
         AnimatedContent(
             targetState = ambient,
@@ -140,25 +153,27 @@ fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier) {
             Box(Modifier.fillMaxSize()) {
                 when {
                     a?.image != null -> ArtFrame(Modifier.graphicsLayer { clip = true }) { KenBurns(a.image) }
-                    // Live channel: no logo placeholder, just a calm gradient until the picture fades in.
-                    a?.logo != null || a?.video != null -> Box(Modifier.fillMaxSize().background(LiveGradient))
+                    // Live channel: no logo placeholder, just a calm gradient in the frame until the picture fades in.
+                    a?.logo != null || a?.video != null -> ArtFrame(Modifier) { Box(Modifier.fillMaxSize().background(LiveGradient)) }
                 }
             }
         }
         val video = ambient?.video
-        if (video != null && image != null) {
-            // Trailers and resume previews play in the picture's frame.
-            ArtFrame(Modifier) { PreviewVideo(video, Modifier.fillMaxSize()) }
-        } else if (video != null) {
-            PreviewVideo(video, Modifier.fillMaxSize())
-            FullScrims()
+        if (video != null) {
+            // Trailers and live channels play in the picture's frame.
+            ArtFrame(Modifier) {
+                PreviewVideo(video, Modifier.fillMaxSize(), onColors = if (live) { c -> videoCorners = c } else null)
+            }
         }
-        if (image != null) {
+        if (fill > 0f) Box(Modifier.fillMaxSize().graphicsLayer { alpha = fill }) {
             TintAroundArt(corners)
             TextScrims()
         }
     }
 }
+
+/** Fill colour around a live channel's frame until its picture runs. */
+private val LiveTint = List(4) { 0xFF221E1B.toInt() }
 
 /** Width of the picture frame; Plex shows its art on roughly the right 60 % of the screen. */
 private const val ArtWidth = 0.62f
@@ -170,16 +185,6 @@ private fun ArtFrame(modifier: Modifier, content: @Composable () -> Unit) {
         // Size first, then the caller's modifier, so masks and clips see the frame's own size.
         Box(Modifier.align(Alignment.TopEnd).fillMaxWidth(ArtWidth).aspectRatio(16f / 9f).then(modifier)) { content() }
     }
-}
-
-/** Scrims for full-screen pictures: text on the left, rows at the bottom. */
-@Composable
-private fun FullScrims() {
-    Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(
-        0f to Bg.copy(alpha = 0.92f), 0.4f to Bg.copy(alpha = 0.55f), 0.75f to Color.Transparent)))
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
-        0f to Bg.copy(alpha = 0.45f), 0.18f to Color.Transparent, 0.5f to Bg.copy(alpha = 0.25f),
-        0.82f to Bg.copy(alpha = 0.9f), 1f to Bg)))
 }
 
 /** Slightly darker towards the text on the left; kept light so the colours stay clear like in Plex. */
@@ -296,50 +301,116 @@ private fun KenBurns(url: String) {
 }
 
 /**
+ * The preview's player and its picture surface. The player can be handed to the full-screen
+ * player (and taken back), so a running live stream continues without reconnecting.
+ */
+private class PreviewPlayer(private val context: android.content.Context, private val listener: Player.Listener) {
+    var player: ExoPlayer = buildPlayer(context).also { it.addListener(listener) }
+        private set
+    private var texture: TextureView? = null
+
+    fun attach(view: TextureView) { texture = view; player.setVideoTextureView(view) }
+
+    /** Gives the running player away and continues with a fresh one. */
+    fun handOff(): ExoPlayer {
+        val p = player
+        p.removeListener(listener)
+        texture?.let { p.clearVideoTextureView(it) }
+        player = buildPlayer(context).also { it.addListener(listener) }
+        texture?.let { player.setVideoTextureView(it) }
+        return p
+    }
+
+    /** Continues with a player given back by the full-screen player. */
+    fun adopt(p: ExoPlayer) {
+        player.removeListener(listener)
+        player.release()
+        player = p.also { it.addListener(listener) }
+        texture?.let { p.setVideoTextureView(it) }
+    }
+
+    /** Average colours of the current picture's quarters, for the colour fill (null before a picture). */
+    fun frameColors(): List<Int>? = texture?.takeIf { it.isAvailable }?.getBitmap(32, 18)?.let { imageCorners(it) }
+
+    fun release() { player.removeListener(listener); player.release() }
+}
+
+/**
  * Plays [source] once the focus rests on it, fading the picture in on the first
  * frame. Stops when the app leaves the foreground and before full-screen playback
  * (IPTV providers often allow only one connection). Back in the foreground (after the
  * player, another app or standby) the same preview does not start again by itself:
- * it waits until the focus moves, so returning to Home never bursts into sound.
+ * it waits until the focus moves, so returning to Home never bursts into sound. The
+ * exception is a live stream the full-screen player gives back (zoom out to Home): it
+ * simply continues. [onColors] receives the picture's colours once it runs.
  */
 @Composable
-fun PreviewVideo(source: VideoSource?, modifier: Modifier = Modifier, showStatus: Boolean = false) {
+fun PreviewVideo(
+    source: VideoSource?,
+    modifier: Modifier = Modifier,
+    showStatus: Boolean = false,
+    onColors: ((List<Int>) -> Unit)? = null,
+) {
     val context = LocalContext.current
-    val player = remember { buildPlayer(context) }
-    var active by remember { mutableStateOf(true) }
     var state by remember { mutableStateOf("idle") }
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val currentSource by rememberUpdatedState(source)
-    // The preview that was showing when the app went to the background; held until the focus moves.
-    var held by remember { mutableStateOf<String?>(null) }
-
-    DisposableEffect(lifecycle) {
-        val observer = LifecycleEventObserver { _, e ->
-            when (e) {
-                Lifecycle.Event.ON_STOP -> { active = false; held = currentSource?.key; player.stop() }
-                Lifecycle.Event.ON_START -> active = true
-                else -> Unit
-            }
-        }
-        val listener = object : Player.Listener {
+    val listener = remember {
+        object : Player.Listener {
             override fun onRenderedFirstFrame() { state = "playing" }
             override fun onPlayerError(error: PlaybackException) { state = "error" }
             override fun onPlaybackStateChanged(s: Int) {
                 if (s == Player.STATE_ENDED) state = "idle"
             }
         }
+    }
+    val pp = remember { PreviewPlayer(context, listener) }
+    var active by remember { mutableStateOf(true) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val currentSource by rememberUpdatedState(source)
+    // The preview that was showing when the app went to the background; held until the focus moves.
+    var held by remember { mutableStateOf<String?>(null) }
+    // A stream taken back from the full-screen player: it keeps playing, nothing reloads.
+    var adopted by remember { mutableStateOf<String?>(null) }
+
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, e ->
+            when (e) {
+                Lifecycle.Event.ON_STOP -> { active = false; held = currentSource?.key; pp.player.stop() }
+                Lifecycle.Event.ON_START -> active = true
+                else -> Unit
+            }
+        }
         lifecycle.addObserver(observer)
-        player.addListener(listener)
-        val stop = { active = false; held = currentSource?.key; player.stop(); player.clearMediaItems() }
+        val stop = { active = false; held = currentSource?.key; pp.player.stop(); pp.player.clearMediaItems() }
+        // Opening the channel that plays here: the full-screen player continues this stream.
+        val handover = { key: String ->
+            val p = pp.player
+            if (currentSource?.key == key && p.currentMediaItem != null && p.playerError == null) {
+                active = false; held = key; state = "idle"
+                pp.handOff()
+            } else null
+        }
         Playback.previews.add(stop)
+        Playback.handovers.add(handover)
         onDispose {
             lifecycle.removeObserver(observer)
             Playback.previews.remove(stop)
-            player.release()
+            Playback.handovers.remove(handover)
+            pp.release()
         }
     }
 
+    // The full-screen player gives its stream back once its zoom out has finished: continue it here.
+    val given = Playback.handedBack
+    LaunchedEffect(given, source?.key, active) {
+        if (given == null || !active || given.first != source?.key) return@LaunchedEffect
+        val p = Playback.takeBack(source?.key) ?: return@LaunchedEffect
+        pp.adopt(p); adopted = source?.key; held = null; state = "playing"
+    }
+
     LaunchedEffect(source?.key, active) {
+        if (adopted != null && adopted == source?.key && active) return@LaunchedEffect // given back, already playing
+        adopted = null
+        val player = pp.player
         player.stop()
         player.clearMediaItems()
         state = "idle"
@@ -356,11 +427,19 @@ fun PreviewVideo(source: VideoSource?, modifier: Modifier = Modifier, showStatus
         }
     }
 
+    // The fill around the frame takes the colours of the running picture (live channels have no artwork).
+    if (onColors != null) LaunchedEffect(state, source?.key) {
+        if (state != "playing") return@LaunchedEffect
+        delay(400) // past the first, often dark, frames
+        pp.frameColors()?.let(onColors)
+    }
+
+    // A stream given back appears at once: it continues the picture that just zoomed into the frame.
     val alpha by animateFloatAsState(if (state == "playing") 1f else 0f,
-        tween(if (state == "playing") 900 else 200), label = "video")
+        if (adopted != null) snap() else tween(if (state == "playing") 900 else 200), label = "video")
     Box(modifier) {
         if (VideoPreviews.enabled) AndroidView(
-            factory = { ctx -> TextureView(ctx).also { player.setVideoTextureView(it) } },
+            factory = { ctx -> TextureView(ctx).also { pp.attach(it) } },
             modifier = Modifier.fillMaxSize().alpha(alpha),
         )
         if (showStatus) when (state) {

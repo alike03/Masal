@@ -247,7 +247,7 @@ class MainActivity : ComponentActivity() {
                                         onOpenSettings = { selectTab(NavTab.Settings, true) },
                                         onOpenItem = openItem,
                                         onPlayItem = { playPlex(it, fromStart = false) },
-                                        onPlayChannel = ::playChannels,
+                                        onPlayChannel = { name, list, i -> playChannels(name, list, i, fromHome = true) },
                                         onApp = { Apps.launch(this@MainActivity, it.pkg) },
                                         onEditApps = { editApps = true; selectTab(NavTab.Apps, true) },
                                     )
@@ -314,7 +314,11 @@ class MainActivity : ComponentActivity() {
         resumedOnce = true
     }
 
-    private fun playChannels(name: String, list: List<Channel>, index: Int) {
+    private fun playChannels(name: String, list: List<Channel>, index: Int, fromHome: Boolean = false) {
+        val ch = list.getOrNull(index)
+        // The preview already playing this channel hands its stream over: no restart, no second connection.
+        Playback.handedOver?.release()
+        Playback.handedOver = ch?.let { Playback.takePreview("live:" + it.key) }
         Playback.stopPreviews()
         val all = vm.channels.value
         val byKey = all.associateBy { it.key }
@@ -330,7 +334,11 @@ class MainActivity : ComponentActivity() {
         Playback.channels = list
         Playback.index = index
         Playback.epg = vm.epg.value
-        startActivity(Intent(this, PlayerActivity::class.java).putExtra("mode", "live"))
+        val intent = Intent(this, PlayerActivity::class.java).putExtra("mode", "live").putExtra("fromHome", fromHome)
+        // From Home the picture zooms from its frame to full screen (and back on exit, see PlayerActivity).
+        val options = if (fromHome) android.app.ActivityOptions.makeCustomAnimation(
+            this, R.anim.masal_zoom_in_from_frame, R.anim.masal_hold).toBundle() else null
+        startActivity(intent, options)
     }
 
     private fun playPlex(item: PlexItem, fromStart: Boolean) {

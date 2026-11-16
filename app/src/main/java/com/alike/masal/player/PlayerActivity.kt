@@ -45,6 +45,16 @@ class PlayerActivity : ComponentActivity() {
     private val state = LiveState()
     private val plex = PlexUiState()
 
+    /** Opened from Home: zooms back into the picture frame on exit and gives the stream back. */
+    private var fromHome = false
+    /** The channel opened with; only that one goes back to Home's preview. */
+    private var openedKey: String? = null
+    /** Back pressed with the opened channel still on: Home's preview takes the stream once this window is gone. */
+    private var giveBack = false
+    /** The player now belongs to Home's preview again: do not stop or release it here. */
+    private var handedBack = false
+    private lateinit var listener: Player.Listener
+
     /** Channel that was playing before the current one ("last channel" key). */
     private var previous: Triple<String, List<Channel>, Int>? = null
     private var tunedKey: String? = null
@@ -66,9 +76,19 @@ class PlayerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         live = intent.getStringExtra("mode") != "plex"
-        player = buildPlayer(this)
+        fromHome = live && intent.getBooleanExtra("fromHome", false)
+        val opened = Playback.channels.getOrNull(Playback.index)
+        openedKey = opened?.key
+        // The preview's running stream for this channel, when it was handed over: continue it.
+        val adopted = Playback.handedOver?.takeIf { p ->
+            live && opened != null && p.currentMediaItem?.localConfiguration?.uri?.toString() == opened.url
+        }
+        Playback.handedOver?.takeIf { it !== adopted }?.release()
+        Playback.handedOver = null
+        player = adopted ?: buildPlayer(this)
 
-        view = PlayerView(this).apply {
+        // Live on a TextureView, which scales with the zoom animation; Plex keeps the SurfaceView (HDR).
+        view = (if (live) layoutInflater.inflate(R.layout.live_player_view, null) as PlayerView else PlayerView(this)).apply {
             player = this@PlayerActivity.player
             keepScreenOn = false // only while playing, see updateScreenOn()
             useController = false
@@ -113,7 +133,7 @@ class PlayerActivity : ComponentActivity() {
         setContentView(root)
         view.requestFocus()
 
-        player.addListener(object : Player.Listener {
+        listener = object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
                 updateScreenOn()
                 // Live streams drop now and then (provider closes the connection, HLS falls behind): reconnect.
@@ -141,12 +161,20 @@ class PlayerActivity : ComponentActivity() {
             override fun onTracksChanged(tracks: Tracks) {
                 if (!live) onPlexTracks(tracks)
             }
-        })
+        }
+        player.addListener(listener)
 
         if (live) {
             if (Playback.channels.isEmpty()) { finish(); return }
             state.groups = Playback.groups
             state.epg = Playback.epg
+            if (adopted != null && opened != null) {
+                // Already tuned: select() must not reopen the stream.
+                tunedUrl = opened.url
+                tunedKey = opened.key
+                Graph.settings.addRecent(opened.key)
+                updateScreenOn()
+            }
             select(Playback.listName, Playback.channels, Playback.index, immediate = true)
         } else {
             playPlex()
@@ -230,6 +258,10 @@ class PlayerActivity : ComponentActivity() {
             return super.dispatchKeyEvent(event) // the list handles navigation
         }
 
+        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+            if (event.action == KeyEvent.ACTION_UP) leaveLive()
+            return true
+        }
         if (event.action != KeyEvent.ACTION_DOWN) {
             return if (event.keyCode in handledKeys) true else super.dispatchKeyEvent(event)
         }
@@ -254,6 +286,22 @@ class PlayerActivity : ComponentActivity() {
             else -> return super.dispatchKeyEvent(event)
         }
         return true
+    }
+
+    /**
+     * Back in the live player. Opened from Home it zooms back into the picture frame; when the
+     * channel is still the one opened, Home's preview continues the stream (no reconnect).
+     */
+    private fun leaveLive() {
+        val ch = state.current
+        // The picture stays here during the zoom out; the stream moves to Home in onStop, once this window is gone.
+        giveBack = fromHome && ch != null && ch.key == openedKey && player.playerError == null &&
+            player.playbackState != Player.STATE_IDLE && player.playbackState != Player.STATE_ENDED
+        finish()
+        if (fromHome) {
+            @Suppress("DEPRECATION") // overrideActivityTransition needs API 34
+            overridePendingTransition(R.anim.masal_hold, R.anim.masal_zoom_out_to_frame)
+        }
     }
 
     // ---- Plex: controls ----
@@ -574,6 +622,15 @@ class PlayerActivity : ComponentActivity() {
         handler.removeCallbacks(progressTick)
         handler.removeCallbacks(retryTune)
         reportPlex("stopped")
+        if (giveBack && !handedBack) state.current?.let { ch ->
+            handler.removeCallbacksAndMessages(null)
+            player.removeListener(listener)
+            view.player = null
+            handedBack = true
+            Playback.giveBack("live:" + ch.key, player)
+        }
+        // Given back to Home's preview, the stream keeps playing there: leave it alone.
+        if (handedBack) { finish(); return }
         player.pause()
         // Live TV makes no sense in the background; release the stream at once (providers often allow one
         // connection, and the Home preview reconnects right after Back) and close.
@@ -591,6 +648,6 @@ class PlayerActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacksAndMessages(null)
-        player.release()
+        if (!handedBack) player.release()
     }
 }

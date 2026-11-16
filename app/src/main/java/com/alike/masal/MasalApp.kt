@@ -1,6 +1,8 @@
 package com.alike.masal
 
 import android.app.Application
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import com.alike.masal.data.Channel
 import com.alike.masal.data.IptvRepository
 import com.alike.masal.data.PlexClient
@@ -47,4 +49,30 @@ object Playback {
     /** Registered by every preview player; all are stopped before full-screen playback starts. */
     val previews = mutableSetOf<() -> Unit>()
     fun stopPreviews() = previews.toList().forEach { it() }
+
+    /** Running previews that can give their stream to the full-screen player, asked by source key. */
+    val handovers = mutableSetOf<(String) -> androidx.media3.exoplayer.ExoPlayer?>()
+    /** A preview's running live stream, for PlayerActivity to continue without reconnecting. */
+    var handedOver: androidx.media3.exoplayer.ExoPlayer? = null
+    /**
+     * The live player's stream given back to Home's preview after zooming out: source key and player.
+     * Compose state, so the preview notices it whenever it arrives.
+     */
+    var handedBack by androidx.compose.runtime.mutableStateOf<Pair<String, androidx.media3.exoplayer.ExoPlayer>?>(null)
+        private set
+
+    /** Takes the running stream of the preview playing [sourceKey], if one does. */
+    fun takePreview(sourceKey: String) = handovers.toList().firstNotNullOfOrNull { it(sourceKey) }
+
+    fun giveBack(sourceKey: String, player: androidx.media3.exoplayer.ExoPlayer) {
+        handedBack = sourceKey to player
+        // Nobody took it (the focus moved on meanwhile): release it rather than let it play unseen.
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            if (handedBack?.second === player) { handedBack = null; player.release() }
+        }, 3_000)
+    }
+
+    /** The given-back stream for [sourceKey], once. */
+    fun takeBack(sourceKey: String?): androidx.media3.exoplayer.ExoPlayer? =
+        handedBack?.takeIf { it.first == sourceKey }?.second?.also { handedBack = null }
 }
