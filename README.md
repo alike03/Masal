@@ -1,8 +1,12 @@
+<p align="center"><img src="docs/images/banner.png" alt="Masal" width="420"></p>
+
 # Masal
 
 A home screen app for Android TV that brings your Plex library, IPTV live TV and your favourite apps together in one calm interface, laid out the way Plex does it: the title's artwork and colours behind, its logo and details on the left, rows that open like an accordion below.
 
 Masal runs as a normal app next to the system launcher. It was built on an NVIDIA Shield and is designed for a TV remote over HDMI-CEC, so everything works with the D-pad, OK, Back and play/pause.
+
+![Home: the focused title's artwork and colours behind, its logo and details on the left, rows below](docs/images/home.jpg)
 
 ## Features
 
@@ -14,6 +18,19 @@ Masal runs as a normal app next to the system launcher. It was built on an NVIDI
 - **Trailers** play in the background after resting on a title, when Plex has one.
 - **Apps page** to pin and order the apps shown on Home.
 - **Setup from the phone**: a QR code on the TV opens a setup page in the phone's browser for Plex and IPTV logins. Logins stay on the TV.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![TV Shows, Recommended tab with Continue Watching](docs/images/tv-shows.jpg) | ![Browse with sort options and the A–Z jump bar](docs/images/browse.jpg) |
+| TV Shows: Recommended | Browse with sorting and A–Z |
+| ![Live TV row on Home](docs/images/home-live-tv.jpg) | ![Search across Plex and the channel list](docs/images/search.jpg) |
+| Live TV row on Home | Search |
+| ![Plex player controls with Ends at time, subtitles and audio](docs/images/player.jpg) | ![Online subtitle search through the Plex server](docs/images/subtitle-search.jpg) |
+| Player | Subtitle search |
+
+Screenshots are rendered from a real library by the JVM tests; artwork belongs to its respective owners.
 
 ## Requirements
 
