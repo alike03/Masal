@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import com.alike.masal.ui.MasalButton
 import androidx.tv.material3.Text
 import com.alike.masal.Graph
@@ -145,11 +146,14 @@ fun SetupScreen(autoFocus: Boolean, channelGroups: () -> List<String> = { emptyL
             }
 
             Spacer(Modifier.height(20.dp))
-            Row {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 MasalButton(
                     if (Graph.plex.configured) "Link Plex again" else "New Plex code",
                     { linkRequest++ }, Modifier.focusRequester(done), Icons.Filled.Refresh,
                 )
+                // Network, display, apps: reachable from here when Masal replaces the stock home screen.
+                MasalButton(com.alike.masal.data.Apps.SettingsLabel, { com.alike.masal.data.Apps.openSystemSettings(context) },
+                    icon = Icons.Filled.Settings, primary = false)
             }
         }
     }

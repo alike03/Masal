@@ -25,6 +25,20 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
   - App: app name and the photo credit. "Edit" card: "Edit Home apps".
 - Background: see look.md. Resting 2.5 s on a Plex title plays its trailer if Plex has one;
   the title itself never plays from Home.
+- Back from the player, another app or standby, the preview that was showing does not start
+  again by itself; it plays again once the focus has moved (no sudden sound on return).
+
+## As the device's home screen
+- Masal can replace the stock launcher (it declares a HOME activity, `singleTask`). Whether it
+  is the home screen is decided on the device, never by the app.
+- When it is the default home screen, Back on Home with the side menu focused does nothing
+  (there is nothing to leave to). As a normal app, Back there leaves the app.
+- The Home key closes all open pages and returns to the Home tab, focus restored there. Pressing
+  it in another app or the player brings Masal back the same way.
+- It starts with the device, often before the network is up: when a network becomes available,
+  IPTV, guide, Plex and the backdrop photo are loaded again if they failed or never loaded.
+- The device settings are reachable through the "Android settings" app tile and the button on
+  the Settings screen.
 
 ## Remote keys
 - D-pad moves; OK opens a title, starts a channel or opens an app.
@@ -34,6 +48,9 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
 - Down from the apps row: apps slide up and out, Continue Watching's header opens.
 - Focus on "Edit": no video starts, background stays the app photo.
 - Flicking through the live TV row: gradient behind, picture fades in, no logo placeholder.
+- Home key on the TV tab or a title page: Home tab, first focus restored, pages closed.
+- With Masal as default home screen: Back in the menu on Home stays; as a normal app it leaves.
+- Start the device with the network cable out, plug it in: channels and Plex rows appear.
 
 ## Open points
 - Plex shows the clock top right; Masal shows it in the side menu (not changed yet).

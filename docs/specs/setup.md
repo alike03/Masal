@@ -22,6 +22,7 @@ Enter Plex and IPTV logins with the phone instead of the remote.
 - Plex: status chip (Connected / Not connected) with the server host; the hint to use the code on
   the TV at plex.tv/link; manual server URL and token folded away below.
 - Changes apply on the TV at once. The page shows the Masal favicon.
+- The Settings screen on the TV also has an "Android settings" button for the device's own settings.
 - Logins stay in the app's private storage, excluded from cloud backup and device transfer;
   never hardcode, log or print them.
 

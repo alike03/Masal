@@ -36,7 +36,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -107,7 +107,9 @@ fun SideRail(
                     ))
                 }
                 .onFocusChanged { open = it.hasFocus; onFocusChange(it.hasFocus) }
-                .focusRestorer { selectedRequester }
+                // Always enter on the open page's entry: the page can change without the menu (Home key),
+                // so the last focused entry is not necessarily the right one.
+                .focusProperties { enter = { selectedRequester } }
                 .focusGroup()
                 .onPreviewKeyEvent { e ->
                     if (e.key == Key.DirectionRight && e.type == KeyEventType.KeyDown) { onEnter(); true } else false

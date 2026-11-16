@@ -105,6 +105,38 @@ class UiFlowTest {
 
     private fun shot(name: String) = rule.onRoot().captureRoboImage("$shots/$name.png")
 
+    /** Masal as the device's home screen: the Home key returns to Home, Back on Home stays. */
+    @Test
+    fun homeScreen() {
+        seed()
+        rule.mainClock.advanceTimeBy(1_000)
+        expectFocus("start", "Testplayer")
+        press(KeyEvent.KEYCODE_DPAD_LEFT)
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        expectFocus("in the TV tab", "Last watched")
+
+        rule.runOnUiThread {
+            rule.activity.onNewIntent(android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_HOME))
+        }
+        rule.mainClock.advanceTimeBy(1_000)
+        rule.waitForIdle()
+        expectFocus("Home key returns to Home", "Testplayer")
+
+        press(KeyEvent.KEYCODE_DPAD_LEFT)
+        expectFocus("menu on Home", "Home")
+        rule.runOnUiThread { rule.activity.isHome = true }
+        rule.waitForIdle()
+        press(KeyEvent.KEYCODE_BACK)
+        assertTrue("as home screen, Back on Home does not leave", !rule.activity.isFinishing)
+        expectFocus("still on Home", "Home")
+        rule.runOnUiThread { rule.activity.isHome = false }
+        rule.waitForIdle()
+        // Not pressed, that would close the test's activity: no enabled Back callback means the
+        // system handles Back, which leaves the app.
+        assertTrue("as a normal app, Back on Home leaves", !rule.activity.onBackPressedDispatcher.hasEnabledCallbacks())
+    }
+
     @Test
     fun remoteFlow() {
         val vm = seed()

@@ -9,7 +9,8 @@ IPTV channels (Xtream or M3U, XMLTV guide) in a TV tab and a full-screen live pl
   starts it shows only a gradient (no "Tuning in" text).
 - Live player: full-screen channel with an overlay for the channel list.
 - Previews stop before full-screen playback (providers often allow one connection); leaving the
-  live player releases the stream at once.
+  live player releases the stream at once. Back from the player, the preview of the channel just
+  watched waits until the focus moves (see home.md).
 - A dropped stream reconnects by itself, up to five times with growing pauses (2 to 10 s).
 - Channels with the same name (main and backup stream) are told apart by their stream address.
 - The guide covers the next 24 h; after more than 3 h in the background channels and guide reload.

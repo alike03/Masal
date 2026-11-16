@@ -25,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -294,7 +295,9 @@ private fun KenBurns(url: String) {
 /**
  * Plays [source] once the focus rests on it, fading the picture in on the first
  * frame. Stops when the app leaves the foreground and before full-screen playback
- * (IPTV providers often allow only one connection).
+ * (IPTV providers often allow only one connection). Back in the foreground (after the
+ * player, another app or standby) the same preview does not start again by itself:
+ * it waits until the focus moves, so returning to Home never bursts into sound.
  */
 @Composable
 fun PreviewVideo(source: VideoSource?, modifier: Modifier = Modifier, showStatus: Boolean = false) {
@@ -303,11 +306,14 @@ fun PreviewVideo(source: VideoSource?, modifier: Modifier = Modifier, showStatus
     var active by remember { mutableStateOf(true) }
     var state by remember { mutableStateOf("idle") }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val currentSource by rememberUpdatedState(source)
+    // The preview that was showing when the app went to the background; held until the focus moves.
+    var held by remember { mutableStateOf<String?>(null) }
 
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, e ->
             when (e) {
-                Lifecycle.Event.ON_STOP -> { active = false; player.stop() }
+                Lifecycle.Event.ON_STOP -> { active = false; held = currentSource?.key; player.stop() }
                 Lifecycle.Event.ON_START -> active = true
                 else -> Unit
             }
@@ -321,7 +327,7 @@ fun PreviewVideo(source: VideoSource?, modifier: Modifier = Modifier, showStatus
         }
         lifecycle.addObserver(observer)
         player.addListener(listener)
-        val stop = { active = false; player.stop(); player.clearMediaItems() }
+        val stop = { active = false; held = currentSource?.key; player.stop(); player.clearMediaItems() }
         Playback.previews.add(stop)
         onDispose {
             lifecycle.removeObserver(observer)
@@ -334,7 +340,8 @@ fun PreviewVideo(source: VideoSource?, modifier: Modifier = Modifier, showStatus
         player.stop()
         player.clearMediaItems()
         state = "idle"
-        if (source == null || !active) return@LaunchedEffect
+        if (source?.key != held) held = null
+        if (source == null || !active || source.key == held) return@LaunchedEffect
         delay(source.delayMs)
         state = "loading"
         val (item, start) = runCatching { source.load() }.getOrNull() ?: run { state = "none"; return@LaunchedEffect }

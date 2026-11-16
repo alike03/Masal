@@ -1,6 +1,8 @@
 package com.alike.masal
 
 import android.app.Application
+import android.net.ConnectivityManager
+import android.net.Network
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.alike.masal.data.Apps
@@ -46,6 +48,15 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
     private var plexJob: Job? = null
     private var lastIptvLoad = 0L
 
+    /**
+     * As the home screen Masal starts with the device, often before the network is up. When a
+     * network becomes available, everything that failed or never loaded is loaded again.
+     */
+    private val network = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(n: Network) { viewModelScope.launch { retryFailedLoads() } }
+    }
+    private val connectivity = app.getSystemService(ConnectivityManager::class.java)
+
     init {
         viewModelScope.launch(Dispatchers.IO) { apps.value = Apps.load(getApplication()) }
         viewModelScope.launch {
@@ -56,10 +67,29 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         loadBackdrops()
+        runCatching { connectivity?.registerDefaultNetworkCallback(network) }
     }
 
+    override fun onCleared() {
+        runCatching { connectivity?.unregisterNetworkCallback(network) }
+    }
+
+    /** Only loads that are not running: the callback also fires right after registering. */
+    internal fun retryFailedLoads() {
+        val sources = Graph.settings.sources
+        if (iptvJob?.isActive != true && sources.isNotEmpty() && (iptvErrors.value.isNotEmpty() || channels.value.isEmpty())) {
+            reloadIptv()
+        }
+        if (plexJob?.isActive != true && Graph.plex.configured && (plexError.value != null || sections.value.isEmpty())) {
+            refreshPlex()
+        }
+        if (backdropJob?.isActive != true && backdrops.value.isEmpty()) loadBackdrops()
+    }
+
+    private var backdropJob: Job? = null
+
     fun loadBackdrops() {
-        viewModelScope.launch(Dispatchers.IO) {
+        backdropJob = viewModelScope.launch(Dispatchers.IO) {
             runCatching { Backdrops.load(Graph.http) }.onSuccess { backdrops.value = it }
                 .onFailure { android.util.Log.w("MasalBg", "backdrops: ${it.message}") }
         }

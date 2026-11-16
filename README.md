@@ -4,7 +4,7 @@
 
 A home screen app for Android TV that brings your Plex library, IPTV live TV and your favourite apps together in one calm interface, laid out the way Plex does it: the title's artwork and colours behind, its logo and details on the left, rows that open like an accordion below.
 
-Masal runs as a normal app next to the system launcher. It was built on an NVIDIA Shield and is designed for a TV remote over HDMI-CEC, so everything works with the D-pad, OK, Back and play/pause.
+Masal runs as a normal app next to the system launcher, or as the device's home screen in its place (see [Home screen](#home-screen)). It was built on an NVIDIA Shield and is designed for a TV remote over HDMI-CEC, so everything works with the D-pad, OK, Back and play/pause.
 
 ![Home: the focused title's artwork and colours behind, its logo and details on the left, rows below](docs/images/home.jpg)
 
@@ -57,6 +57,22 @@ scripts/install.sh       # build and install on the TV over network ADB
 3. Link Plex with the code shown on the TV, or enter the server URL and token.
 4. Add an Xtream login or an M3U playlist.
 5. Optional: choose the channel category and title for the live TV row on Home.
+
+## Home screen
+
+Masal can replace the stock launcher. Android TV usually offers no chooser for this, so it is set over ADB:
+
+```sh
+adb shell cmd package set-home-activity com.alike.masal/.MainActivity
+```
+
+If the stock launcher keeps coming back, disable it (find its package with `adb shell cmd package resolve-activity -a android.intent.action.MAIN -c android.intent.category.HOME` before switching):
+
+```sh
+adb shell pm disable-user --user 0 <stock launcher package>
+```
+
+To go back, enable it again with `adb shell pm enable <stock launcher package>`. Keep that command at hand: if the home screen fails to start, ADB is the way back. The device settings stay reachable through the "Android settings" tile and the button on Masal's Settings screen.
 
 ## Releases
 

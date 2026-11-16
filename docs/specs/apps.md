@@ -10,6 +10,8 @@ Launch installed TV apps; choose and order the apps shown on Home.
 - Outside edit mode play/pause (or Menu) pins or unpins the focused app.
 - Pinned apps carry a check mark. The order is stored in settings (`home_apps`).
 - Background: one Bing photo of the day for all apps, with the photo credit.
+- "Android settings": the device's settings app, listed like an app (it has no launcher entry on
+  TV) so it stays reachable when Masal replaces the stock home screen. Can be pinned to Home.
 
 ## Checks
 - Pin an app, move it left, see the same order on Home.

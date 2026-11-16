@@ -1,6 +1,7 @@
 package com.alike.masal
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.KeyEvent
 import com.alike.masal.player.logKey
@@ -120,6 +121,10 @@ data class Detail(
 class MainActivity : ComponentActivity() {
     private val vm: MasalViewModel by viewModels()
     private var resumedOnce = false
+    /** Masal is the device's default home screen: Back on Home then stays here instead of leaving. */
+    internal var isHome by mutableStateOf(false) // internal: the UI tests set it
+    /** Counts Home key presses while Masal runs; each one returns to the start of Home. */
+    private var homePresses by mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -147,8 +152,9 @@ class MainActivity : ComponentActivity() {
                 val railRequester = remember { FocusRequester() }
                 var railFocused by remember { mutableStateOf(false) }
                 val scope = rememberCoroutineScope()
-                // Back: close a page, then go to the menu, then to Home, then leave the app.
-                BackHandler(enabled = stack.isNotEmpty() || !railFocused || tab != NavTab.Home) {
+                // Back: close a page, then go to the menu, then to Home, then leave the app
+                // (unless Masal is the home screen: there is nothing to leave to).
+                BackHandler(enabled = stack.isNotEmpty() || !railFocused || tab != NavTab.Home || isHome) {
                     when {
                         stack.isNotEmpty() -> {
                             autoFocus = true
@@ -157,12 +163,14 @@ class MainActivity : ComponentActivity() {
                             scope.launch { delay(600); if (stack.none { it.key == closed }) holder.removeState(closed) }
                         }
                         !railFocused -> runCatching { railRequester.requestFocus() }
-                        else -> {
+                        tab != NavTab.Home -> {
                             selectTab(NavTab.Home, false)
                             scope.launch { delay(40); runCatching { railRequester.requestFocus() } }
                         }
+                        else -> Unit // home screen, already on Home
                     }
                 }
+
 
                 val openItem: (PlexItem) -> Unit = { item ->
                     when (item.type) {
@@ -192,6 +200,17 @@ class MainActivity : ComponentActivity() {
                     val t = railTarget ?: return@LaunchedEffect
                     delay(150)
                     if (t != currentTab) selectTab(t, false)
+                }
+
+                // Home key: close all pages and go back to Home, as the stock home screen does.
+                LaunchedEffect(homePresses) {
+                    if (homePresses == 0) return@LaunchedEffect
+                    val closed = stack.map { it.key }
+                    stack.clear()
+                    railTarget = null
+                    selectTab(NavTab.Home, true)
+                    delay(600)
+                    closed.forEach { holder.removeState(it) }
                 }
 
                 Box(Modifier.fillMaxSize().background(Bg)) {
@@ -279,8 +298,17 @@ class MainActivity : ComponentActivity() {
         return super.dispatchKeyEvent(event)
     }
 
+    public override fun onNewIntent(intent: Intent) { // public: the UI tests send the Home key
+        super.onNewIntent(intent)
+        // singleTask: the Home key brings this running instance back with a new intent.
+        if (intent.hasCategory(Intent.CATEGORY_HOME)) homePresses++
+    }
+
     override fun onResume() {
         super.onResume()
+        isHome = packageManager.resolveActivity(
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), PackageManager.MATCH_DEFAULT_ONLY,
+        )?.activityInfo?.packageName == packageName
         // Back from the player or another app: refresh progress, history and app list.
         if (resumedOnce) vm.onResumeRefresh()
         resumedOnce = true
