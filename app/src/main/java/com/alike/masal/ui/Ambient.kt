@@ -57,6 +57,7 @@ import com.alike.masal.data.Channel
 import com.alike.masal.data.PlexItem
 import com.alike.masal.player.buildPlayer
 import com.alike.masal.player.channelItem
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -218,8 +219,10 @@ private fun TintAroundArt(corners: List<Int>?) {
                     canvas.restore()
 
                     // The hole: fully open in the picture's top right, closing towards its left and bottom edges.
-                    val w = size.width * ArtWidth
-                    val h = w * 9f / 16f
+                    // Whole pixels, rounded like the frame's layout (fillMaxWidth, aspectRatio): a hole edge
+                    // half a pixel off the picture's edge lets the dark background through as a thin line.
+                    val w = (size.width * ArtWidth).roundToInt().toFloat()
+                    val h = (w / (16f / 9f)).roundToInt().toFloat()
                     val left = size.width - w
                     val frame = androidx.compose.ui.geometry.Size(w, h)
                     canvas.saveLayer(

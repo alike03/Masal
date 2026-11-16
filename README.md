@@ -66,13 +66,13 @@ Masal can replace the stock launcher. Android TV usually offers no chooser for t
 adb shell cmd package set-home-activity com.alike.masal/.MainActivity
 ```
 
-If the stock launcher keeps coming back, disable it (find its package with `adb shell cmd package resolve-activity -a android.intent.action.MAIN -c android.intent.category.HOME` before switching):
+Some devices keep their stock launcher anyway (on an NVIDIA Shield it has system priority). Then the only way is to disable it (find its package with `adb shell cmd package resolve-activity -a android.intent.action.MAIN -c android.intent.category.HOME` before switching):
 
 ```sh
 adb shell pm disable-user --user 0 <stock launcher package>
 ```
 
-To go back, enable it again with `adb shell pm enable <stock launcher package>`. Keep that command at hand: if the home screen fails to start, ADB is the way back. The device settings stay reachable through the "Android settings" tile and the button on Masal's Settings screen.
+Disabling has side effects: on the Shield the system's recommendations service (`com.google.android.tvrecommendations`) then crashes repeatedly, since it expects the stock launcher. To go back, enable it again with `adb shell pm enable <stock launcher package>`. Keep that command at hand: if the home screen fails to start, ADB is the way back. The device settings stay reachable through the "Android settings" tile and the button on Masal's Settings screen.
 
 ## Releases
 
