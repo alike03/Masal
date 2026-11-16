@@ -21,13 +21,15 @@ fi
 ADB="${ANDROID_HOME:+$ANDROID_HOME/platform-tools/}adb"
 APK=app/build/outputs/apk/debug/app-debug.apk
 
-[ "${SKIP_BUILD:-0}" = 1 ] || ./gradlew assembleDebug -q --console=plain
-
-# Never install an APK that is older than the app sources (a failed build would otherwise go unnoticed).
-# Tests are left out: they do not change the APK.
-if [ -n "$(find app/src/main app/src/debug app/build.gradle.kts -newer "$APK" -type f -print -quit)" ]; then
-  echo "APK is older than the sources; build first." >&2
-  exit 1
+if [ "${SKIP_BUILD:-0}" = 1 ]; then
+  # Without a build, never install an APK that is older than the app sources (tests do not change the APK).
+  if [ -n "$(find app/src/main app/src/debug app/build.gradle.kts -newer "$APK" -type f -print -quit)" ]; then
+    echo "APK is older than the sources; build first." >&2
+    exit 1
+  fi
+else
+  # A failed build stops the script (set -e); an unchanged APK is simply up to date.
+  ./gradlew assembleDebug -q --console=plain
 fi
 
 "$ADB" connect "$TV_ADB" >/dev/null 2>&1 || true
