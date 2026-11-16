@@ -18,6 +18,9 @@ Kotlin, Compose for TV (`androidx.tv:tv-material`), Media3 ExoPlayer, OkHttp, Co
 - JDK 17 and the Android SDK (set `JAVA_HOME` / `ANDROID_HOME`, or put them in `.env`; `local.properties` holds `sdk.dir`).
 - `./gradlew assembleDebug` builds; `scripts/install.sh` builds and installs over network ADB (`TV_ADB` in `.env`), with an optional Home Assistant fallback. Its stale-APK check ignores test sources.
 
+## Releases
+`.github/workflows/release.yml`: on a `v*` tag, tests, builds `assembleRelease` signed with the key from the repository secrets (created once by `scripts/create-release-key.sh`), checks the signature and publishes a GitHub release with `gh release create` (tags with `-` become pre-releases). Manual runs are dry runs that keep the APK as a workflow artifact. Version name comes from the tag, version code from the run number (`MASAL_VERSION_NAME` / `MASAL_VERSION_CODE`). Actions are pinned to commit SHAs with the version in a comment; when updating, look up the latest release of each action and runner image (`ubuntu-26.04` at the time of writing) instead of guessing.
+
 ## Tests (no TV needed)
 `./gradlew testDebugUnitTest` runs three Robolectric suites; video surfaces are off in tests (`VideoPreviews.enabled`), and so is Coil's fade-in (`ImageFades.enabled`, Robolectric's frozen clock leaves images half faded). Values from `.env` are passed to the tests as environment variables.
 - `UiFlowTest`: real MainActivity driven with remote keys, fictitious data only, focus assertions. Shots: `app/build/outputs/roborazzi/build/masal-shots/`.

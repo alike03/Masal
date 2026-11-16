@@ -58,6 +58,16 @@ scripts/install.sh       # build and install on the TV over network ADB
 4. Add an Xtream login or an M3U playlist.
 5. Optional: choose the channel category and title for the live TV row on Home.
 
+## Releases
+
+Pushing a version tag builds a signed APK and publishes it as a GitHub release:
+
+```sh
+git tag v1.0.0 && git push origin v1.0.0    # tags with a hyphen (v1.1.0-beta.1) become pre-releases
+```
+
+The pipeline (`.github/workflows/release.yml`) runs the tests first. Before the first release, run `scripts/create-release-key.sh` once: it creates the signing key outside the repository, stores its password in `.env` and sets the repository secrets. Keep a backup of the key and password; updates of a released app can only be signed with the same key.
+
 ## Development
 
 - Feature behaviour is described in [`docs/specs/`](docs/specs/README.md); conventions and architecture notes for contributors (and coding agents) are in [`CLAUDE.md`](CLAUDE.md).

@@ -11,6 +11,12 @@ val dotEnv: Map<String, String> = rootProject.file(".env").takeIf { it.exists() 
     .filter { it.isNotEmpty() && !it.startsWith("#") && '=' in it }
     .associate { it.substringBefore('=').trim() to it.substringAfter('=').trim().removeSurrounding("\"") }
 
+/** A setting from the environment (CI) or from .env (local). */
+fun setting(key: String): String? = System.getenv(key)?.ifBlank { null } ?: dotEnv[key]?.ifBlank { null }
+
+/** Release signing key; only present on the release pipeline and on machines that have it. */
+val releaseKeystore: File? = setting("MASAL_KEYSTORE_FILE")?.let { rootProject.file(it) }?.takeIf { it.exists() }
+
 android {
     namespace = "com.alike.masal"
     compileSdk = 35
@@ -19,11 +25,23 @@ android {
         applicationId = "com.alike.masal"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        // Set by the release pipeline from the tag (v1.2.3 -> 1.2.3) and the run number.
+        versionCode = setting("MASAL_VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = setting("MASAL_VERSION_NAME") ?: "0.1.0"
+    }
+    signingConfigs {
+        if (releaseKeystore != null) create("release") {
+            storeFile = releaseKeystore
+            storePassword = setting("MASAL_KEYSTORE_PASSWORD")
+            keyAlias = setting("MASAL_KEY_ALIAS")
+            keyPassword = setting("MASAL_KEY_PASSWORD")
+        }
     }
     buildTypes {
-        release { isMinifyEnabled = false }
+        release {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
