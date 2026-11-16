@@ -72,4 +72,4 @@ Masal is an independent project and is not affiliated with or endorsed by Plex, 
 
 ## License
 
-[LICENSE NOT YET CHOSEN]
+The code is released under the [MIT License](LICENSE). The bundled fonts keep their own SIL Open Font License (see [`licenses/`](licenses/)).
