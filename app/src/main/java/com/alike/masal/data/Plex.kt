@@ -319,10 +319,13 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings)
 
     // ---- plex.tv account link (PIN flow, user enters the code at plex.tv/link) ----
 
+    /** plex.tv; the UI tests point it at a closed port so they never reach the internet. */
+    @Volatile internal var accountBase = "https://plex.tv"
+
     data class Pin(val id: Long, val code: String)
 
     fun createPin(): Pin {
-        val req = Request.Builder().url("https://plex.tv/api/v2/pins")
+        val req = Request.Builder().url("$accountBase/api/v2/pins")
             .post(FormBody.Builder().add("strong", "false").build())
             .plexHeaders(token = null).build()
         http.newCall(req).execute().use { r ->
@@ -334,7 +337,7 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings)
 
     /** Returns the auth token once the code was entered, null while still pending. */
     fun checkPin(pin: Pin): String? {
-        val req = Request.Builder().url("https://plex.tv/api/v2/pins/${pin.id}").plexHeaders(token = null).build()
+        val req = Request.Builder().url("$accountBase/api/v2/pins/${pin.id}").plexHeaders(token = null).build()
         http.newCall(req).execute().use { r ->
             if (!r.isSuccessful) error("plex.tv HTTP ${r.code}")
             return JSONObject(r.body!!.string()).optString("authToken").takeIf { it.isNotBlank() && it != "null" }
@@ -343,7 +346,7 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings)
 
     /** Finds a local address of the user's own Plex server. */
     fun findServerUrl(token: String): String? {
-        val req = Request.Builder().url("https://plex.tv/api/v2/resources?includeHttps=1&includeRelay=0")
+        val req = Request.Builder().url("$accountBase/api/v2/resources?includeHttps=1&includeRelay=0")
             .plexHeaders(token).build()
         val arr = http.newCall(req).execute().use { r ->
             if (!r.isSuccessful) return null

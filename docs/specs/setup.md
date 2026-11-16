@@ -19,12 +19,26 @@ Enter Plex and IPTV logins with the phone instead of the remote.
 - Home live TV row: a select of the channel categories from the loaded sources (in provider order,
   plus "None" to hide the row) and the row title. A saved category that is not in the loaded list
   stays selected and marked, so a late load never clears it.
+- Home rows: checkboxes for Plex's Home rows and every collection, grouped by library (so two
+  collections with the same name are told apart), with "Save rows". Same choice as on the TV.
 - Plex: status chip (Connected / Not connected) with the server host; the hint to use the code on
   the TV at plex.tv/link; manual server URL and token folded away below.
 - Changes apply on the TV at once. The page shows the Masal favicon.
-- The Settings screen on the TV also has an "Android settings" button for the device's own settings.
+## Settings screen on the TV
+- Left: the QR code and address of the phone page, for logins, sources and the Plex server.
+- Right, a list moved with the remote:
+  - Plex: status and link code, "Link Plex again", "Android settings" (the device's own settings).
+  - Live TV row on Home: "Channel category" opens a list of the loaded categories plus "None";
+    OK picks, Back returns without change. "Row title" opens a text field with the TV keyboard;
+    Done saves, Back cancels.
+  - Home rows: one line per Plex row and collection, grouped by library, with a check mark when
+    shown; OK switches it.
+  - Live TV sources: names only; adding and removing happens on the phone page.
+- Changes apply at once and are the same settings as on the phone page.
 - Logins stay in the app's private storage, excluded from cloud backup and device transfer;
   never hardcode, log or print them.
 
 ## Checks
 - Scan the QR code, save Plex settings, Home shows Continue Watching.
+- On the TV, switch a collection on: it is checked on the phone page after a reload, and on Home.
+- Pick a category on the TV, Back: the setting is unchanged; OK: the live TV row shows it.

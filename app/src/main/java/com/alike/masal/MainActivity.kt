@@ -260,7 +260,7 @@ class MainActivity : ComponentActivity() {
                                         onCollection = openItem,
                                         onGenre = { id, name -> open(Detail(id, kind = "genre", title = name, section = t.section.key)) },
                                     )
-                                    t == NavTab.Settings -> SetupScreen(autoFocus) { vm.channels.value.map { it.group }.filter { it.isNotBlank() }.distinct() }
+                                    t == NavTab.Settings -> SetupScreen(vm, autoFocus)
                                 }
                             }
                         }

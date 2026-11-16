@@ -46,6 +46,7 @@ class UiFlowTest {
     private val shots = "build/masal-shots"
 
     private fun seed(): MasalViewModel {
+        Graph.plex.accountBase = "http://127.0.0.1:9" // Settings asks plex.tv for a link code: never leave the machine
         val vm = ViewModelProvider(rule.activity)[MasalViewModel::class.java]
         Thread.sleep(600) // let the (empty) initial loads finish so they do not overwrite the test data
         rule.waitForIdle()
@@ -135,6 +136,53 @@ class UiFlowTest {
         // Not pressed, that would close the test's activity: no enabled Back callback means the
         // system handles Back, which leaves the app.
         assertTrue("as a normal app, Back on Home leaves", !rule.activity.onBackPressedDispatcher.hasEnabledCallbacks())
+    }
+
+    /** Settings with the remote: live TV row category (Back cancels, OK picks) and Home rows. */
+    @Test
+    fun settingsScreen() {
+        val vm = seed()
+        val recent = com.alike.masal.data.HomeRowOption("home.movies.recent", "Recently Added Movies", "Plex", true)
+        val saga = com.alike.masal.data.HomeRowOption("collection:5", "Testsammlung", "Filme", false)
+        vm.homeRowOptions.value = listOf(recent, saga)
+        Graph.settings.homeRowsOn = emptySet(); Graph.settings.homeRowsOff = emptySet()
+        rule.mainClock.advanceTimeBy(1_000)
+        press(KeyEvent.KEYCODE_DPAD_LEFT)
+        press(KeyEvent.KEYCODE_DPAD_DOWN, times = 5)
+        expectFocus("menu on Settings", "Settings")
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        rule.mainClock.advanceTimeBy(1_000)
+        rule.waitForIdle()
+        expectFocus("first button", "Plex")
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        expectFocus("category row", "Channel category")
+        shot("09-settings")
+
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        expectFocus("picker starts on the saved category", "Testgruppe HD")
+        shot("10-settings-category")
+        press(KeyEvent.KEYCODE_DPAD_UP)
+        press(KeyEvent.KEYCODE_BACK)
+        expectFocus("Back returns to the row", "Channel category")
+        assertTrue("Back leaves the category unchanged", Graph.settings.homeLiveGroup == "Testgruppe HD")
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        press(KeyEvent.KEYCODE_DPAD_UP)
+        expectFocus("previous category", "Filme")
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        expectFocus("OK returns to the row with the new value", "Filme")
+        assertTrue("OK picks the category", Graph.settings.homeLiveGroup == "Filme")
+
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        expectFocus("title row", "Row title")
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        expectFocus("first Home row", "Recently Added Movies")
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertTrue("OK switches a default row off", !Graph.settings.homeRowShown(recent))
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        expectFocus("collection", "Testsammlung")
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertTrue("OK switches a collection on", Graph.settings.homeRowShown(saga))
+        shot("11-settings-rows")
     }
 
     @Test

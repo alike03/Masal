@@ -16,13 +16,19 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
      page (`Settings.homeLiveGroup` / `homeLiveTitle`, title defaults to "Live TV"); hidden while
      no category is set. The category is matched without accents and provider prefix such as
      "[XX] ". No category subtitle under the cards.
-  5. Plex's own Home hubs (Recently Added Movies/TV, promoted collections). Without hubs:
+  5. Plex rows, chosen in Settings (see "Home rows" below). Without hubs (older servers):
      one "Recently Added" row.
+- Home rows: every Plex Home row (Recently Added Movies/TV and the like) and every collection of
+  every movie and TV library can be shown on Home. By default Home shows what Plex shows on its own
+  Home (its rows and the collections promoted there). Choices are stored as differences from that
+  default (`home_rows_on`, `home_rows_off`), so a collection newly promoted in Plex still appears
+  unless it was switched off. Order: Plex's own order, then extra collections in library order.
+  Extra collections show their first 20 titles. Changing rows does not reload IPTV.
 - Info block per item:
   - Plex title: logo art (or title text), episode title, facts line (S1 • E5, date, runtime,
     rating), two-line summary, top three cast. Smaller and lower, like Plex.
   - Channel: logo, LIVE chip, name, current programme with time and progress, next programme.
-  - App: app name and the photo credit. "Edit" card: "Edit Home apps".
+  - App and "Edit" card: no info block, only the photo behind (no app name, no photo credit).
 - Background: see look.md. Resting 2.5 s on a Plex title plays its trailer if Plex has one;
   the title itself never plays from Home.
 - Back from the player, another app or standby, the preview that was showing does not start
@@ -46,7 +52,8 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
 
 ## Checks
 - Down from the apps row: apps slide up and out, Continue Watching's header opens.
-- Focus on "Edit": no video starts, background stays the app photo.
+- Focus on "Edit": no video starts, background stays the app photo, no text above the rows.
+- Switch a collection on in Settings: it appears on Home at once, without reloading channels.
 - Flicking through the live TV row: gradient behind, picture fades in, no logo placeholder.
 - Home key on the TV tab or a title page: Home tab, first focus restored, pages closed.
 - With Masal as default home screen: Back in the menu on Home stays; as a normal app it leaves.

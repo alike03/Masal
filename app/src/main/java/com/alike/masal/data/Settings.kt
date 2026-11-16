@@ -48,6 +48,10 @@ class Settings(context: Context) {
     /** Bumped whenever sources or Plex settings change, so data gets reloaded. */
     val version: StateFlow<Int> = _version
 
+    private val _homeVersion = MutableStateFlow(0)
+    /** Bumped when only the Home layout changes (live TV row, Plex rows): Home redraws, nothing reloads. */
+    val homeVersion: StateFlow<Int> = _homeVersion
+
     val clientId: String
         get() = prefs.getString("client_id", null)
             ?: UUID.randomUUID().toString().also { prefs.edit().putString("client_id", it).apply() }
@@ -101,11 +105,34 @@ class Settings(context: Context) {
         get() = prefs.getString("home_live_title", "")?.ifBlank { null } ?: "Live TV"
         set(v) = prefs.edit().putString("home_live_title", v.trim()).apply()
 
+    /** Home rows switched on although Plex does not show them on its Home (see [homeRowShown]). */
+    var homeRowsOn: Set<String>
+        get() = prefs.getStringSet("home_rows_on", emptySet())?.toSet() ?: emptySet()
+        set(v) = prefs.edit().putStringSet("home_rows_on", v).apply()
+
+    /** Home rows switched off although Plex shows them on its Home. */
+    var homeRowsOff: Set<String>
+        get() = prefs.getStringSet("home_rows_off", emptySet())?.toSet() ?: emptySet()
+        set(v) = prefs.edit().putStringSet("home_rows_off", v).apply()
+
+    /** Stored as differences from Plex's own Home, so rows Plex adds later still appear by default. */
+    fun homeRowShown(option: HomeRowOption): Boolean =
+        option.id in homeRowsOn || (option.defaultOn && option.id !in homeRowsOff)
+
+    fun setHomeRowShown(option: HomeRowOption, shown: Boolean) {
+        homeRowsOn = if (shown && !option.defaultOn) homeRowsOn + option.id else homeRowsOn - option.id
+        homeRowsOff = if (!shown && option.defaultOn) homeRowsOff + option.id else homeRowsOff - option.id
+    }
+
     fun addRecent(key: String) {
         recentChannels = (listOf(key) + recentChannels.filter { it != key }).take(20)
     }
 
     fun changed() {
         _version.value = _version.value + 1
+    }
+
+    fun homeChanged() {
+        _homeVersion.value = _homeVersion.value + 1
     }
 }

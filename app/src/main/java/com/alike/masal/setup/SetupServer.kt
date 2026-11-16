@@ -5,6 +5,7 @@ import android.graphics.Color
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
+import com.alike.masal.data.HomeRowOption
 import com.alike.masal.data.IptvSource
 import com.alike.masal.data.Settings
 import fi.iki.elonen.NanoHTTPD
@@ -27,6 +28,8 @@ class SetupServer(
     private val assets: Map<String, Pair<String, ByteArray>> = emptyMap(),
     /** Channel categories of the loaded sources, in provider order, for the Home row select. */
     private val channelGroups: () -> List<String> = { emptyList() },
+    /** Plex rows and collections that can be shown on Home. */
+    private val homeRows: () -> List<HomeRowOption> = { emptyList() },
 ) : NanoHTTPD(SETUP_PORT) {
 
     override fun serve(session: IHTTPSession): Response {
@@ -42,8 +45,10 @@ class SetupServer(
         if (session.method == Method.POST) {
             session.parseBody(HashMap())
             val p = session.parameters.mapValues { it.value.firstOrNull().orEmpty().trim() }
-            notice = handle(p)
-            onChanged()
+            val (text, reload) = handle(p, session.parameters)
+            notice = text
+            // Sources and Plex reload everything; Home layout changes only redraw Home.
+            if (reload) onChanged() else settings.homeChanged()
             val r = newFixedLengthResponse(Response.Status.REDIRECT_SEE_OTHER, "text/plain", "")
             r.addHeader("Location", "$base?saved=" + java.net.URLEncoder.encode(notice, "UTF-8"))
             return r
@@ -58,16 +63,28 @@ class SetupServer(
         "${u.scheme}://${u.host}" + if (u.port > 0) ":${u.port}" else ""
     }.getOrDefault("(address hidden)")
 
-    private fun handle(p: Map<String, String>): String = when (p["action"]) {
+    /** Applies a form; returns the notice and whether data must reload (false: only Home's layout changed). */
+    private fun handle(p: Map<String, String>, all: Map<String, List<String>>): Pair<String, Boolean> = when (p["action"]) {
+        "home" -> {
+            settings.homeLiveGroup = p["group"].orEmpty()
+            settings.homeLiveTitle = p["title"].orEmpty()
+            "Home row saved." to false
+        }
+        "rows" -> {
+            // Unchecked boxes are not sent: every row listed on the page comes along as "all".
+            val listed = all["all"].orEmpty().toSet()
+            val checked = all["row"].orEmpty().toSet()
+            homeRows().filter { it.id in listed }.forEach { settings.setHomeRowShown(it, it.id in checked) }
+            "Home rows saved." to false
+        }
+        else -> handleData(p) to true
+    }
+
+    private fun handleData(p: Map<String, String>): String = when (p["action"]) {
         "plex" -> {
             if (p["url"].orEmpty().isNotBlank()) settings.plexUrl = p["url"]!!
             if (p["token"].orEmpty().isNotBlank()) settings.plexToken = p["token"]!!
             "Plex settings saved."
-        }
-        "home" -> {
-            settings.homeLiveGroup = p["group"].orEmpty()
-            settings.homeLiveTitle = p["title"].orEmpty()
-            "Home row saved."
         }
         "add_m3u" -> {
             if (p["url"].isNullOrBlank()) "Playlist URL is missing."
@@ -132,6 +149,22 @@ class SetupServer(
                 append("<option value=\"${esc(g)}\"${if (sel) " selected" else ""}>${esc(g)}</option>")
             }
         }
+        val rowOptions = homeRows()
+        val rowsBody = if (rowOptions.isEmpty()) """<p class="empty">Connect Plex first. Its rows and collections appear here once loaded; reopen this page then.</p>"""
+        else buildString {
+            append("<form method=\"post\" action=\"$base\" class=\"fields\"><input type=\"hidden\" name=\"action\" value=\"rows\">")
+            rowOptions.groupBy { it.group }.forEach { (group, options) ->
+                append("<fieldset class=\"checks\"><legend>${esc(group)}</legend>")
+                options.forEach { o ->
+                    val id = "row-" + o.id.replace(Regex("[^A-Za-z0-9]"), "-")
+                    append("<input type=\"hidden\" name=\"all\" value=\"${esc(o.id)}\">")
+                    append("<label class=\"check\" for=\"$id\"><input type=\"checkbox\" id=\"$id\" name=\"row\" value=\"${esc(o.id)}\"" +
+                        (if (settings.homeRowShown(o)) " checked" else "") + "><span>${esc(o.title)}</span></label>")
+                }
+                append("</fieldset>")
+            }
+            append("<div class=\"actions\"><button class=\"btn\">Save rows</button></div></form>")
+        }
         val groupHint = if (groups.isEmpty()) "No channels loaded yet. Add a source first, then reopen this page."
             else "${groups.size} categories from your sources."
         return """<!doctype html><html lang="en"><head><meta charset="utf-8">
@@ -188,6 +221,11 @@ dialog form{display:flex;flex-direction:column;gap:16px}
 .type span{font-size:13px;color:var(--dim)}
 .type:has(input:checked){border-color:var(--accent);background:var(--raised)}
 fieldset.group{border:0;margin:0;padding:0;min-width:0}
+fieldset.checks{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column}
+fieldset.checks legend{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);padding:0;margin-bottom:4px}
+.check{display:flex;align-items:center;gap:12px;margin:0;padding:10px 0;border-top:1px solid var(--line);color:var(--text);font-size:15px;cursor:pointer}
+.check:first-of-type{border-top:0}
+.check input{width:20px;height:20px;margin:0;flex:none;accent-color:var(--accent)}
 fieldset.group[disabled]{display:none}
 @media (max-width:380px){.types{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:no-preference){dialog[open]{animation:rise .18s ease-out}@keyframes rise{from{opacity:0;transform:translateY(8px)}}}
@@ -207,6 +245,11 @@ $sourceList
 <div class="field"><label for="row-title">Row title</label><input type="text" id="row-title" name="title" value="${esc(settings.homeLiveTitle)}" placeholder="Live TV"></div>
 <div class="actions"><button class="btn">Save row</button></div>
 </form>
+</section>
+<section class="card" aria-labelledby="h-rows">
+<h2 id="h-rows">Home rows</h2>
+<p class="muted">Plex rows and collections shown on Home. Also adjustable in Settings on the TV.</p>
+$rowsBody
 </section>
 <section class="card" aria-labelledby="h-plex">
 <div class="head"><h2 id="h-plex">Plex</h2>$plexChip</div>

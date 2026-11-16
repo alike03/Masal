@@ -89,8 +89,9 @@ fun HomeScreen(
     val plexError by vm.plexError.collectAsState()
 
     val apps = remember(allApps, homeKeys) { val byPkg = allApps.associateBy { it.pkg }; homeKeys.mapNotNull { byPkg[it] } }
-    val settingsVersion by Graph.settings.version.collectAsState() // the row's category is set on the setup page
-    val tvRow = remember(channels, settingsVersion) {
+    val settingsVersion by Graph.settings.version.collectAsState() // the row's category is set in Settings
+    val homeVersion by Graph.settings.homeVersion.collectAsState()
+    val tvRow = remember(channels, settingsVersion, homeVersion) {
         val group = MasalViewModel.normGroup(Graph.settings.homeLiveGroup)
         if (group.isEmpty()) emptyList()
         else {
@@ -234,9 +235,8 @@ fun HomeScreen(
             when (h) {
                 is Hero.Plex -> HeroPlex(h.item)
                 is Hero.Live -> HeroChannel(h.channel, h.channel.epgId?.let { epg[it] })
-                is Hero.App -> HeroApp(h.app, backdropFor(h.app.pkg, backdrops))
-                Hero.EditApps -> Text("Edit Home apps", color = TextMain, fontSize = 32.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 20.dp))
+                // Apps: only the photo behind, no name and no photo credit.
+                is Hero.App, Hero.EditApps -> Unit
                 null -> {
                     val status = (iptvErrors + listOfNotNull(plexError)).firstOrNull()
                     if (status != null) Text(status, color = Accent, fontSize = 13.sp, maxLines = 2)
@@ -257,19 +257,6 @@ fun PosterRow(title: String, content: LazyListScope.() -> Unit) {
         )
     }
 }
-
-@Composable
-fun HeroApp(app: TvApp, backdrop: Backdrop?) {
-    Column(Modifier.padding(top = 20.dp)) {
-        Text(app.label, color = TextMain, fontSize = 32.sp, fontWeight = FontWeight.Bold)
-        if (backdrop != null) {
-            Text(backdrop.copyrightLine(), color = TextDim, fontSize = 11.sp, maxLines = 1,
-                modifier = Modifier.padding(top = 40.dp))
-        }
-    }
-}
-
-fun Backdrop.copyrightLine() = listOf(title, credit).filter { it.isNotBlank() }.joinToString("  ")
 
 /** Last card of the Home apps row: opens the Apps page to choose and order apps. */
 @Composable

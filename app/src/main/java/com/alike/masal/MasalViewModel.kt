@@ -9,6 +9,8 @@ import com.alike.masal.data.Apps
 import com.alike.masal.data.Backdrop
 import com.alike.masal.data.Backdrops
 import com.alike.masal.data.Channel
+import com.alike.masal.data.HomeRowOption
+import com.alike.masal.data.HomeRows
 import com.alike.masal.data.PlexHub
 import com.alike.masal.data.PlexItem
 import com.alike.masal.data.PlexSection
@@ -17,6 +19,7 @@ import com.alike.masal.data.TvApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
@@ -25,8 +28,15 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
     val epg = MutableStateFlow<Map<String, List<Programme>>>(emptyMap())
     val onDeck = MutableStateFlow<List<PlexItem>>(emptyList())
     val recentlyAdded = MutableStateFlow<List<PlexItem>>(emptyList())
-    /** Plex's own Home rows (recently added, promoted collections); Continue Watching comes from [onDeck]. */
+    /** The Plex rows shown on Home, as chosen in Settings; Continue Watching comes from [onDeck]. */
     val homeHubs = MutableStateFlow<List<PlexHub>>(emptyList())
+    /** Everything that can be shown as a row on Home (Plex's rows and all collections), for Settings. */
+    val homeRowOptions = MutableStateFlow<List<HomeRowOption>>(emptyList())
+    /** Plex's own Home rows as loaded, before the user's choice. */
+    @Volatile private var plexHomeHubs: List<PlexHub> = emptyList()
+    /** First titles of collections shown on Home that Plex does not promote. */
+    private val extraRowCache = java.util.concurrent.ConcurrentHashMap<String, List<PlexItem>>()
+    private var homeRowsJob: Job? = null
     val recentChannels = MutableStateFlow(Graph.settings.recentChannels)
     internal val sectionCache = java.util.concurrent.ConcurrentHashMap<String, List<PlexItem>>() // internal: tests seed it
     internal val hubCache = java.util.concurrent.ConcurrentHashMap<String, List<PlexHub>>() // internal: tests seed it
@@ -66,6 +76,8 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
                 refreshPlex()
             }
         }
+        // Only the Home layout changed (rows chosen in Settings): rebuild the rows, reload nothing else.
+        viewModelScope.launch { Graph.settings.homeVersion.drop(1).collect { rebuildHomeRows() } }
         loadBackdrops()
         runCatching { connectivity?.registerDefaultNetworkCallback(network) }
     }
@@ -117,6 +129,7 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
     fun refreshPlex() {
         if (!Graph.plex.configured) {
             onDeck.value = emptyList(); recentlyAdded.value = emptyList(); sections.value = emptyList(); homeHubs.value = emptyList()
+            homeRowOptions.value = emptyList(); plexHomeHubs = emptyList()
             return
         }
         plexJob?.cancel()
@@ -128,13 +141,51 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
                 .onFailure { plexError.value = "Plex: ${it.message ?: it.javaClass.simpleName}" }
             val hubs = runCatching { Graph.plex.homeHubs() }
             ensureActive()
-            hubs.onSuccess { list -> homeHubs.value = list.filter { it.id != "home.continue" && it.id != "home.ondeck" } }
-                .onFailure { // older servers: fall back to one "Recently added" row
-                    val recent = runCatching { Graph.plex.recentlyAdded() }
-                    ensureActive()
-                    recent.onSuccess { recentlyAdded.value = it }
-                }
+            plexHomeHubs = hubs.getOrNull()?.filter { it.id != "home.continue" && it.id != "home.ondeck" }.orEmpty()
+            extraRowCache.clear()
+            hubs.onFailure { // older servers: fall back to one "Recently added" row
+                val recent = runCatching { Graph.plex.recentlyAdded() }
+                ensureActive()
+                recent.onSuccess { recentlyAdded.value = it }
+            }
+            buildHomeRows()
         }
+    }
+
+    fun rebuildHomeRows() {
+        if (!Graph.plex.configured) return
+        homeRowsJob?.cancel()
+        homeRowsJob = viewModelScope.launch(Dispatchers.IO) { buildHomeRows() }
+    }
+
+    /**
+     * Home's Plex rows: Plex's own rows in Plex's order, then extra collections in library order,
+     * each only when switched on in Settings (see Settings.homeRowShown).
+     */
+    private suspend fun buildHomeRows() {
+        val collections = sections.value.flatMap { s ->
+            runCatching { collections(s.key) }.getOrDefault(emptyList()).map { s to it }
+        }
+        val hubs = plexHomeHubs
+        val options = HomeRows.options(hubs, collections)
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        homeRowOptions.value = options
+        val shown = options.filter { Graph.settings.homeRowShown(it) }
+        val shownIds = shown.mapTo(HashSet()) { it.id }
+        val rows = ArrayList<PlexHub>()
+        for (h in hubs) {
+            val id = HomeRows.collectionKey(h.id)?.let { "collection:$it" } ?: h.id
+            if (id in shownIds && rows.none { it.id == id }) rows += h.copy(id = id)
+        }
+        for (o in shown) {
+            if (!o.id.startsWith("collection:") || rows.any { it.id == o.id }) continue
+            val key = o.id.removePrefix("collection:")
+            val items = extraRowCache[key]
+                ?: runCatching { Graph.plex.collectionItems(key).take(20) }.getOrNull()?.also { extraRowCache[key] = it }
+            if (!items.isNullOrEmpty()) rows += PlexHub(o.id, o.title, items)
+        }
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        homeHubs.value = rows
     }
 
     /** Library contents are cached for the session; tabs switch often. */
