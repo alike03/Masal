@@ -48,7 +48,7 @@ cp .env.dist .env        # then fill in TV_ADB (and JAVA_HOME / ANDROID_HOME if 
 scripts/install.sh       # build and install on the TV over network ADB
 ```
 
-`scripts/install.sh` installs the app; it never starts it. Network ADB must be enabled on the TV (developer options) and this computer allowed once. An optional fallback through Home Assistant's Android TV integration can be configured in `.env`.
+`scripts/install.sh` installs the app, compiles it on the TV and opens it, but only when the TV is on (it never wakes it; `NO_START=1` installs only). Network ADB must be enabled on the TV (developer options) and this computer allowed once. An optional fallback through Home Assistant's Android TV integration can be configured in `.env`.
 
 ## First start
 

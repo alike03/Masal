@@ -9,14 +9,14 @@ Android TV app: a home interface with IPTV live TV, Plex playback and app shortc
 - Local settings (device address, toolchain paths, optional Home Assistant fallback, test values) live in `.env` (gitignored, template `.env.dist`). Never commit machine-specific values, IPs or paths.
 - Credentials (Plex, IPTV) are entered on the device through the setup page and stay in the app's private storage. Never hardcode, log or print them.
 - `snapshot/` holds personal library data for the real-data tests: gitignored, never commit it.
-- `scripts/install.sh` installs, it never starts the app.
+- `scripts/install.sh` installs, compiles and opens Masal, but only on an awake TV: it never wakes the TV and never starts other apps (`NO_START=1` installs only).
 
 ## Stack
 Kotlin, Compose for TV (`androidx.tv:tv-material`), Media3 ExoPlayer, OkHttp, Coil, NanoHTTPD (QR setup page), ZXing.
 
 ## Build and install
 - JDK 17 and the Android SDK (set `JAVA_HOME` / `ANDROID_HOME`, or put them in `.env`; `local.properties` holds `sdk.dir`).
-- `./gradlew assembleDebug` builds; `scripts/install.sh` builds and installs over network ADB (`TV_ADB` in `.env`), with an optional Home Assistant fallback, then compiles the app on the device (`cmd package compile -m speed`): an uncompiled debug APK cold-starts slowly, and as the home screen Masal is cold-started at the moment the device goes to standby. Its stale-APK check ignores test sources.
+- `./gradlew assembleDebug` builds; `scripts/install.sh` builds and installs over network ADB (`TV_ADB` in `.env`), with an optional Home Assistant fallback, then compiles the app on the device (`cmd package compile -m speed`; Android compiles a debuggable APK only to `quicken`, a release build fully): an uncompiled debug APK cold-starts slowly, and as the home screen Masal is cold-started at the moment the device goes to standby. Then it opens Masal if the TV is awake. Its stale-APK check ignores test sources.
 
 ## Releases
 `.github/workflows/release.yml`: on a `v*` tag, tests, builds `assembleRelease` signed with the key from the repository secrets (created once by `scripts/create-release-key.sh`), checks the signature and publishes a GitHub release with `gh release create` (tags with `-` become pre-releases). Manual runs are dry runs that keep the APK as a workflow artifact. Version name comes from the tag, version code from the run number (`MASAL_VERSION_NAME` / `MASAL_VERSION_CODE`). Actions are pinned to commit SHAs with the version in a comment; when updating, look up the latest release of each action and runner image (`ubuntu-26.04` at the time of writing) instead of guessing.
