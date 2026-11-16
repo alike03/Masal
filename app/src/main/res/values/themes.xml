@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Masal" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:colorBackground">@color/bg</item>
+    </style>
+    <color name="bg">#FF121110</color>
+    <!-- Background of the Masal logo, so the icon has no visible edge. -->
+    <color name="icon_bg">#FF1D1916</color>
+    <color name="accent">#FFE0A458</color>
+</resources>

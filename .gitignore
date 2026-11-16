@@ -1,0 +1,12 @@
+.gradle/
+build/
+local.properties
+*.apk
+.idea/
+
+# Local settings (template: .env.dist)
+.env
+
+# Real library snapshot for local UI tests (personal data, never commit)
+/snapshot/
+.kotlin/
