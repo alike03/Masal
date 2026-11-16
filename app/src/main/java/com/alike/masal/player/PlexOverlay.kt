@@ -33,6 +33,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -83,7 +85,17 @@ import java.util.Locale
 /** One line in a side panel (a subtitle, an audio track, a language, a search result). */
 class PanelOption(val label: String, val detail: String = "", val selected: Boolean = false, val action: () -> Unit)
 
-class Panel(val title: String, val options: List<PanelOption> = emptyList(), val note: String? = null)
+/**
+ * A side panel. [back] is where Back leads (a settings choice back to the settings list; null
+ * closes the panel); [focus] is the line that gets focus (else the selected one, else the first).
+ */
+class Panel(
+    val title: String,
+    val options: List<PanelOption> = emptyList(),
+    val note: String? = null,
+    val back: (() -> Panel)? = null,
+    val focus: Int? = null,
+)
 
 /** What the Plex player shows; owned by PlayerActivity. */
 class PlexUiState {
@@ -104,6 +116,9 @@ class PlexUiState {
     var message by mutableStateOf<String?>(null)
     /** Bumped to move focus back into the bar (after a panel closes). */
     var focusTick by mutableLongStateOf(0)
+    /** Skip lengths in seconds, from the settings. */
+    var skipBack by mutableIntStateOf(10)
+    var skipForward by mutableIntStateOf(30)
 }
 
 class PlexActions(
@@ -112,6 +127,7 @@ class PlexActions(
     val subtitles: () -> Unit,
     val audio: () -> Unit,
     val touch: () -> Unit,
+    val settings: () -> Unit = {},
 )
 
 @Composable
@@ -177,16 +193,18 @@ private fun Controls(state: PlexUiState, actions: PlexActions) {
                 Text("-" + formatClock(left), color = TextMain, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             }
             Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                RoundButton(PlayerIcons.Back, "10", actions.touch, onClick = { actions.seekBy(-10_000) })
+                RoundButton(PlayerIcons.Back, "${state.skipBack}", actions.touch, onClick = { actions.seekBy(-state.skipBack * 1000L) })
                 Spacer(Modifier.width(14.dp))
                 RoundButton(if (state.playing) PlayerIcons.Pause else Icons.Filled.PlayArrow, null, actions.touch,
                     big = true, modifier = Modifier.focusRequester(play), onClick = actions.playPause)
                 Spacer(Modifier.width(14.dp))
-                RoundButton(PlayerIcons.Forward, "30", actions.touch, onClick = { actions.seekBy(30_000) })
+                RoundButton(PlayerIcons.Forward, "${state.skipForward}", actions.touch, onClick = { actions.seekBy(state.skipForward * 1000L) })
                 Spacer(Modifier.weight(1f))
                 PillButton(PlayerIcons.Subtitles, state.subtitleLabel, actions.touch, actions.subtitles)
                 Spacer(Modifier.width(12.dp))
                 PillButton(PlayerIcons.Audio, state.audioLabel.ifBlank { "Audio" }, actions.touch, actions.audio)
+                Spacer(Modifier.width(12.dp))
+                PillButton(Icons.Filled.Settings, "Settings", actions.touch, actions.settings)
             }
         }
     }
@@ -285,11 +303,11 @@ private fun SidePanel(panel: Panel, touch: () -> Unit) {
         panel.note?.let { Text(it, color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
         // Start scrolled to the selected option: with many tracks it may lie beyond the first screen,
         // and focus can only be requested on a composed row.
-        val selected = panel.options.indexOfFirst { it.selected }.coerceAtLeast(0)
+        val selected = (panel.focus ?: panel.options.indexOfFirst { it.selected }).coerceAtLeast(0)
         val listState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = (selected - 2).coerceAtLeast(0))
         LazyColumn(state = listState, contentPadding = PaddingValues(top = 14.dp, bottom = 30.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             itemsIndexed(panel.options) { i, o ->
-                val target = if (panel.options.any { it.selected }) o.selected else i == 0
+                val target = i == selected
                 Surface(
                     onClick = { touch(); o.action() },
                     modifier = Modifier.fillMaxWidth().then(if (target) Modifier.focusRequester(first) else Modifier)

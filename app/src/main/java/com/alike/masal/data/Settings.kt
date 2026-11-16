@@ -124,6 +124,34 @@ class Settings(context: Context) {
         homeRowsOff = if (!shown && option.defaultOn) homeRowsOff + option.id else homeRowsOff - option.id
     }
 
+    // ---- Plex player (choices in player/PlayerSettings.kt) ----
+
+    /** Subtitle size in percent of the default 21 dp. */
+    var subtitleSize: Int
+        get() = prefs.getInt("sub_size", 100)
+        set(v) = prefs.edit().putInt("sub_size", v).apply()
+
+    var subtitleColor: String
+        get() = prefs.getString("sub_color", "white") ?: "white"
+        set(v) = prefs.edit().putString("sub_color", v).apply()
+
+    /** "none" (outline only), "half" or "solid" box behind the text. */
+    var subtitleBackground: String
+        get() = prefs.getString("sub_bg", "none") ?: "none"
+        set(v) = prefs.edit().putString("sub_bg", v).apply()
+
+    var subtitlePosition: String
+        get() = prefs.getString("sub_pos", "normal") ?: "normal"
+        set(v) = prefs.edit().putString("sub_pos", v).apply()
+
+    var skipBackSeconds: Int
+        get() = prefs.getInt("skip_back", 10)
+        set(v) = prefs.edit().putInt("skip_back", v).apply()
+
+    var skipForwardSeconds: Int
+        get() = prefs.getInt("skip_fwd", 30)
+        set(v) = prefs.edit().putInt("skip_fwd", v).apply()
+
     fun addRecent(key: String) {
         recentChannels = (listOf(key) + recentChannels.filter { it != key }).take(20)
     }

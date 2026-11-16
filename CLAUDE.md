@@ -36,6 +36,6 @@ Compose pitfalls found by the tests: a lazy grid that overlaps the element you p
 - `data/` Settings (SharedPreferences; favourites, recent channels, Home apps order, Home live TV row), IPTV (M3U, Xtream API, XMLTV EPG), Plex client (JSON API, hubs, search, collections, genres, clearLogo, UltraBlurColors, streams, subtitle search/download, PIN link, timeline/scrobble), installed apps, Home rows (`HomeRows.kt`: Plex rows and collections chosen for Home, stored as differences from Plex's own Home), Bing photo-of-the-day backdrops (no key), `foldText()` (accent and Turkish I folding).
 - `setup/` QR setup page for the phone and the Settings screen on the TV (spec: `setup.md`).
 - `ui/` Home (`HomeScreen.kt`), accordion rows and info blocks (`Rows.kt`, `FoldingRows`), background and previews (`Ambient.kt`), libraries (`BrowseScreens.kt`), search (`SearchScreen.kt`), Apps page, TV tab, side menu, theme and soft scrolling (`Components.kt`).
-- `player/` `PlayerActivity` (Plex and live), `PlexOverlay.kt`, `LiveOverlay.kt`, `Media.kt` (ExoPlayer with audio focus).
+- `player/` `PlayerActivity` (Plex and live), `PlexOverlay.kt`, `LiveOverlay.kt`, `PlayerSettings.kt` (subtitle look and skip lengths, stored in Settings), `Media.kt` (ExoPlayer with audio focus).
 - `debug/` `SnapshotReceiver` (debug builds only).
 - Look, assets, fonts and motion timings: `docs/specs/look.md`.

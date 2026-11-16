@@ -93,16 +93,10 @@ class PlayerActivity : ComponentActivity() {
             setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
             isFocusable = true
             isFocusableInTouchMode = true
-            subtitleView?.apply {
-                // Plex-like captions: white, bold, black outline, no box.
-                val font = runCatching { ResourcesCompat.getFont(context, R.font.dm_sans) }.getOrNull()
-                setStyle(CaptionStyleCompat(Color.WHITE, Color.TRANSPARENT, Color.TRANSPARENT,
-                    CaptionStyleCompat.EDGE_TYPE_OUTLINE, Color.BLACK, Typeface.create(font ?: Typeface.SANS_SERIF, Typeface.BOLD)))
-                setFixedTextSize(TypedValue.COMPLEX_UNIT_DIP, 21f)
-                setApplyEmbeddedFontSizes(false)
-                setBottomPaddingFraction(0.07f)
-            }
         }
+        // Subtitle look from the player settings (colour, box or outline, size, position).
+        subtitleFont = runCatching { ResourcesCompat.getFont(this, R.font.dm_sans) }.getOrNull()
+        applySettings()
         val root = FrameLayout(this).apply {
             setBackgroundColor(Color.BLACK)
             addView(view, FrameLayout.LayoutParams(-1, -1))
@@ -123,6 +117,7 @@ class PlayerActivity : ComponentActivity() {
                             subtitles = ::openSubtitles,
                             audio = ::openAudio,
                             touch = ::touch,
+                            settings = { openSettings() },
                         ))
                     }
                 }
@@ -364,6 +359,7 @@ class PlayerActivity : ComponentActivity() {
         when (e.keyCode) {
             KeyEvent.KEYCODE_BACK -> {
                 if (!down) when {
+                    plex.panel?.back != null -> plex.panel = plex.panel?.back?.invoke()
                     plex.panel != null -> { plex.panel = null; setControls(true); plex.focusTick++ }
                     plex.controls -> setControls(false)
                     else -> finish()
@@ -374,8 +370,8 @@ class PlayerActivity : ComponentActivity() {
                 if (down && e.repeatCount == 0) when (e.keyCode) {
                     KeyEvent.KEYCODE_MEDIA_PLAY -> player.play()
                     KeyEvent.KEYCODE_MEDIA_PAUSE -> player.pause()
-                    KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> seekBy(30_000)
-                    KeyEvent.KEYCODE_MEDIA_REWIND -> seekBy(-10_000)
+                    KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> seekBy(plex.skipForward * 1000L)
+                    KeyEvent.KEYCODE_MEDIA_REWIND -> seekBy(-plex.skipBack * 1000L)
                     else -> togglePlay()
                 }
                 if (down && plex.panel == null) setControls(true)
@@ -392,7 +388,7 @@ class PlayerActivity : ComponentActivity() {
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> { if (down) setControls(true); return true }
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
                 if (down) {
-                    seekBy(if (e.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) -10_000 else 30_000)
+                    seekBy(if (e.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) -plex.skipBack * 1000L else plex.skipForward * 1000L)
                     setControls(true, focus = "seek")
                 }
                 return true
@@ -530,6 +526,51 @@ class PlayerActivity : ComponentActivity() {
             }
             add(PanelOption("Search for subtitles…", detail = "OpenSubtitles through your Plex server") { openLanguages() })
         })
+    }
+
+    // ---- Plex: settings panel ----
+
+    private var subtitleFont: Typeface? = null
+
+    /** Applies the stored player settings: subtitle look now, skip lengths on buttons and keys. */
+    private fun applySettings() {
+        val s = Graph.settings
+        view.subtitleView?.let { PlayerSettings.applySubtitles(it, s, subtitleFont) }
+        plex.skipBack = s.skipBackSeconds
+        plex.skipForward = s.skipForwardSeconds
+    }
+
+    private fun openSettings(focus: Int? = null) { plex.panel = settingsPanel(focus) }
+
+    /** One line per setting with its value; OK opens its choices (stored for all titles). */
+    private fun settingsPanel(focus: Int? = null): Panel {
+        val s = Graph.settings
+        val p = PlayerSettings
+        fun pct(v: Int) = "$v %"
+        fun sec(v: Int) = "$v s"
+        val lines = listOf(
+            Triple("Subtitle size", pct(s.subtitleSize)) { i: Int ->
+                choose(i, "Subtitle size", p.sizes.map { pct(it) to it }, s.subtitleSize) { s.subtitleSize = it } },
+            Triple("Subtitle colour", with(p) { colors.of(s.subtitleColor).label }) { i: Int ->
+                choose(i, "Subtitle colour", p.colors.map { it.label to it.key }, s.subtitleColor) { s.subtitleColor = it } },
+            Triple("Subtitle background", with(p) { backgrounds.of(s.subtitleBackground).label }) { i: Int ->
+                choose(i, "Subtitle background", p.backgrounds.map { it.label to it.key }, s.subtitleBackground) { s.subtitleBackground = it } },
+            Triple("Subtitle position", with(p) { positions.of(s.subtitlePosition).label }) { i: Int ->
+                choose(i, "Subtitle position", p.positions.map { it.label to it.key }, s.subtitlePosition) { s.subtitlePosition = it } },
+            Triple("Skip back", sec(s.skipBackSeconds)) { i: Int ->
+                choose(i, "Skip back", p.skipBack.map { sec(it) to it }, s.skipBackSeconds) { s.skipBackSeconds = it } },
+            Triple("Skip forward", sec(s.skipForwardSeconds)) { i: Int ->
+                choose(i, "Skip forward", p.skipForward.map { sec(it) to it }, s.skipForwardSeconds) { s.skipForwardSeconds = it } },
+        )
+        return Panel("Settings", lines.mapIndexed { i, (label, value, open) -> PanelOption(label, value) { open(i) } },
+            note = "Saved on this TV for all titles.", focus = focus)
+    }
+
+    /** The choices of one setting; picking applies it at once and returns to the settings list. */
+    private fun <T> choose(line: Int, title: String, choices: List<Pair<String, T>>, current: T, set: (T) -> Unit) {
+        plex.panel = Panel(title, choices.map { (label, value) ->
+            PanelOption(label, selected = value == current) { set(value); applySettings(); openSettings(line) }
+        }, back = { settingsPanel(line) })
     }
 
     private fun openAudio() {
