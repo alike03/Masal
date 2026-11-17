@@ -69,9 +69,10 @@
     <string name="appspage_title">Uygulamalar</string>
     <string name="appspage_hint_moving">◀ ▶ taşı   OK bitti</string>
     <string name="appspage_hint_editing">OK bir uygulamayı Ana Sayfa\'ya ekler veya kaldırır. Taşımak için Ana Sayfa\'daki bir uygulamada OK\'a bas.</string>
-    <string name="appspage_hint">OK açar   ▶❚❚ Ana Sayfa\'ya ekler</string>
     <string name="appspage_done">Bitti</string>
     <string name="appspage_edit">Ana Sayfa uygulamalarını düzenle</string>
     <string name="appspage_on_home">Ana Sayfa\'da</string>
     <string name="appspage_all_apps">Tüm uygulamalar</string>
+    <string name="home_movie_collection">Film koleksiyonu</string>
+    <string name="home_show_collection">Dizi koleksiyonu</string>
 </resources>

@@ -63,6 +63,7 @@ import com.alike.masal.player.buildPlayer
 import com.alike.masal.player.channelItem
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
@@ -155,10 +156,25 @@ fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier, screen: 
         live -> videoCorners ?: LiveTint
         else -> null
     }
-    // The fill appears, changes and disappears together with the frame (same 450 ms).
     val framed = image != null || live
-    // Without a picture (or on a screen switch to one without) the fill goes at once with the old picture.
-    val fill by animateFloatAsState(if (framed) 1f else 0f, if (framed || !cut) tween(450) else snap(), label = "fill")
+    // After a cut the new picture and its fill appear together: both wait until the picture's
+    // colours are known, then fade in over the same 300 ms, and the colours are set, not glided
+    // from the previous page's. Otherwise the picture would show with bare corners first.
+    var afterCut by remember { mutableStateOf(false) }
+    val fresh = cut || afterCut
+    val ready = corners != null
+    LaunchedEffect(cut, ready) {
+        if (cut && !ready) afterCut = true
+        if (ready) afterCut = false
+    }
+    val waiting = fresh && framed && !ready
+    // Within a row the fill changes together with the frame (same 450 ms); without a picture it
+    // goes at once with the old one.
+    val fill by animateFloatAsState(
+        if (framed && !waiting) 1f else 0f,
+        when { !framed || waiting -> if (fresh) snap() else tween(450); fresh -> tween(300); else -> tween(450) },
+        label = "fill",
+    )
     Box(modifier.fillMaxSize().background(Bg)) {
         AnimatedContent(
             targetState = Shown(ambient, cut || ambient == null),
@@ -174,7 +190,10 @@ fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier, screen: 
             label = "ambient",
         ) { shown ->
             val a = shown.ambient
-            Box(Modifier.fillMaxSize()) {
+            // The current picture stays hidden while its colours are still being read after a cut.
+            val hold = waiting && a?.key == ambient?.key
+            val shownAlpha by animateFloatAsState(if (hold) 0f else 1f, if (hold) snap() else tween(300), label = "art")
+            Box(Modifier.fillMaxSize().graphicsLayer { alpha = shownAlpha }) {
                 when {
                     a?.image != null -> ArtFrame(Modifier.graphicsLayer { clip = true }) { KenBurns(a.image) }
                     // Live channel: no logo placeholder, just a calm gradient in the frame until the picture fades in.
@@ -190,7 +209,7 @@ fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier, screen: 
             }
         }
         if (fill > 0f) Box(Modifier.fillMaxSize().graphicsLayer { alpha = fill }) {
-            TintAroundArt(corners)
+            TintAroundArt(corners, jump = fresh)
             TextScrims()
         }
     }
@@ -202,6 +221,9 @@ private class Shown(val ambient: Ambient?, val cut: Boolean) {
     override fun equals(other: Any?) = other is Shown && other.ambient?.key == ambient?.key && other.ambient?.image == ambient?.image
     override fun hashCode() = (ambient?.key + "|" + ambient?.image).hashCode()
 }
+
+/** Fill colour while a picture's own colours are unknown. */
+private val NeutralCorners = List(4) { 0xFF1E1C1A.toInt() }
 
 /** Fill colour around a live channel's frame until its picture runs. */
 private val LiveTint = List(4) { 0xFF221E1B.toInt() }
@@ -234,10 +256,11 @@ private fun TextScrims() {
  * picture's own edge, so the fade has no dark band. The colours glide to the next title's.
  */
 @Composable
-private fun TintAroundArt(corners: List<Int>?) {
-    val target = corners ?: List(4) { 0xFF1E1C1A.toInt() }
+private fun TintAroundArt(corners: List<Int>?, jump: Boolean = false) {
+    val target = corners ?: NeutralCorners
+    // [jump]: the new page's colours are set at once, not glided from the previous page's.
     val c = List(4) { i ->
-        androidx.compose.animation.animateColorAsState(Color(target[i]), tween(450), label = "tint$i").value
+        androidx.compose.animation.animateColorAsState(Color(target[i]), if (jump) snap() else tween(450), label = "tint$i").value
     }
     val (tl, tr, br, bl) = c
     Box(
@@ -287,10 +310,21 @@ private fun rememberImageCorners(url: String): List<Int>? {
     var corners by remember(url) { mutableStateOf(cornerCache[url]) }
     LaunchedEffect(url) {
         if (corners != null) return@LaunchedEffect
-        val request = coil.request.ImageRequest.Builder(context).data(url).size(24, 14).allowHardware(false).build()
-        val result = context.imageLoader.execute(request) as? coil.request.SuccessResult ?: return@LaunchedEffect
-        val bitmap = (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap ?: return@LaunchedEffect
-        corners = withContext(Dispatchers.Default) { imageCorners(bitmap) }.also { cornerCache[url] = it }
+        val read = kotlinx.coroutines.coroutineScope {
+            async {
+                val request = coil.request.ImageRequest.Builder(context).data(url).size(24, 14).allowHardware(false).build()
+                val result = context.imageLoader.execute(request) as? coil.request.SuccessResult
+                val bitmap = (result?.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                bitmap?.let { b -> withContext(Dispatchers.Default) { imageCorners(b) } }
+            }.let { job ->
+                // The picture waits for its colours; a slow or failed read must not hold it back for long.
+                kotlinx.coroutines.withTimeoutOrNull(700) { job.await() } ?: run {
+                    corners = NeutralCorners
+                    job.await()
+                }
+            }
+        }
+        if (read != null) { cornerCache[url] = read; corners = read } else if (corners == null) corners = NeutralCorners
     }
     return corners
 }

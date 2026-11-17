@@ -182,15 +182,9 @@ class SetupServer(
                 append("<fieldset class=\"checks\"><legend>${esc(group)}</legend>")
                 options.forEach { o ->
                     val id = "row-" + o.id.replace(Regex("[^A-Za-z0-9]"), "-")
-                    // Movie or TV show collection: library names alone do not always tell.
-                    val kind = when (o.kind) {
-                        "movie" -> " <small class=\"muted\">(${t(R.string.settings_kind_movie_collection)})</small>"
-                        "show" -> " <small class=\"muted\">(${t(R.string.settings_kind_show_collection)})</small>"
-                        else -> ""
-                    }
                     append("<input type=\"hidden\" name=\"all\" value=\"${esc(o.id)}\">")
                     append("<label class=\"check\" for=\"$id\"><input type=\"checkbox\" id=\"$id\" name=\"row\" value=\"${esc(o.id)}\"" +
-                        (if (settings.homeRowShown(o)) " checked" else "") + "><span>${esc(o.title)}$kind</span></label>")
+                        (if (settings.homeRowShown(o)) " checked" else "") + "><span>${esc(o.title)}</span></label>")
                 }
                 append("</fieldset>")
             }

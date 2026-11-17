@@ -4,7 +4,9 @@
 Launch installed TV apps; choose and order the apps shown on Home.
 
 ## Behaviour
-- Apps page (side menu): "On Home" row with the pinned apps in order, then all apps.
+- Apps page (side menu): "On Home" row with the pinned apps in order, then all apps. The
+  "Edit Home apps" / "Done" button sits on the right edge of the header, its label on one line;
+  outside edit mode there is no key hint (only while editing or moving).
 - "Edit Home apps" switches OK from opening to pinning; in that mode OK on a Home app picks
   it up, ◀ ▶ moves it, OK puts it down.
 - Outside edit mode play/pause (or Menu) pins or unpins the focused app.

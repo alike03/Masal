@@ -73,5 +73,12 @@ class LiveOverlayTest {
         state.infoVisible = false
         state.listVisible = true
         shot("03-channel-list")
+        // Switching: the loading bar runs along the bottom edge (an endless animation: clock by hand).
+        rule.mainClock.autoAdvance = false
+        state.listVisible = false
+        state.infoVisible = true
+        state.index = 2
+        state.loading = true
+        shot("04-switching")
     }
 }

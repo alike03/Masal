@@ -69,9 +69,10 @@
     <string name="appspage_title">Apps</string>
     <string name="appspage_hint_moving">◀ ▶ verschieben   OK fertig</string>
     <string name="appspage_hint_editing">OK fügt eine App zur Startseite hinzu oder entfernt sie. OK auf einer App der Startseite, um sie zu verschieben.</string>
-    <string name="appspage_hint">OK öffnet   ▶❚❚ fügt zur Startseite hinzu</string>
     <string name="appspage_done">Fertig</string>
     <string name="appspage_edit">Apps der Startseite bearbeiten</string>
     <string name="appspage_on_home">Auf der Startseite</string>
     <string name="appspage_all_apps">Alle Apps</string>
+    <string name="home_movie_collection">Film-Sammlung</string>
+    <string name="home_show_collection">Serien-Sammlung</string>
 </resources>

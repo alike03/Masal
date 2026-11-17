@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -73,6 +76,8 @@ class LiveState {
     var infoVisible by mutableStateOf(false)
     var listVisible by mutableStateOf(false)
     var digits by mutableStateOf("")
+    /** The chosen channel is still connecting (the previous picture may still be showing). */
+    var loading by mutableStateOf(false)
 
     val current get() = channels.getOrNull(index)
 }
@@ -83,6 +88,8 @@ fun LiveOverlay(state: LiveState, onPick: (name: String, list: List<Channel>, in
         if (state.infoVisible && !state.listVisible) {
             state.current?.let { InfoBanner(state.index + 1, it, it.epgId?.let { id -> state.epg[id] }, Modifier.align(Alignment.BottomCenter)) }
         }
+        // Switching channels: a thin bar along the bottom edge until the new picture starts.
+        if (state.loading) LoadingBar(Modifier.align(Alignment.BottomCenter))
         if (state.digits.isNotEmpty()) {
             Text(
                 state.digits, color = TextMain, fontSize = 40.sp, fontWeight = FontWeight.Bold,
@@ -92,6 +99,21 @@ fun LiveOverlay(state: LiveState, onPick: (name: String, list: List<Channel>, in
         }
         if (state.listVisible) ChannelPanel(state, onPick)
     }
+}
+
+/** Indeterminate loading bar: an amber segment sliding along a faint track. */
+@Composable
+private fun LoadingBar(modifier: Modifier) {
+    val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "loading")
+    val x by t.animateFloat(
+        -0.3f, 1f,
+        androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(1_100, easing = androidx.compose.animation.core.LinearEasing)),
+        label = "x",
+    )
+    Box(modifier.fillMaxWidth().height(4.dp).background(TextMain.copy(alpha = 0.12f)).drawBehind {
+        drawRect(Accent, topLeft = androidx.compose.ui.geometry.Offset(size.width * x, 0f),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.3f, size.height))
+    })
 }
 
 @Composable

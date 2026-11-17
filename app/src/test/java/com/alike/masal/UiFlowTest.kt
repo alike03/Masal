@@ -13,6 +13,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.alike.masal.data.Channel
 import com.alike.masal.data.PlexHub
+import androidx.compose.ui.test.onAllNodesWithText
 import com.alike.masal.data.PlexItem
 import com.alike.masal.data.PlexSection
 import com.alike.masal.data.TvApp
@@ -113,9 +114,12 @@ class UiFlowTest {
     /** Masal as the device's home screen: the Home key returns to Home, Back on Home stays. */
     @Test
     fun homeScreen() {
-        seed()
+        val vm = seed()
+        vm.homeHubs.value = listOf(PlexHub("collection:5", "Testsammlung", vm.sectionCache.getValue("1")))
         rule.mainClock.advanceTimeBy(1_000)
         expectFocus("start", "Testplayer")
+        assertTrue("a collection row says it holds movies",
+            rule.onAllNodesWithText("Movie collection").fetchSemanticsNodes().isNotEmpty())
         press(KeyEvent.KEYCODE_DPAD_LEFT)
         press(KeyEvent.KEYCODE_DPAD_DOWN)
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
@@ -152,7 +156,7 @@ class UiFlowTest {
     fun settingsScreen() {
         val vm = seed()
         val recent = com.alike.masal.data.HomeRowOption("home.movies.recent", "Recently Added Movies", "Plex", true)
-        val saga = com.alike.masal.data.HomeRowOption("collection:5", "Testsammlung", "Filme", false, "movie")
+        val saga = com.alike.masal.data.HomeRowOption("collection:5", "Testsammlung", "Filme", false)
         vm.homeRowOptions.value = listOf(recent, saga)
         Graph.settings.homeRowsOn = emptySet(); Graph.settings.homeRowsOff = emptySet()
         rule.mainClock.advanceTimeBy(1_000)
@@ -206,7 +210,7 @@ class UiFlowTest {
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         assertTrue("OK switches a default row off", !Graph.settings.homeRowShown(recent))
         press(KeyEvent.KEYCODE_DPAD_DOWN)
-        expectFocus("collection, marked as movie collection", "Movie collection")
+        expectFocus("collection", "Testsammlung")
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         assertTrue("OK switches a collection on", Graph.settings.homeRowShown(saga))
         shot("12-settings-rows")

@@ -41,8 +41,7 @@ Enter Plex and IPTV logins with the phone instead of the remote.
     Back put it down; Back again returns. "Back to the provider's order" (only with an own order)
     clears it. New categories from the provider appear after the ordered ones.
   - Home rows: one line per Plex row and collection, grouped by library, with a check mark when
-    shown; OK switches it. Collections say whether they are a movie or a TV show collection
-    (also on the phone page).
+    shown; OK switches it.
   - Live TV sources: names only; adding and removing happens on the phone page.
 - Changes apply at once and are the same settings as on the phone page.
 - Logins stay in the app's private storage, excluded from cloud backup and device transfer;

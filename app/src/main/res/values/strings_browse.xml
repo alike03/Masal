@@ -69,9 +69,10 @@
     <string name="appspage_title">Apps</string>
     <string name="appspage_hint_moving">◀ ▶ move   OK done</string>
     <string name="appspage_hint_editing">OK adds or removes an app on Home. OK on a Home app to move it.</string>
-    <string name="appspage_hint">OK opens   ▶❚❚ adds to Home</string>
     <string name="appspage_done">Done</string>
     <string name="appspage_edit">Edit Home apps</string>
     <string name="appspage_on_home">On Home</string>
     <string name="appspage_all_apps">All apps</string>
+    <string name="home_movie_collection">Movie collection</string>
+    <string name="home_show_collection">TV show collection</string>
 </resources>

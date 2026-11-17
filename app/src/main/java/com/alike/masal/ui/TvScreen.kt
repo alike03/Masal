@@ -102,8 +102,7 @@ fun TvScreen(vm: MasalViewModel, autoFocus: Boolean, onPlay: (String, List<Chann
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
     val current = groups.firstOrNull { it.first == selected } ?: groups.firstOrNull()
     var focused by remember { mutableStateOf<Channel?>(null) }
-    // Another category: the header shows it until a channel of it gets focus.
-    LaunchedEffect(current?.first) { if (focused != null && current?.second?.none { it.key == focused?.key } != false) focused = null }
+    // Moving through the categories keeps the channel playing; until a channel had focus the header shows the category.
     // The focused channel plays in the picture frame top right, with its colours around it, as on Home.
     ReportAmbient(focused?.let { liveAmbient(it) })
     val focus = rememberRestorableFocus(autoFocus, groups.isNotEmpty())

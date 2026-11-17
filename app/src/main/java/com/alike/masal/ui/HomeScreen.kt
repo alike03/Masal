@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
@@ -215,7 +216,7 @@ fun HomeScreen(
         }
         plexRows.forEach { hub ->
             add(RowSpec("hub:${hub.id}", PosterRowHeight) {
-                PosterRow(hub.title) {
+                PosterRow(hub.title, collectionKind(hub)) {
                     items(hub.items, key = { "h:${hub.id}:" + it.ratingKey }) { item ->
                         PosterCard(
                             item, Graph.plex.image(item.poster, 240, 360),
@@ -273,14 +274,30 @@ fun HomeScreen(
 }
 
 @Composable
-fun PosterRow(title: String, content: LazyListScope.() -> Unit) {
+fun PosterRow(title: String, kind: String? = null, content: LazyListScope.() -> Unit) {
     Column {
-        RowTitle(title)
+        if (kind == null) RowTitle(title)
+        else Row(verticalAlignment = Alignment.Bottom) {
+            RowTitle(title)
+            Text(kind, color = TextDim, fontSize = 13.sp, maxLines = 1, modifier = Modifier.padding(start = 10.dp, bottom = 4.dp))
+        }
         LazyRow(
             contentPadding = PaddingValues(horizontal = EdgePadding, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             content = content,
         )
+    }
+}
+
+/** For a collection row: whether it holds movies or TV shows (a collection's title alone does not tell). */
+@Composable
+private fun collectionKind(hub: com.alike.masal.data.PlexHub): String? {
+    if (!hub.id.startsWith("collection:")) return null
+    val types = hub.items.mapTo(HashSet()) { if (it.type == "movie") "movie" else if (it.type in setOf("show", "season", "episode")) "show" else it.type }
+    return when (types.singleOrNull()) {
+        "movie" -> stringResource(R.string.home_movie_collection)
+        "show" -> stringResource(R.string.home_show_collection)
+        else -> null
     }
 }
 

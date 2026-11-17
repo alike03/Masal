@@ -466,7 +466,8 @@ fun MasalButton(
             Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
         }
-        Text(text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        // A button label never breaks into two lines.
+        Text(text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
     }
 }
 

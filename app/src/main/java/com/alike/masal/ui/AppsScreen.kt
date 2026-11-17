@@ -1,6 +1,7 @@
 package com.alike.masal.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -70,19 +71,16 @@ fun AppsScreen(vm: MasalViewModel, autoFocus: Boolean, startEditing: Boolean, on
             modifier = Modifier.fillMaxSize(),
         ) {
             item(key = "head", span = { GridItemSpan(maxLineSpan) }) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Column {
+                // Title (and, while editing, how it works) on the left, the edit button on the right edge.
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column(Modifier.weight(1f)) {
                         Text(stringResource(R.string.appspage_title), color = TextMain, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                        Text(
-                            stringResource(
-                                when {
-                                    moving != null -> R.string.appspage_hint_moving
-                                    editing -> R.string.appspage_hint_editing
-                                    else -> R.string.appspage_hint
-                                }
-                            ),
-                            color = TextDim, fontSize = 13.sp,
-                        )
+                        val hint = when {
+                            moving != null -> R.string.appspage_hint_moving
+                            editing -> R.string.appspage_hint_editing
+                            else -> null
+                        }
+                        if (hint != null) Text(stringResource(hint), color = TextDim, fontSize = 13.sp)
                     }
                     MasalButton(
                         stringResource(if (editing) R.string.appspage_done else R.string.appspage_edit),

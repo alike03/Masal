@@ -11,6 +11,8 @@ IPTV channels (Xtream or M3U, XMLTV guide) in a TV tab and a full-screen live pl
   of the selected one on the right (number, logo, full name, current programme, time, next; the
   star button marks favourites). No key hints, no LIVE badge anywhere in Masal: the context is
   clear. Channel names are never cut off; a long name wraps.
+- Moving through the categories keeps the focused channel playing in the frame; only another
+  channel replaces it.
 - Category order: "Last watched" and "Favourites" first, then the categories in the user's order
   (Settings, see setup.md), categories not placed by the user after them in the provider's order.
   The live player's channel list uses the same order.
@@ -32,7 +34,8 @@ IPTV channels (Xtream or M3U, XMLTV guide) in a TV tab and a full-screen live pl
   once; while the user presses quickly (less than 400 ms apart) the stream opens only 300 ms
   after the last press, so flicking through channels does not open a stream per channel. The
   info banner follows every press at once. The channel list, the last-channel key and digits
-  switch the same way.
+  switch the same way. Until the chosen channel's picture starts, a thin amber loading bar runs
+  along the bottom edge of the screen (also when the banner has gone).
 - Fallback to one stream: if the new channel fails as a second stream, or shows no picture within
   8 s, it is opened the old way (old stream stops, black with a buffering spinner until the new one
   starts). Many providers (Xtream in particular) allow one connection per account, and a device

@@ -373,7 +373,7 @@ private fun MainList(
             item(key = "group:$group") { Text(group, color = TextDim, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)) }
             items(rows, key = { "row:" + it.id }) { o ->
                 val shown = remember(homeVersion, o) { Graph.settings.homeRowShown(o) }
-                OptionRow(o.title, kindLabel(o.kind), shown) { onToggle(o) }
+                OptionRow(o.title, null, shown) { onToggle(o) }
             }
         }
 
@@ -450,14 +450,6 @@ private fun ChoiceList(title: String, note: String, choices: List<Pair<String, S
             }
         }
     }
-}
-
-/** "Movie collection" or "TV show collection" for a collection's library type. */
-@Composable
-private fun kindLabel(kind: String?): String? = when (kind) {
-    "movie" -> stringResource(R.string.settings_kind_movie_collection)
-    "show" -> stringResource(R.string.settings_kind_show_collection)
-    else -> null
 }
 
 /**

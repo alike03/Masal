@@ -154,6 +154,7 @@ class PlayerActivity : ComponentActivity() {
                 if (live && pending != null) return
                 // Live streams drop now and then (provider closes the connection, HLS falls behind): reconnect.
                 if (live && retryLive()) return
+                if (live) state.loading = false // given up: no endless loading bar
                 Toast.makeText(this@PlayerActivity, getString(R.string.player_playback_failed, error.errorCodeName), Toast.LENGTH_LONG).show()
             }
 
@@ -181,6 +182,7 @@ class PlayerActivity : ComponentActivity() {
             override fun onRenderedFirstFrame() {
                 if (!live) return
                 pictureUrl = tunedUrl
+                updateLoading()
                 // The channel failed as a second stream but plays on its own: the provider allows one
                 // connection, or the device cannot decode two such streams. Stay with one player.
                 if (fallbackUrl != null && fallbackUrl == tunedUrl) {
@@ -223,6 +225,7 @@ class PlayerActivity : ComponentActivity() {
         state.listName = name
         state.channels = list
         state.index = idx
+        updateLoading()
         showInfo()
         handler.removeCallbacks(tune)
         if (immediate) tuneCurrent() else { holdPending(); handler.postDelayed(tune, 300) }
@@ -352,6 +355,7 @@ class PlayerActivity : ComponentActivity() {
         p.addListener(listener)
         if (hadFocus) v.requestFocus()
         updateScreenOn()
+        updateLoading()
     }
 
     private fun releasePending() {
@@ -376,6 +380,11 @@ class PlayerActivity : ComponentActivity() {
             // Opaque, so the next channel loading in the view underneath stays hidden (also beside a 4:3 picture).
             if (live) setBackgroundColor(Color.BLACK)
         }
+
+    /** The loading bar shows while the chosen channel's picture has not started yet. */
+    private fun updateLoading() {
+        state.loading = live && state.current != null && state.current?.url != pictureUrl
+    }
 
     /** The screen stays on only while something plays or buffers to play; paused or failed, the TV may dim and sleep. */
     private fun updateScreenOn() {
