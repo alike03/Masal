@@ -68,18 +68,22 @@ import java.util.Locale
 val RailWidth = 64.dp
 /** Font size of the labels; [ItemChrome] is everything around a label in an open entry. */
 private val LabelSize = 16.sp
-/** Bar 3 + gap 6 + padding 12 + icon 20 + gap 14 + label + 8 + padding 12 + end 10, and a little air. */
-private val ItemChrome = 85.dp + 12.dp
+/** Bar 3 + gap 8 + padding 12 + icon 20 + gap 14 + label + 8 + padding 12 + end 5, and a little air. */
+private val ItemChrome = 82.dp + 16.dp
 private val MarkSize = 24.dp
-/** The open menu's panel: a shade lighter than the page background. */
-private val RailPanel = Color(0xFF1A1816)
+/** The open menu's card: a shade lighter than the page background, floating with space around it. */
+private val RailPanel = Color(0xFF1C1A18)
+private val CardInsetX = 6.dp
+private val CardInsetY = 12.dp
+private val CardCorner = 18.dp
 
 class RailEntry(val title: String, val icon: ImageVector)
 
 /**
- * Menu on the left: small icons while you browse; with focus it widens into a solid panel with
- * labels and a clean edge, and the page behind dims slightly. Everything follows one animated
- * value, so the menu slides open instead of jumping. Right or OK goes into the page.
+ * Menu on the left: small icons while you browse; with focus it opens as a rounded card floating
+ * over the page (space above, below and to the left), with labels, and the page behind dims
+ * slightly. Everything follows one animated value, so the menu opens instead of jumping. Right or
+ * OK goes into the page.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -103,7 +107,7 @@ fun SideRail(
     val p by animateFloatAsState(if (open) 1f else 0f, tween(300, easing = FastOutSlowInEasing), label = "rail")
 
     Box(Modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxSize().graphicsLayer { alpha = p }.background(Color.Black.copy(alpha = 0.3f)))
+        Box(Modifier.fillMaxSize().graphicsLayer { alpha = p }.background(Color.Black.copy(alpha = 0.25f)))
         Column(
             Modifier
                 .fillMaxHeight()
@@ -115,9 +119,17 @@ fun SideRail(
                         0.7f to Bg.copy(alpha = 0.5f),
                         1f to Bg.copy(alpha = 0f),
                     ), alpha = 1f - p)
-                    drawRect(RailPanel, alpha = p)
-                    drawRect(Line, topLeft = androidx.compose.ui.geometry.Offset(size.width - 1.dp.toPx(), 0f),
-                        size = androidx.compose.ui.geometry.Size(1.dp.toPx(), size.height), alpha = p)
+                    if (p > 0f) {
+                        val inset = androidx.compose.ui.geometry.Offset(CardInsetX.toPx(), CardInsetY.toPx())
+                        val card = androidx.compose.ui.geometry.Size(size.width - inset.x, size.height - 2 * inset.y)
+                        val corner = androidx.compose.ui.geometry.CornerRadius(CardCorner.toPx())
+                        // A soft shadow under the card, then the card and its fine edge.
+                        for (i in 1..3) drawRoundRect(Color.Black, inset + androidx.compose.ui.geometry.Offset(0f, i * 2.dp.toPx()), card,
+                            corner, alpha = p * 0.12f)
+                        drawRoundRect(RailPanel, inset, card, corner, alpha = p)
+                        drawRoundRect(Line, inset, card, corner, alpha = p,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
+                    }
                 }
                 .onFocusChanged { open = it.hasFocus; onFocusChange(it.hasFocus) }
                 // Always enter on the open page's entry: the page can change without the menu (Home key),
@@ -154,12 +166,12 @@ fun SideRail(
 
 @Composable
 private fun RailItem(entry: RailEntry, selected: Boolean, progress: () -> Float, onFocus: () -> Unit, onClick: () -> Unit, modifier: Modifier) {
-    // The open page: amber icon and label, and an amber bar at the edge. Focus: a soft light field
+    // The open page: amber icon and label (and an amber bar at the edge while closed). Focus: a soft light field
     // (no glow, no zoom), so moving through the menu stays calm.
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 10.dp)) {
-        Box(Modifier.width(3.dp).height(18.dp).graphicsLayer { alpha = if (selected) 1f else 0f }
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 5.dp)) {
+        Box(Modifier.width(3.dp).height(18.dp).graphicsLayer { alpha = if (selected) 1f - progress() else 0f }
             .background(Accent, RoundedCornerShape(2.dp)))
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.width(8.dp))
         Surface(
             onClick = onClick,
             modifier = modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) onFocus() },
