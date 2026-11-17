@@ -42,6 +42,11 @@ data class IptvSource(
  * they are only entered through the temporary QR setup page.
  */
 class Settings(context: Context) {
+    companion object {
+        /** [homeLiveGroup] value for the favourite channels; no provider category looks like this. */
+        const val FavouritesGroup = ":favourites"
+    }
+
     private val prefs = context.getSharedPreferences("masal", Context.MODE_PRIVATE)
 
     private val _version = MutableStateFlow(0)
@@ -103,7 +108,10 @@ class Settings(context: Context) {
         }
         set(v) = prefs.edit().putString("category_order", JSONArray(v).toString()).apply()
 
-    /** IPTV category shown as a row on Home (matched without accents and provider prefix); empty hides the row. */
+    /**
+     * IPTV category shown as a row on Home (matched without accents and provider prefix); empty hides
+     * the row, [FavouritesGroup] shows the favourite channels.
+     */
     var homeLiveGroup: String
         get() = prefs.getString("home_live_group", "") ?: ""
         set(v) = prefs.edit().putString("home_live_group", v.trim()).apply()
@@ -113,6 +121,11 @@ class Settings(context: Context) {
         get() = prefs.getString("home_live_title", "")?.ifBlank { null }
             ?: runCatching { Language.text(com.alike.masal.R.string.common_live_tv) }.getOrDefault("Live TV")
         set(v) = prefs.edit().putString("home_live_title", v.trim()).apply()
+
+    /** Name of the linked Plex account, to name its rows in Settings next to the profiles. */
+    var plexAccountName: String
+        get() = prefs.getString("plex_account_name", "") ?: ""
+        set(v) = prefs.edit().putString("plex_account_name", v).apply()
 
     /** Plex Home members added as profiles, in the order they were added (profiles.md). Holds their tokens. */
     var profiles: List<PlexProfile>

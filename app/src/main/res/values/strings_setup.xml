@@ -124,4 +124,6 @@
     <string name="settings_profile_wrong_pin">Wrong PIN.</string>
     <string name="settings_profile_pin_note">The member\'s Plex PIN. It is used once to sign in and is not stored.</string>
     <string name="setup_plex_profiles">Profiles: %1$s. Add or remove them in Settings on the TV.</string>
+    <string name="settings_home_rows_count">%1$d of %2$d on</string>
+    <string name="settings_rows_main_account">Your account</string>
 </resources>

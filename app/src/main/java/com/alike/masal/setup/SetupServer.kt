@@ -168,12 +168,14 @@ class SetupServer(
         val groups = channelGroups()
         val saved = settings.homeLiveGroup
         val savedNorm = com.alike.masal.MasalViewModel.normGroup(saved)
-        val savedInList = saved.isNotBlank() && groups.any { com.alike.masal.MasalViewModel.normGroup(it) == savedNorm }
+        val favourites = Settings.FavouritesGroup
+        val savedInList = saved == favourites || saved.isNotBlank() && groups.any { com.alike.masal.MasalViewModel.normGroup(it) == savedNorm }
         val groupOptions = buildString {
             append("<option value=\"\"${if (saved.isBlank()) " selected" else ""}>${t(R.string.settings_category_none)}</option>")
+            append("<option value=\"${esc(favourites)}\"${if (saved == favourites) " selected" else ""}>${t(R.string.common_favourites)}</option>")
             if (saved.isNotBlank() && !savedInList) append("<option value=\"${esc(saved)}\" selected>${t(R.string.settings_category_missing, saved)}</option>")
             groups.forEach { g ->
-                val sel = saved.isNotBlank() && com.alike.masal.MasalViewModel.normGroup(g) == savedNorm
+                val sel = saved.isNotBlank() && saved != favourites && com.alike.masal.MasalViewModel.normGroup(g) == savedNorm
                 append("<option value=\"${esc(g)}\"${if (sel) " selected" else ""}>${esc(g)}</option>")
             }
         }
@@ -181,15 +183,24 @@ class SetupServer(
         val rowsBody = if (rowOptions.isEmpty()) """<p class="empty">${t(R.string.setup_rows_empty)}</p>"""
         else buildString {
             append("<form method=\"post\" action=\"$base\" class=\"fields\"><input type=\"hidden\" name=\"action\" value=\"rows\">")
-            rowOptions.groupBy { it.group }.forEach { (group, options) ->
-                append("<fieldset class=\"checks\"><legend>${esc(group)}</legend>")
-                options.forEach { o ->
-                    val id = "row-" + o.id.replace(Regex("[^A-Za-z0-9]"), "-")
-                    append("<input type=\"hidden\" name=\"all\" value=\"${esc(o.id)}\">")
-                    append("<label class=\"check\" for=\"$id\"><input type=\"checkbox\" id=\"$id\" name=\"row\" value=\"${esc(o.id)}\"" +
-                        (if (settings.homeRowShown(o)) " checked" else "") + "><span>${esc(o.title)}</span></label>")
+            // One folded block per profile, like the TV (profiles.md); the main account's is open.
+            rowOptions.groupBy { it.profile ?: "" }.forEach { (key, profileRows) ->
+                val name = if (key.isEmpty()) settings.plexAccountName.ifBlank { r.getString(R.string.settings_rows_main_account) }
+                    else settings.profiles.firstOrNull { it.id == key }?.name ?: key
+                val on = profileRows.count { settings.homeRowShown(it) }
+                append("<details class=\"rows\"${if (key.isEmpty()) " open" else ""}><summary>${esc(name)} " +
+                    "<span class=\"muted\">(${t(R.string.settings_home_rows_count, on, profileRows.size)})</span></summary>")
+                profileRows.groupBy { it.group }.forEach { (group, options) ->
+                    append("<fieldset class=\"checks\"><legend>${esc(group)}</legend>")
+                    options.forEach { o ->
+                        val id = "row-" + o.id.replace(Regex("[^A-Za-z0-9]"), "-")
+                        append("<input type=\"hidden\" name=\"all\" value=\"${esc(o.id)}\">")
+                        append("<label class=\"check\" for=\"$id\"><input type=\"checkbox\" id=\"$id\" name=\"row\" value=\"${esc(o.id)}\"" +
+                            (if (settings.homeRowShown(o)) " checked" else "") + "><span>${esc(o.title)}</span></label>")
+                    }
+                    append("</fieldset>")
                 }
-                append("</fieldset>")
+                append("</details>")
             }
             append("<div class=\"actions\"><button class=\"btn\">${t(R.string.setup_save_rows)}</button></div></form>")
         }
@@ -241,6 +252,8 @@ input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visi
 details{border-top:1px solid var(--line);padding-top:12px}
 summary{cursor:pointer;color:var(--dim);font-size:15px}
 details[open] summary{margin-bottom:12px}
+details.rows summary{color:var(--text);font-size:17px;font-weight:600}
+details.rows summary .muted{font-weight:400;font-size:14px}
 dialog{width:min(520px,calc(100% - 24px));max-height:calc(100% - 24px);overflow:auto;border:1px solid var(--line);border-radius:18px;padding:20px;background:var(--panel);color:var(--text)}
 dialog::backdrop{background:rgba(0,0,0,.65)}
 dialog form{display:flex;flex-direction:column;gap:16px}

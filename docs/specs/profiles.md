@@ -24,9 +24,13 @@ account's rows.
   again where there is one.
 
 ## Home rows per profile
-- Settings "Home rows" (TV and phone page) is grouped by profile: first the main account exactly as
-  today, then per added profile a group named after it (its own Continue Watching and Plex's Home
-  rows as Plex shows them for that member) and its collections grouped as "name: library".
+- Settings "Home rows" on the TV has one entry per profile: the main account first (named after the
+  linked Plex account, "Your account" until its name is known), then each added profile, each with
+  how many of its rows are on ("8 of 34 on"). OK opens that profile's rows, grouped as Plex and
+  then by library; OK switches a row, Back returns to the entry. A profile's rows are its own
+  Continue Watching, Plex's Home rows as Plex shows them for that member, and every collection.
+- The phone page folds the rows the same way: one block per profile with the count, the main
+  account's open.
 - Defaults for an added profile: Continue Watching on, everything else off (the main account's
   rows already show the shared ones). Choices are stored per profile.
 - The same collection can be on twice, once for the main account and once for a profile: each
@@ -35,7 +39,8 @@ account's rows.
   of each profile (in the order they were added), Live TV, the main account's Plex rows, then each
   profile's other rows.
 - A profile's rows show the profile's name next to the row title, in the same dim style as the
-  "Movies" / "TV shows" label, before that label: "Watchlist   Tester   Movies".
+  "Movies" / "TV shows" label, before that label, with a thin vertical line between the two:
+  "Watchlist   Tester | Movies".
 - Progress bars and watched marks in a profile's row are that member's.
 
 ## Watching from a profile's row

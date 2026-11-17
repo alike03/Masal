@@ -369,6 +369,16 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings,
 
     // ---- Plex Home members (profiles.md) ----
 
+    /** The linked account's display name. */
+    fun accountName(): String? {
+        val req = Request.Builder().url("$accountBase/api/v2/user").plexHeaders(settings.plexToken).build()
+        return http.newCall(req).execute().use { r ->
+            if (!r.isSuccessful) return null
+            val o = JSONObject(r.body!!.string())
+            o.optString("friendlyName").ifBlank { o.optString("title") }.ifBlank { o.optString("username") }.ifBlank { null }
+        }
+    }
+
     /** Members of the main account's Plex Home, the main account itself left out. */
     fun homeUsers(): List<PlexHomeUser> {
         val req = Request.Builder().url("$accountBase/api/v2/home/users").plexHeaders(settings.plexToken).build()

@@ -87,7 +87,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-private enum class SettingsPage { Main, Language, Category, Title, Order, Profiles }
+private enum class SettingsPage { Main, Language, Category, Title, Order, Profiles, Rows }
 
 /**
  * Settings on the TV: the QR code for the phone page (logins, sources, Plex server) on the left,
@@ -152,6 +152,7 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                 val token = runCatching { Graph.plex.checkPin(pin) }.getOrNull() ?: continue
                 plexStatus = context.getString(R.string.settings_plex_searching)
                 Graph.settings.plexToken = token // keep the link even if the server lookup fails
+                Graph.settings.plexAccountName = "" // another account may have been linked
                 val server = if (Graph.settings.plexUrl.isBlank()) runCatching { Graph.plex.findServerUrl(token) }.getOrNull()
                     else Graph.settings.plexUrl
                 if (server != null) Graph.settings.plexUrl = server
@@ -184,6 +185,9 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
     val orderRow = remember { FocusRequester() }
     val profilesRow = remember { FocusRequester() }
     var profilesView by remember { mutableStateOf<ProfilesView>(ProfilesView.List) }
+    // Home rows: one entry per profile ("" = the main account), each opening that profile's rows.
+    var rowsProfile by remember { mutableStateOf("") }
+    val rowsEntries = remember { mutableMapOf<String, FocusRequester>() }
     val categoryOrder by vm.categoryOrder.collectAsState()
     // The category being moved on the order page; Back then puts it down instead of leaving the page.
     var moving by remember { mutableStateOf<String?>(null) }
@@ -245,10 +249,8 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                         profilesRow = profilesRow,
                         onProfiles = { back = profilesRow; profilesView = ProfilesView.List; page = SettingsPage.Profiles },
                         options = options,
-                        onToggle = { o ->
-                            Graph.settings.setHomeRowShown(o, !Graph.settings.homeRowShown(o))
-                            Graph.settings.homeChanged()
-                        },
+                        rowsEntry = { key -> rowsEntries.getOrPut(key) { FocusRequester() } },
+                        onRows = { key -> back = rowsEntries[key]; rowsProfile = key; page = SettingsPage.Rows },
                         sourceNames = sources.map { it.name },
                     )
                 }
@@ -267,14 +269,21 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                 }
                 SettingsPage.Category -> {
                     val savedNorm = MasalViewModel.normGroup(liveGroup)
-                    val choices = listOf("" to stringResource(R.string.settings_category_none)) +
-                        (if (liveGroup.isNotBlank() && groups.none { MasalViewModel.normGroup(it) == savedNorm })
+                    val favourites = com.alike.masal.data.Settings.FavouritesGroup
+                    val choices = listOf("" to stringResource(R.string.settings_category_none), favourites to stringResource(R.string.common_favourites)) +
+                        (if (liveGroup.isNotBlank() && liveGroup != favourites && groups.none { MasalViewModel.normGroup(it) == savedNorm })
                             listOf(liveGroup to stringResource(R.string.settings_category_missing, liveGroup)) else emptyList()) +
                         groups.map { it to it }
                     ChoiceList(
                         stringResource(R.string.settings_channel_category), stringResource(R.string.settings_category_note),
                         choices,
-                        selected = choices.indexOfFirst { (g, _) -> if (g.isBlank()) liveGroup.isBlank() else liveGroup.isNotBlank() && MasalViewModel.normGroup(g) == savedNorm },
+                        selected = choices.indexOfFirst { (g, _) ->
+                            when {
+                                g.isBlank() -> liveGroup.isBlank()
+                                g == favourites || liveGroup == favourites -> g == liveGroup
+                                else -> liveGroup.isNotBlank() && MasalViewModel.normGroup(g) == savedNorm
+                            }
+                        },
                     ) { g ->
                         Graph.settings.homeLiveGroup = g
                         Graph.settings.homeChanged()
@@ -289,6 +298,13 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                     onMove = { name, delta -> vm.moveCategory(name, delta) },
                     onReset = { moving = null; vm.setCategoryOrder(emptyList()) },
                 )
+                SettingsPage.Rows -> HomeRowsPage(
+                    profileTitle(rowsProfile),
+                    options.filter { (it.profile ?: "") == rowsProfile },
+                ) { o ->
+                    Graph.settings.setHomeRowShown(o, !Graph.settings.homeRowShown(o))
+                    Graph.settings.homeChanged()
+                }
                 SettingsPage.Profiles -> ProfilesPage(profilesView, { profilesView = it }) { vm.refreshPlex() }
                 SettingsPage.Title -> TitleEditor(liveTitle, onCancel = { page = SettingsPage.Main }) { t ->
                     Graph.settings.homeLiveTitle = t
@@ -332,7 +348,8 @@ private fun MainList(
     profilesRow: FocusRequester,
     onProfiles: () -> Unit,
     options: List<HomeRowOption>,
-    onToggle: (HomeRowOption) -> Unit,
+    rowsEntry: (String) -> FocusRequester,
+    onRows: (String) -> Unit,
     sourceNames: List<String>,
 ) {
     val homeVersion by Graph.settings.homeVersion.collectAsState() // check marks follow every change
@@ -375,7 +392,14 @@ private fun MainList(
         item { SettingRow(stringResource(R.string.language_title), language, onLanguage, Modifier.focusRequester(languageRow)) }
 
         item { Heading(stringResource(R.string.settings_live_row_heading)) }
-        item { SettingRow(stringResource(R.string.settings_channel_category), liveGroup.ifBlank { categoryNone }, onCategory, Modifier.focusRequester(categoryRow)) }
+        item {
+            val categoryValue = when (liveGroup) {
+                "" -> categoryNone
+                com.alike.masal.data.Settings.FavouritesGroup -> stringResource(R.string.common_favourites)
+                else -> liveGroup
+            }
+            SettingRow(stringResource(R.string.settings_channel_category), categoryValue, onCategory, Modifier.focusRequester(categoryRow))
+        }
         item { SettingRow(stringResource(R.string.settings_row_title), liveTitle, onTitle, Modifier.focusRequester(titleRow)) }
 
         item { Heading(stringResource(R.string.settings_tv_tab_heading)) }
@@ -385,11 +409,12 @@ private fun MainList(
         if (options.isEmpty()) {
             item { Text(stringResource(R.string.settings_home_rows_empty), color = TextDim, fontSize = 15.sp) }
         }
-        options.groupBy { it.group }.forEach { (group, rows) ->
-            item(key = "group:$group") { Text(group, color = TextDim, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)) }
-            items(rows, key = { "row:" + it.id }) { o ->
-                val shown = remember(homeVersion, o) { Graph.settings.homeRowShown(o) }
-                OptionRow(o.title, null, shown) { onToggle(o) }
+        // One entry per profile with how many of its rows are on; OK opens its rows (a long list per profile).
+        options.groupBy { it.profile ?: "" }.forEach { (key, rows) ->
+            item(key = "rows:$key") {
+                val on = remember(homeVersion, rows) { rows.count { Graph.settings.homeRowShown(it) } }
+                SettingRow(profileTitle(key), stringResource(R.string.settings_home_rows_count, on, rows.size), { onRows(key) },
+                    Modifier.focusRequester(rowsEntry(key)))
             }
         }
 
@@ -399,6 +424,35 @@ private fun MainList(
                 if (sourceNames.isEmpty()) Text(stringResource(R.string.settings_sources_none), color = TextDim, fontSize = 15.sp)
                 sourceNames.forEach { Text(it, color = TextMain, fontSize = 15.sp, modifier = Modifier.padding(top = 2.dp)) }
                 Text(stringResource(R.string.settings_sources_hint), color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            }
+        }
+    }
+}
+
+/** Name of a profile's rows in Settings: the linked account's name for "" (or "Your account"), else the member's. */
+@Composable
+private fun profileTitle(key: String): String =
+    if (key.isEmpty()) Graph.settings.plexAccountName.ifBlank { stringResource(R.string.settings_rows_main_account) }
+    else Graph.settings.profiles.firstOrNull { it.id == key }?.name ?: key
+
+/** One profile's Home rows, grouped as Plex and then by library; OK switches a row. */
+@Composable
+private fun HomeRowsPage(name: String, options: List<HomeRowOption>, onToggle: (HomeRowOption) -> Unit) {
+    val homeVersion by Graph.settings.homeVersion.collectAsState()
+    val first = remember { FocusRequester() }
+    LaunchedEffect(Unit) { delay(60); runCatching { first.requestFocus() } }
+    Column(Modifier.widthIn(max = 640.dp)) {
+        Text(stringResource(R.string.settings_home_rows), color = TextMain, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+        Text(name, color = TextDim, fontSize = 15.sp, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
+        LazyColumn(contentPadding = PaddingValues(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            options.groupBy { it.group }.forEach { (group, rows) ->
+                item(key = "group:$group") {
+                    Text(group, color = TextDim, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp, bottom = 2.dp))
+                }
+                items(rows, key = { "row:" + it.id }) { o ->
+                    val shown = remember(homeVersion, o) { Graph.settings.homeRowShown(o) }
+                    OptionRow(o.title, null, shown, if (o == options.first()) Modifier.focusRequester(first) else Modifier) { onToggle(o) }
+                }
             }
         }
     }

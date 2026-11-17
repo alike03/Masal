@@ -153,6 +153,7 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
                 ensureActive()
                 recent.onSuccess { recentlyAdded.value = it }
             }
+            if (Graph.settings.plexAccountName.isBlank()) runCatching { Graph.plex.accountName() }.getOrNull()?.let { Graph.settings.plexAccountName = it }
             profileRows = loadProfiles()
             ensureActive()
             buildHomeRows()

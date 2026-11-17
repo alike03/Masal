@@ -2,6 +2,7 @@ package com.alike.masal.ui
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -97,9 +98,12 @@ fun HomeScreen(
     val apps = remember(allApps, homeKeys) { val byPkg = allApps.associateBy { it.pkg }; homeKeys.mapNotNull { byPkg[it] } }
     val settingsVersion by Graph.settings.version.collectAsState() // the row's category is set in Settings
     val homeVersion by Graph.settings.homeVersion.collectAsState()
-    val tvRow = remember(channels, settingsVersion, homeVersion) {
-        val group = MasalViewModel.normGroup(Graph.settings.homeLiveGroup)
+    val favourites by vm.favorites.collectAsState()
+    val tvRow = remember(channels, settingsVersion, homeVersion, favourites) {
+        val saved = Graph.settings.homeLiveGroup
+        val group = MasalViewModel.normGroup(saved)
         if (group.isEmpty()) emptyList()
+        else if (saved == com.alike.masal.data.Settings.FavouritesGroup) channels.filter { it.key in favourites }.distinctBy { it.key }
         else {
             // Normalise each distinct category name once, not every channel (lists can hold 30 000 entries).
             val wanted = channels.mapTo(HashSet()) { it.group }.filterTo(HashSet()) { MasalViewModel.normGroup(it) == group }
@@ -296,9 +300,10 @@ fun PosterRow(title: String, kind: String? = null, owner: String? = null, conten
         if (kind == null && owner == null) RowTitle(title)
         else Row(verticalAlignment = Alignment.Bottom) {
             RowTitle(title)
-            // A profile's row: the member's name first, then Movies / TV shows (profiles.md).
-            listOfNotNull(owner, kind).forEach {
-                Text(it, color = TextDim, fontSize = 13.sp, maxLines = 1, modifier = Modifier.padding(start = 10.dp, bottom = 4.dp))
+            // A profile's row: the member's name first, then Movies / TV shows (profiles.md), with a thin line between.
+            listOfNotNull(owner, kind).forEachIndexed { i, label ->
+                if (i > 0) Box(Modifier.padding(start = 10.dp, bottom = 7.dp).size(width = 1.dp, height = 12.dp).background(TextDim.copy(alpha = 0.6f)))
+                Text(label, color = TextDim, fontSize = 13.sp, maxLines = 1, modifier = Modifier.padding(start = 10.dp, bottom = 4.dp))
             }
         }
         LazyRow(

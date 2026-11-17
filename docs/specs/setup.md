@@ -19,11 +19,11 @@ Enter Plex and IPTV logins with the phone instead of the remote.
 - Live TV sources: list with type badge, name and host, Remove per source. "+ Add source" opens a
   dialog: first the type (Xtream login or M3U playlist), then only that type's fields.
   Several sources are possible.
-- Home live TV row: a select of the channel categories from the loaded sources (in provider order,
-  plus "None" to hide the row) and the row title. A saved category that is not in the loaded list
+- Home live TV row: a select of "None" (hides the row), "Favourites" and the channel categories from
+  the loaded sources (in provider order) and the row title. A saved category that is not in the loaded list
   stays selected and marked, so a late load never clears it.
 - Home rows: checkboxes for Plex's Home rows and every collection, grouped by library (so two
-  collections with the same name are told apart), then the same per profile, with "Save rows".
+  collections with the same name are told apart), folded per profile with its count, with "Save rows".
   Same choice as on the TV. The Plex card names the added profiles; they are added on the TV.
 - Plex: status chip (Connected / Not connected) with the server host; the hint to use the code on
   the TV at plex.tv/link; manual server URL and token folded away below.
@@ -35,15 +35,16 @@ Enter Plex and IPTV logins with the phone instead of the remote.
     "Profiles" (once Plex is linked) adds and removes members of the Plex Home (profiles.md).
   - Language (after Plex): "Language" shows the current choice and opens a list (Device language,
     English, Deutsch, Türkçe); OK picks and redraws the app in it, Back returns without change.
-  - Live TV row on Home: "Channel category" opens a list of the loaded categories plus "None";
+  - Live TV row on Home: "Channel category" opens a list: "None", "Favourites", then the loaded categories;
     OK picks, Back returns without change. "Row title" opens a text field with the TV keyboard;
     Done saves, Back cancels.
   - TV tab: "Category order" (value: as the provider lists them, or own order) opens the
     categories numbered in their order. OK picks one up, Up/Down move it (stored at once), OK or
     Back put it down; Back again returns. "Back to the provider's order" (only with an own order)
     clears it. New categories from the provider appear after the ordered ones.
-  - Home rows: one line per Plex row and collection, grouped by library, with a check mark when
-    shown; OK switches it.
+  - Home rows: one entry per profile (the main account first) with how many rows are on; OK opens
+    its rows, one line per Plex row and collection grouped by library, with a check mark when
+    shown; OK switches it, Back returns (profiles.md).
   - Live TV sources: names only; adding and removing happens on the phone page.
 - Changes apply at once and are the same settings as on the phone page.
 - Logins stay in the app's private storage, excluded from cloud backup and device transfer;

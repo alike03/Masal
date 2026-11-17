@@ -22,7 +22,7 @@ object HomeRows {
     /**
      * A profile's choices: its Continue Watching (on), then its Plex Home rows and collections like
      * [options], all off by default since the main account's rows already show the shared ones.
-     * Grouped under the profile's name, collections as "name: library".
+     * Grouped like the main account's (Plex, then each library); [HomeRowOption.profile] tells them apart.
      */
     fun profileOptions(
         profile: PlexProfile, continueTitle: String, plexHubs: List<PlexHub>, collections: List<Pair<PlexSection, PlexItem>>,
@@ -32,7 +32,7 @@ object HomeRows {
         return rows.map { o ->
             HomeRowOption(
                 id = prefix + o.id, title = o.title,
-                group = if (o.group == PlexGroup) profile.name else "${profile.name}: ${o.group}",
+                group = o.group,
                 defaultOn = o.id == Continue, profile = profile.id,
             )
         }

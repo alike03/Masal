@@ -151,6 +151,19 @@ class UiFlowTest {
         assertTrue("as a normal app, Back on Home leaves", !rule.activity.onBackPressedDispatcher.hasEnabledCallbacks())
     }
 
+    /** The Home live TV row can show the favourite channels instead of a category. */
+    @Test
+    fun favouritesRow() {
+        val vm = seed()
+        Graph.settings.homeLiveGroup = com.alike.masal.data.Settings.FavouritesGroup
+        rule.runOnUiThread { vm.favorites.value = setOf("test|Testkanal 2", "test|Testkanal 20"); Graph.settings.homeChanged() }
+        rule.mainClock.advanceTimeBy(1_000)
+        rule.waitForIdle()
+        assertTrue("a favourite is in the row", rule.onAllNodesWithText("Testkanal 2", substring = false).fetchSemanticsNodes().isNotEmpty())
+        assertTrue("the category's channels are not", rule.onAllNodesWithText("Testkanal 31").fetchSemanticsNodes().isEmpty())
+        Graph.settings.homeLiveGroup = "Testgruppe HD"
+    }
+
     /** A profile's rows (profiles.md): its Continue Watching right after the main one, named; its collection after the main rows. */
     @Test
     fun profileRows() {
@@ -174,6 +187,9 @@ class UiFlowTest {
         assertTrue("its row is named after the profile",
             rule.onAllNodesWithText("Tester Kind").fetchSemanticsNodes().isNotEmpty())
         shot("13-profile-row")
+        press(KeyEvent.KEYCODE_DPAD_DOWN, times = 3)
+        rule.mainClock.advanceTimeBy(600)
+        shot("14-profile-collection")
     }
 
     /** Settings with the remote: live TV row category (Back cancels, OK picks) and Home rows. */
@@ -182,7 +198,9 @@ class UiFlowTest {
         val vm = seed()
         val recent = com.alike.masal.data.HomeRowOption("home.movies.recent", "Recently Added Movies", "Plex", true)
         val saga = com.alike.masal.data.HomeRowOption("collection:5", "Testsammlung", "Filme", false)
-        vm.homeRowOptions.value = listOf(recent, saga)
+        Graph.settings.saveProfile(com.alike.masal.data.PlexProfile("kid-2", "Tester Kind", "t"))
+        val kidSaga = com.alike.masal.data.HomeRowOption("p:kid-2:collection:5", "Profilsammlung", "Filme", false, profile = "kid-2")
+        vm.homeRowOptions.value = listOf(recent, saga, kidSaga)
         Graph.settings.homeRowsOn = emptySet(); Graph.settings.homeRowsOff = emptySet()
         rule.mainClock.advanceTimeBy(1_000)
         press(KeyEvent.KEYCODE_DPAD_LEFT)
@@ -231,7 +249,15 @@ class UiFlowTest {
         vm.setCategoryOrder(emptyList())
 
         press(KeyEvent.KEYCODE_DPAD_DOWN)
-        expectFocus("first Home row", "Recently Added Movies")
+        expectFocus("Home rows: one entry per profile, the account first", "Your account")
+        expectFocus("with how many rows are on", "1 of 2 on")
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        expectFocus("the profile's entry", "Tester Kind")
+        press(KeyEvent.KEYCODE_DPAD_UP)
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        rule.mainClock.advanceTimeBy(300)
+        expectFocus("OK opens the account's rows", "Recently Added Movies")
+        assertTrue("only the account's rows", rule.onAllNodesWithText("Profilsammlung").fetchSemanticsNodes().isEmpty())
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         assertTrue("OK switches a default row off", !Graph.settings.homeRowShown(recent))
         press(KeyEvent.KEYCODE_DPAD_DOWN)
@@ -239,6 +265,10 @@ class UiFlowTest {
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         assertTrue("OK switches a collection on", Graph.settings.homeRowShown(saga))
         shot("12-settings-rows")
+        press(KeyEvent.KEYCODE_BACK)
+        rule.mainClock.advanceTimeBy(300)
+        expectFocus("Back returns to the account's entry", "Your account")
+        Graph.settings.removeProfile("kid-2")
     }
 
     @Test

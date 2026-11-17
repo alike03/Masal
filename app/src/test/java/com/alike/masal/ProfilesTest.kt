@@ -127,7 +127,8 @@ class ProfilesTest {
         val options = HomeRows.profileOptions(p, "Continue Watching", hubs, listOf(movies to item("5"), movies to item("6")))
         assertEquals(listOf("p:kid-2:continue", "p:kid-2:home.movies.recent", "p:kid-2:collection:5", "p:kid-2:collection:6"), options.map { it.id })
         assertEquals(listOf("continue", "home.movies.recent", "collection:5", "collection:6"), options.map { it.rowId })
-        assertEquals(listOf("Tester Kind", "Tester Kind", "Tester Kind: Movies", "Tester Kind: Movies"), options.map { it.group })
+        assertEquals(listOf("Plex", "Plex", "Movies", "Movies"), options.map { it.group })
+        assertTrue(options.all { it.profile == "kid-2" })
         // Only the profile's Continue Watching is on by default.
         assertEquals(listOf(true, false, false, false), options.map { settings.homeRowShown(it) })
 

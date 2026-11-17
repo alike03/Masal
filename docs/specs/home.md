@@ -13,9 +13,10 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
   2. Apps: only the apps pinned on Home, in the user's order, then an "Edit" card.
   3. Continue Watching (Plex on deck), then each profile's Continue Watching when switched on
      (profiles.md).
-  4. Live TV row: the channels of one IPTV category with its own title, both set on the setup
-     page (`Settings.homeLiveGroup` / `homeLiveTitle`, title defaults to "Live TV"); hidden while
-     no category is set. The category is matched without accents and provider prefix such as
+  4. Live TV row: the channels of one IPTV category, or the favourite channels, with its own title,
+     both set on the setup page (`Settings.homeLiveGroup` / `homeLiveTitle`, title defaults to
+     "Live TV"); hidden while no category is set. Favourites show in channel list order and follow
+     every change of a favourite. The category is matched without accents and provider prefix such as
      "[XX] ". No category subtitle under the cards.
   5. Plex rows, chosen in Settings (see "Home rows" below). A collection row says next to its
      title whether it holds movies or TV shows ("Movies" / "TV shows"). Without hubs (older servers):
