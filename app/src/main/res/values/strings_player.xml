@@ -51,7 +51,6 @@
     <string name="player_position_higher">Higher</string>
 
     <!-- Live TV -->
-    <string name="live_badge">LIVE</string>
     <!-- Next programme: start time, title -->
     <string name="live_next">"Next %1$s  %2$s"</string>
     <string name="live_no_guide">No guide information for this channel.</string>

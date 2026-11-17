@@ -233,12 +233,8 @@ fun HeroChannel(channel: Channel, programmes: List<Programme>?, modifier: Modifi
         if (channel.logo != null) {
             NetImage(channel.logo, channel.name, Modifier.size(160.dp, 60.dp), ContentScale.Fit)
         }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.padding(top = 10.dp)) {
-            Chip(stringResource(R.string.common_live), highlight = true)
-            Text(channel.name, color = TextMain, fontSize = 19.sp, fontWeight = FontWeight.Bold, maxLines = 1,
-                overflow = TextOverflow.Ellipsis)
-        }
+        Text(channel.name, color = TextMain, fontSize = 19.sp, fontWeight = FontWeight.Bold, lineHeight = 23.sp,
+            modifier = Modifier.padding(top = 10.dp))
         if (now != null) {
             Text(now.title, color = TextMain, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))

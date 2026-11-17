@@ -87,7 +87,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-private enum class SettingsPage { Main, Language, Category, Title }
+private enum class SettingsPage { Main, Language, Category, Title, Order }
 
 /**
  * Settings on the TV: the QR code for the phone page (logins, sources, Plex server) on the left,
@@ -181,6 +181,10 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
     val categoryRow = remember { FocusRequester() }
     val titleRow = remember { FocusRequester() }
     val languageRow = remember { FocusRequester() }
+    val orderRow = remember { FocusRequester() }
+    val categoryOrder by vm.categoryOrder.collectAsState()
+    // The category being moved on the order page; Back then puts it down instead of leaving the page.
+    var moving by remember { mutableStateOf<String?>(null) }
     val list = rememberLazyListState()
 
     val done = remember { FocusRequester() }
@@ -210,7 +214,7 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
         // key never reaches the side menu's Back handling.
         Box(Modifier.weight(1f).onPreviewKeyEvent { e ->
             if (page == SettingsPage.Main || e.key != Key.Back) return@onPreviewKeyEvent false
-            if (e.type == KeyEventType.KeyUp) page = SettingsPage.Main
+            if (e.type == KeyEventType.KeyUp) { if (moving != null) moving = null else page = SettingsPage.Main }
             true
         }) {
             when (page) {
@@ -223,13 +227,15 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                         runCatching { r.requestFocus() }
                     }
                     MainList(
-                        list, done, categoryRow, titleRow, languageRow,
+                        list, done, categoryRow, titleRow, languageRow, orderRow,
                         plexCode, plexStatus, onLink = { linkRequest++ },
                         onAndroidSettings = { Apps.openSystemSettings(context) },
                         liveGroup = liveGroup, liveTitle = liveTitle,
                         onLanguage = { back = languageRow; page = SettingsPage.Language },
                         onCategory = { back = categoryRow; page = SettingsPage.Category },
                         onTitle = { back = titleRow; page = SettingsPage.Title },
+                        orderValue = stringResource(if (categoryOrder.isEmpty()) R.string.settings_category_order_default else R.string.settings_category_order_custom),
+                        onOrder = { back = orderRow; moving = null; page = SettingsPage.Order },
                         options = options,
                         onToggle = { o ->
                             Graph.settings.setHomeRowShown(o, !Graph.settings.homeRowShown(o))
@@ -267,6 +273,14 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                         page = SettingsPage.Main
                     }
                 }
+                SettingsPage.Order -> CategoryOrderList(
+                    names = remember(channels, categoryOrder) { channelGroups(vm) },
+                    custom = categoryOrder.isNotEmpty(),
+                    moving = moving,
+                    onPick = { moving = if (moving == it) null else it },
+                    onMove = { name, delta -> vm.moveCategory(name, delta) },
+                    onReset = { moving = null; vm.setCategoryOrder(emptyList()) },
+                )
                 SettingsPage.Title -> TitleEditor(liveTitle, onCancel = { page = SettingsPage.Main }) { t ->
                     Graph.settings.homeLiveTitle = t
                     Graph.settings.homeChanged()
@@ -285,7 +299,7 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 }
 
 /** Channel categories of the loaded sources, in provider order. */
-private fun channelGroups(vm: MasalViewModel) = vm.channels.value.map { it.group }.filter { it.isNotBlank() }.distinct()
+private fun channelGroups(vm: MasalViewModel) = vm.categoryNames()
 
 @Composable
 private fun MainList(
@@ -294,6 +308,7 @@ private fun MainList(
     categoryRow: FocusRequester,
     titleRow: FocusRequester,
     languageRow: FocusRequester,
+    orderRow: FocusRequester,
     plexCode: String?,
     plexStatus: String,
     onLink: () -> Unit,
@@ -303,6 +318,8 @@ private fun MainList(
     onLanguage: () -> Unit,
     onCategory: () -> Unit,
     onTitle: () -> Unit,
+    orderValue: String,
+    onOrder: () -> Unit,
     options: List<HomeRowOption>,
     onToggle: (HomeRowOption) -> Unit,
     sourceNames: List<String>,
@@ -345,6 +362,9 @@ private fun MainList(
         item { SettingRow(stringResource(R.string.settings_channel_category), liveGroup.ifBlank { categoryNone }, onCategory, Modifier.focusRequester(categoryRow)) }
         item { SettingRow(stringResource(R.string.settings_row_title), liveTitle, onTitle, Modifier.focusRequester(titleRow)) }
 
+        item { Heading(stringResource(R.string.settings_tv_tab_heading)) }
+        item { SettingRow(stringResource(R.string.settings_category_order), orderValue, onOrder, Modifier.focusRequester(orderRow)) }
+
         item { Heading(stringResource(R.string.settings_home_rows)) }
         if (options.isEmpty()) {
             item { Text(stringResource(R.string.settings_home_rows_empty), color = TextDim, fontSize = 15.sp) }
@@ -353,7 +373,7 @@ private fun MainList(
             item(key = "group:$group") { Text(group, color = TextDim, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)) }
             items(rows, key = { "row:" + it.id }) { o ->
                 val shown = remember(homeVersion, o) { Graph.settings.homeRowShown(o) }
-                OptionRow(o.title, null, shown) { onToggle(o) }
+                OptionRow(o.title, kindLabel(o.kind), shown) { onToggle(o) }
             }
         }
 
@@ -427,6 +447,76 @@ private fun ChoiceList(title: String, note: String, choices: List<Pair<String, S
         LazyColumn(state = list, contentPadding = PaddingValues(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             itemsIndexed(choices) { i, (value, label) ->
                 OptionRow(label, null, i == selected, if (i == target) Modifier.focusRequester(first) else Modifier) { onPick(value) }
+            }
+        }
+    }
+}
+
+/** "Movie collection" or "TV show collection" for a collection's library type. */
+@Composable
+private fun kindLabel(kind: String?): String? = when (kind) {
+    "movie" -> stringResource(R.string.settings_kind_movie_collection)
+    "show" -> stringResource(R.string.settings_kind_show_collection)
+    else -> null
+}
+
+/**
+ * The channel categories in the TV tab's order. OK picks one up, Up/Down move it, OK or Back put
+ * it down (no long press over HDMI-CEC). Every move is stored at once.
+ */
+@Composable
+private fun CategoryOrderList(
+    names: List<String>,
+    custom: Boolean,
+    moving: String?,
+    onPick: (String) -> Unit,
+    onMove: (String, Int) -> Unit,
+    onReset: () -> Unit,
+) {
+    val first = remember { FocusRequester() }
+    val list = rememberLazyListState()
+    LaunchedEffect(Unit) { delay(60); runCatching { first.requestFocus() } }
+    // The moved category stays in view (rows below the title and the reset button: offset 1).
+    LaunchedEffect(names, moving) {
+        val i = names.indexOf(moving ?: return@LaunchedEffect)
+        if (i < 0) return@LaunchedEffect
+        val visible = list.layoutInfo.visibleItemsInfo.map { it.index }
+        if (i + 1 !in visible.drop(1).dropLast(1)) list.animateScrollToItem((i - 2).coerceAtLeast(0))
+    }
+    Column(Modifier.widthIn(max = 640.dp)) {
+        Text(stringResource(R.string.settings_category_order), color = TextMain, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.settings_category_order_note), color = TextDim, fontSize = 15.sp,
+            modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
+        if (names.isEmpty()) {
+            Text(stringResource(R.string.settings_category_order_empty), color = TextDim, fontSize = 15.sp)
+            return@Column
+        }
+        LazyColumn(state = list, contentPadding = PaddingValues(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            item(key = "reset") {
+                if (custom) MasalButton(stringResource(R.string.settings_category_order_reset), onReset,
+                    Modifier.padding(bottom = 8.dp), Icons.Filled.Refresh, primary = false)
+            }
+            itemsIndexed(names, key = { _, n -> "cat:$n" }) { i, name ->
+                val isMoving = name == moving
+                ListSurface(
+                    onClick = { onPick(name) },
+                    modifier = (if (i == 0) Modifier.focusRequester(first) else Modifier).onPreviewKeyEvent { e ->
+                        if (!isMoving || e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                        when (e.key) {
+                            Key.DirectionUp -> { onMove(name, -1); true }
+                            Key.DirectionDown -> { onMove(name, +1); true }
+                            Key.DirectionLeft, Key.DirectionRight -> true // stay on the moved row
+                            else -> false
+                        }
+                    },
+                ) {
+                    Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("${i + 1}", fontSize = 13.sp, modifier = Modifier.width(36.dp))
+                        Text(name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f))
+                        if (isMoving) Text("▲ ▼  " + stringResource(R.string.settings_category_order_moving), fontSize = 13.sp, color = Accent)
+                    }
+                }
             }
         }
     }

@@ -48,6 +48,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import kotlinx.coroutines.delay
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -77,6 +78,7 @@ fun TvScreen(vm: MasalViewModel, autoFocus: Boolean, onPlay: (String, List<Chann
     val recentKeys by vm.recentChannels.collectAsState()
     val epg by vm.epg.collectAsState()
     val loading by vm.loadingChannels.collectAsState()
+    val categoryOrder by vm.categoryOrder.collectAsState()
     val recentLabel = stringResource(R.string.tv_last_watched)
     val favouritesLabel = stringResource(R.string.tv_favourites)
     val label = { name: String? ->
@@ -87,19 +89,23 @@ fun TvScreen(vm: MasalViewModel, autoFocus: Boolean, onPlay: (String, List<Chann
         }
     }
 
-    val groups = remember(channels, favorites, recentKeys) {
+    val groups = remember(channels, favorites, recentKeys, categoryOrder) {
         val byKey = channels.associateBy { it.key }
         val recent = recentKeys.mapNotNull { byKey[it] }
         val favs = channels.filter { it.key in favorites }
         buildList {
             if (recent.isNotEmpty()) add(RECENT to recent)
             if (favs.isNotEmpty()) add(FAVOURITES to favs)
-            addAll(channels.groupBy { it.group }.toList())
+            addAll(com.alike.masal.data.CategoryOrder.groups(channels.groupBy { it.group }.toList(), categoryOrder))
         }
     }
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
     val current = groups.firstOrNull { it.first == selected } ?: groups.firstOrNull()
     var focused by remember { mutableStateOf<Channel?>(null) }
+    // Another category: the header shows it until a channel of it gets focus.
+    LaunchedEffect(current?.first) { if (focused != null && current?.second?.none { it.key == focused?.key } != false) focused = null }
+    // The focused channel plays in the picture frame top right, with its colours around it, as on Home.
+    ReportAmbient(focused?.let { liveAmbient(it) })
     val focus = rememberRestorableFocus(autoFocus, groups.isNotEmpty())
     focus.defaultKey = "cat:" + groups.firstOrNull()?.first
 
@@ -124,20 +130,32 @@ fun TvScreen(vm: MasalViewModel, autoFocus: Boolean, onPlay: (String, List<Chann
         }
     }
 
-    Column(Modifier.fillMaxSize()) {
-        Spacer(Modifier.height(NavHeight))
-        if (groups.isEmpty()) {
-            Text(
-                stringResource(if (loading) R.string.tv_loading_channels else R.string.tv_no_channels),
-                color = TextDim, modifier = Modifier.padding(start = EdgePadding, top = 24.dp),
-            )
-            return
+    if (groups.isEmpty()) {
+        Text(
+            stringResource(if (loading) R.string.tv_loading_channels else R.string.tv_no_channels),
+            color = TextDim, modifier = Modifier.padding(start = EdgePadding, top = NavHeight + 32.dp),
+        )
+        return
+    }
+    Box(Modifier.fillMaxSize()) {
+        // Top left, over the colour fill: the focused channel (as on Home), else the category.
+        HeroSwap(focused, { it?.key }, Modifier.padding(start = EdgePadding, top = 40.dp).height(TvListsTop - 52.dp)) { ch ->
+            if (ch != null) HeroLive(ch, ch.epgId?.let { id -> epg[id] })
+            else Column {
+                Text(label(current?.first), color = TextMain, fontSize = 28.sp, fontWeight = FontWeight.Bold, lineHeight = 32.sp)
+                val count = current?.second?.size ?: 0
+                Text(pluralStringResource(R.plurals.tv_channels_count, count, count), color = TextDim, fontSize = 14.sp,
+                    modifier = Modifier.padding(top = 6.dp))
+            }
         }
-        Row(Modifier.fillMaxSize().padding(top = 8.dp)) {
+        // The lists sit on a dark band that fades in over the lower edge of the picture.
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
+            0f to Color.Transparent, 0.40f to Color.Transparent, 0.52f to Bg.copy(alpha = 0.82f), 1f to Bg.copy(alpha = 0.94f))))
+        Row(Modifier.fillMaxSize().padding(top = TvListsTop)) {
             // Categories
             LazyColumn(
                 Modifier.width(214.dp).fillMaxHeight(),
-                contentPadding = PaddingValues(start = EdgePadding - 10.dp, end = 10.dp, top = 4.dp, bottom = 32.dp),
+                contentPadding = PaddingValues(start = EdgePadding - 10.dp, end = 10.dp, top = 2.dp, bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 items(groups, key = { "cat:" + it.first }) { (name, list) ->
@@ -154,24 +172,11 @@ fun TvScreen(vm: MasalViewModel, autoFocus: Boolean, onPlay: (String, List<Chann
             }
 
             Column(Modifier.weight(1f).padding(end = EdgePadding)) {
-                // Preview + guide for the focused channel
-                Row(Modifier.fillMaxWidth().height(196.dp)) {
-                    Box(Modifier.fillMaxHeight().width(348.dp).clip(RoundedCornerShape(6.dp)).background(Color.Black)) {
-                        if (focused != null) {
-                            LivePreview(focused, Modifier.fillMaxSize())
-                        } else {
-                            Text(stringResource(R.string.tv_preview_hint), color = TextDim, fontSize = 12.sp,
-                                modifier = Modifier.align(Alignment.Center))
-                        }
-                    }
-                    Spacer(Modifier.width(18.dp))
-                    focused?.let { HeroLive(it, it.epgId?.let { id -> epg[id] }, Modifier.fillMaxHeight()) }
-                }
-                Row(Modifier.padding(top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(label(current?.first), color = TextMain, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Row(Modifier.padding(start = 2.dp, top = 6.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(label(current?.first), color = TextMain, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     val count = current?.second?.size ?: 0
-                    Text("  " + pluralStringResource(R.plurals.tv_channels_count, count, count) + "   " + stringResource(R.string.tv_favourite_hint),
-                        color = TextDim, fontSize = 11.sp)
+                    Text("  " + pluralStringResource(R.plurals.tv_channels_count, count, count), color = TextDim, fontSize = 12.sp)
                 }
                 val list = current?.second.orEmpty()
                 LazyColumn(
@@ -196,7 +201,7 @@ fun TvScreen(vm: MasalViewModel, autoFocus: Boolean, onPlay: (String, List<Chann
                             epgList = ch.epgId?.let { epg[it] },
                             favorite = ch.key in favorites,
                             onFocus = { focused = ch },
-                            onClick = { onPlay(label(current?.first), list, i) },
+                            onClick = { onPlay(current?.first.orEmpty(), list, i) },
                             onLongClick = { vm.toggleFavorite(ch) },
                             modifier = focus.modifier("ch:${ch.key}"),
                         )
@@ -206,6 +211,9 @@ fun TvScreen(vm: MasalViewModel, autoFocus: Boolean, onPlay: (String, List<Chann
         }
     }
 }
+
+/** Where the category and channel lists start; above them the channel's info and picture. */
+private val TvListsTop = 262.dp
 
 @Composable
 private fun CategoryItem(name: String, count: Int, selected: Boolean, onFocus: () -> Unit, onClick: () -> Unit, modifier: Modifier) {
@@ -251,7 +259,7 @@ private fun ChannelRow(
             onLongClick = onLongClick,
             modifier = modifier.weight(1f).onFocusChanged { if (it.isFocused) onFocus() },
             shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(6.dp)),
-            colors = ClickableSurfaceDefaults.colors(containerColor = Panel, focusedContainerColor = PanelFocus),
+            colors = ClickableSurfaceDefaults.colors(containerColor = Panel.copy(alpha = 0.78f), focusedContainerColor = PanelFocus),
             border = ClickableSurfaceDefaults.border(
                 focusedBorder = androidx.tv.material3.Border(androidx.compose.foundation.BorderStroke(2.dp, Accent), shape = RoundedCornerShape(6.dp)),
             ),
@@ -265,8 +273,8 @@ private fun ChannelRow(
                 }
                 Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(channel.name, color = TextMain, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
-                            overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                        Text(channel.name, color = TextMain, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f, fill = false))
                         if (favorite) Box(Modifier.padding(start = 6.dp).size(6.dp).background(Accent, RoundedCornerShape(3.dp)))
                     }
                     Text(now?.title ?: stringResource(R.string.tv_no_guide), color = TextDim, fontSize = 11.sp, maxLines = 1,

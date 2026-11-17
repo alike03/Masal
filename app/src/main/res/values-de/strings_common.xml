@@ -14,7 +14,6 @@
     <string name="common_last_watched">Zuletzt gesehen</string>
     <string name="common_favourites">Favoriten</string>
     <string name="common_no_playable_file">Für diesen Titel gibt es keine abspielbare Datei.</string>
-    <string name="common_live">LIVE</string>
     <string name="common_next">Danach %1$s  %2$s</string>
     <string name="common_no_guide">Keine Programminformationen</string>
     <string name="common_tuning_in">Sender wird geladen</string>

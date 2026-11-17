@@ -14,7 +14,6 @@
     <string name="common_last_watched">Son izlenenler</string>
     <string name="common_favourites">Favoriler</string>
     <string name="common_no_playable_file">Bu içeriğin oynatılabilir dosyası yok.</string>
-    <string name="common_live">CANLI</string>
     <string name="common_next">Sonra %1$s  %2$s</string>
     <string name="common_no_guide">Yayın akışı bilgisi yok</string>
     <string name="common_tuning_in">Kanal açılıyor</string>

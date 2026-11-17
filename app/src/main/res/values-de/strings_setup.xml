@@ -96,4 +96,14 @@
     <string name="setup_name_playlist_placeholder">Meine Playlist</string>
     <string name="setup_playlist_url">Playlist-URL</string>
     <string name="setup_m3u_epg">Programmführer-URL (XMLTV), optional</string>
+    <string name="settings_kind_movie_collection">Film-Sammlung</string>
+    <string name="settings_kind_show_collection">Serien-Sammlung</string>
+    <string name="settings_tv_tab_heading">TV-Tab</string>
+    <string name="settings_category_order">Reihenfolge der Kategorien</string>
+    <string name="settings_category_order_default">Wie beim Anbieter</string>
+    <string name="settings_category_order_custom">Eigene Reihenfolge</string>
+    <string name="settings_category_order_note">OK nimmt eine Kategorie auf, ▲ ▼ verschieben sie, OK legt sie ab. «Zuletzt gesehen» und «Favoriten» bleiben immer oben.</string>
+    <string name="settings_category_order_reset">Reihenfolge des Anbieters wiederherstellen</string>
+    <string name="settings_category_order_empty">Noch keine Senderkategorien geladen.</string>
+    <string name="settings_category_order_moving">wird verschoben</string>
 </resources>

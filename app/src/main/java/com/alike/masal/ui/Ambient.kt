@@ -82,6 +82,8 @@ data class Ambient(
     val logo: String? = null,
     /** Plex's tint for the title (4 corners); the art then sits on the right like in Plex. */
     val colors: List<Int> = emptyList(),
+    /** Replaces the previous picture at once instead of fading over it (focus moved to another row). */
+    val cut: Boolean = false,
 )
 
 /** How long focus must rest on an item before the background follows it. */
@@ -90,16 +92,25 @@ private const val AmbientSettle = 150L
 /** Screens report their background here; MainActivity draws the one for the visible screen. */
 val LocalAmbient = staticCompositionLocalOf<(Ambient?) -> Unit> { {} }
 
-/** Reports [ambient] as this screen's background whenever it changes. */
+/**
+ * Reports [ambient] as this screen's background whenever it changes. [group] is the row the
+ * focus is in: within a row the background waits until the focus rests; moving to another row it
+ * changes at once and the previous picture disappears without fading, like the info text.
+ */
 @Composable
-fun ReportAmbient(ambient: Ambient?) {
+fun ReportAmbient(ambient: Ambient?, group: Any? = null) {
     val sink = LocalAmbient.current
-    LaunchedEffect(ambient?.key, ambient?.image, ambient?.video?.key) {
+    val lastGroup = remember { arrayOf<Any?>(Unreported) }
+    LaunchedEffect(ambient?.key, ambient?.image, ambient?.video?.key, group) {
+        val jump = group != null && lastGroup[0] !== Unreported && group != lastGroup[0]
         // While the user scrolls quickly through a row, only the item they rest on changes the background.
-        kotlinx.coroutines.delay(AmbientSettle)
-        sink(ambient)
+        if (!jump) kotlinx.coroutines.delay(AmbientSettle)
+        lastGroup[0] = group
+        sink(if (jump) ambient?.copy(cut = true) else ambient)
     }
 }
+
+private val Unreported = Any()
 
 fun liveVideo(ch: Channel) = VideoSource("live:" + ch.key, 700) { channelItem(ch) to 0L }
 
@@ -124,8 +135,15 @@ fun plexAmbient(item: PlexItem): Ambient {
     return Ambient("plex:" + item.ratingKey, image, video, colors = item.blur)
 }
 
+/**
+ * The background of the visible screen. [screen] is that screen's key: switching screens replaces
+ * the picture at once, so a page never shows the previous page's artwork while it fades in.
+ */
 @Composable
-fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier) {
+fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier, screen: String? = null) {
+    val lastScreen = remember { arrayOf(screen) }
+    val cut = ambient?.cut == true || screen != lastScreen[0]
+    androidx.compose.runtime.SideEffect { lastScreen[0] = screen }
     val image = ambient?.image
     // A live channel: no artwork, its stream plays in the frame.
     val live = ambient != null && image == null && (ambient.video != null || ambient.logo != null)
@@ -139,19 +157,23 @@ fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier) {
     }
     // The fill appears, changes and disappears together with the frame (same 450 ms).
     val framed = image != null || live
-    val fill by animateFloatAsState(if (framed) 1f else 0f, tween(450), label = "fill")
+    // Without a picture (or on a screen switch to one without) the fill goes at once with the old picture.
+    val fill by animateFloatAsState(if (framed) 1f else 0f, if (framed || !cut) tween(450) else snap(), label = "fill")
     Box(modifier.fillMaxSize().background(Bg)) {
         AnimatedContent(
-            targetState = ambient,
+            targetState = Shown(ambient, cut || ambient == null),
             // The new picture fades in over the old one, which stays until it is covered:
-            // no dip to black between two pictures.
+            // no dip to black between two pictures. A cut (other row, other screen, no picture)
+            // removes the old one at once: it must not show behind the new row's or page's text.
             transitionSpec = {
-                fadeIn(tween(450, easing = androidx.compose.animation.core.FastOutSlowInEasing)) togetherWith
+                if (targetState.cut) fadeIn(tween(300)) togetherWith fadeOut(snap())
+                else fadeIn(tween(450, easing = androidx.compose.animation.core.FastOutSlowInEasing)) togetherWith
                     fadeOut(tween(150, delayMillis = 450))
             },
-            contentKey = { it?.key + "|" + it?.image },
+            contentKey = { it.ambient?.key + "|" + it.ambient?.image },
             label = "ambient",
-        ) { a ->
+        ) { shown ->
+            val a = shown.ambient
             Box(Modifier.fillMaxSize()) {
                 when {
                     a?.image != null -> ArtFrame(Modifier.graphicsLayer { clip = true }) { KenBurns(a.image) }
@@ -172,6 +194,13 @@ fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier) {
             TextScrims()
         }
     }
+}
+
+/** What the background shows and whether it replaces the previous picture without a crossfade. */
+private class Shown(val ambient: Ambient?, val cut: Boolean) {
+    // Equal by picture only: a changed cut flag alone must not start a transition.
+    override fun equals(other: Any?) = other is Shown && other.ambient?.key == ambient?.key && other.ambient?.image == ambient?.image
+    override fun hashCode() = (ambient?.key + "|" + ambient?.image).hashCode()
 }
 
 /** Fill colour around a live channel's frame until its picture runs. */
@@ -463,14 +492,6 @@ fun PreviewVideo(
 
 /** Turned off by the JVM UI tests, which cannot draw a TextureView. */
 object VideoPreviews { @Volatile var enabled = true }
-
-/** Small live preview box (TV tab): a calm gradient, no placeholder text, until the picture fades in. */
-@Composable
-fun LivePreview(channel: Channel?, modifier: Modifier = Modifier) {
-    Box(modifier.background(LiveGradient)) {
-        PreviewVideo(channel?.let { liveVideo(it) }, Modifier.fillMaxSize())
-    }
-}
 
 /** Shown behind live channels before their picture starts. */
 private val LiveGradient = Brush.linearGradient(

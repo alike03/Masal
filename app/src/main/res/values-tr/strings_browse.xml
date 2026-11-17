@@ -60,7 +60,6 @@
         <item quantity="one">%d kanal</item>
         <item quantity="other">%d kanal</item>
     </plurals>
-    <string name="tv_favourite_hint">favori yıldızı için kanalda ▶ tuşuna bas</string>
     <string name="tv_no_guide">Yayın akışı bilgisi yok</string>
     <string name="tv_next">Sonra %1$s</string>
     <string name="tv_remove_favourite">Favorilerden çıkar</string>

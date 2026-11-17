@@ -30,6 +30,7 @@ Kotlin, Compose for TV (`androidx.tv:tv-material`), Media3 ExoPlayer, OkHttp, Co
 - `LiveOverlayTest`: the live player's info banner (with and without guide) and channel list, fictitious channels. Shots: `.../live-shots/`.
 - `GermanScreensTest` / `TurkishScreensTest` (`LocaleScreensTest.kt`): Home and Settings with the device in German and Turkish. Shots: `.../locale-shots/`. UI tests stay offline: `Backdrops.base` and `Graph.plex.accountBase` point at a closed port.
 - `AmbientSeamTest`: the colour fill meets the picture frame without a line (pixel columns at the frame edge).
+- `CategoryOrderTest`: the user's channel category order over the provider's list (plain JVM test).
 
 Snapshot: made on the device by the debug-only `SnapshotReceiver`, which drives the app's own `PlexClient` through a recording interceptor; responses are keyed with `debug.key()` (path + sorted query without token), so new Plex calls must also be made in the receiver (Plex search is not recorded yet). Run `adb shell cmd deviceidle tempwhitelist -d 300000 com.alike.masal` (needed while the device sleeps) and `adb shell am broadcast -n com.alike.masal/.debug.SnapshotReceiver`, wait for `snapshot.done` in the app's files folder, pull `snapshot.zip` into `snapshot/`, delete the device copy and scan it for credentials. Logins are replaced by [x] on the device.
 

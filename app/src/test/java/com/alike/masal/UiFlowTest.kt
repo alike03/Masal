@@ -128,13 +128,18 @@ class UiFlowTest {
         rule.waitForIdle()
         expectFocus("Home key returns to Home", "Testplayer")
 
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        val lower = focused()
+        assertTrue("down leaves the apps row", !lower.contains("Testplayer"))
         press(KeyEvent.KEYCODE_DPAD_LEFT)
         expectFocus("menu on Home", "Home")
         rule.runOnUiThread { rule.activity.isHome = true }
         rule.waitForIdle()
         press(KeyEvent.KEYCODE_BACK)
         assertTrue("as home screen, Back on Home does not leave", !rule.activity.isFinishing)
-        expectFocus("still on Home", "Home")
+        expectFocus("Back in the menu goes to Home's first card", "Testplayer")
+        press(KeyEvent.KEYCODE_DPAD_LEFT)
+        expectFocus("menu on Home again", "Home")
         rule.runOnUiThread { rule.activity.isHome = false }
         rule.waitForIdle()
         // Not pressed, that would close the test's activity: no enabled Back callback means the
@@ -147,7 +152,7 @@ class UiFlowTest {
     fun settingsScreen() {
         val vm = seed()
         val recent = com.alike.masal.data.HomeRowOption("home.movies.recent", "Recently Added Movies", "Plex", true)
-        val saga = com.alike.masal.data.HomeRowOption("collection:5", "Testsammlung", "Filme", false)
+        val saga = com.alike.masal.data.HomeRowOption("collection:5", "Testsammlung", "Filme", false, "movie")
         vm.homeRowOptions.value = listOf(recent, saga)
         Graph.settings.homeRowsOn = emptySet(); Graph.settings.homeRowsOff = emptySet()
         rule.mainClock.advanceTimeBy(1_000)
@@ -181,14 +186,30 @@ class UiFlowTest {
         press(KeyEvent.KEYCODE_DPAD_DOWN)
         expectFocus("title row", "Row title")
         press(KeyEvent.KEYCODE_DPAD_DOWN)
+        expectFocus("category order row", "Category order")
+        val before = vm.categoryNames()
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        expectFocus("order page starts on the first category", before.first())
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        assertTrue("OK and Down move the first category one down", vm.categoryNames().take(2) == listOf(before[1], before[0]))
+        expectFocus("focus stays on the moved category", before.first())
+        shot("11-settings-category-order")
+        press(KeyEvent.KEYCODE_BACK)
+        expectFocus("Back puts it down and stays on the page", before.first())
+        press(KeyEvent.KEYCODE_BACK)
+        expectFocus("Back returns to the row", "Own order")
+        vm.setCategoryOrder(emptyList())
+
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
         expectFocus("first Home row", "Recently Added Movies")
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         assertTrue("OK switches a default row off", !Graph.settings.homeRowShown(recent))
         press(KeyEvent.KEYCODE_DPAD_DOWN)
-        expectFocus("collection", "Testsammlung")
+        expectFocus("collection, marked as movie collection", "Movie collection")
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         assertTrue("OK switches a collection on", Graph.settings.homeRowShown(saga))
-        shot("11-settings-rows")
+        shot("12-settings-rows")
     }
 
     @Test

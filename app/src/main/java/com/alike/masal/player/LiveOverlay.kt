@@ -109,11 +109,10 @@ private fun InfoBanner(number: Int, ch: Channel, programmes: List<Programme>?, m
                 NetImage(ch.logo, ch.name, Modifier.fillMaxSize(), ContentScale.Fit)
             }
             Column(Modifier.padding(start = 18.dp).weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                // The full channel name, wrapping if needed; no LIVE badge (the player is live anyway).
+                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("$number", color = Accent, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text(ch.name, color = TextMain, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1,
-                        overflow = TextOverflow.Ellipsis)
-                    Chip(stringResource(R.string.live_badge), highlight = true)
+                    Text(ch.name, color = TextMain, fontSize = 22.sp, fontWeight = FontWeight.Bold, lineHeight = 26.sp)
                 }
                 if (now != null) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {

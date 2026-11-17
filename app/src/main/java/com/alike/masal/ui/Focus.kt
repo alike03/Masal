@@ -33,6 +33,12 @@ class RestorableFocus(private val holder: FocusKeyHolder) {
         .onFocusChanged { if (it.isFocused) holder.key = key }
         .focusRequester(requesters.getOrPut(key) { FocusRequester() })
 
+    /** Focuses the default card (the first one); false when it is not composed. */
+    fun focusDefault(): Boolean {
+        val r = defaultKey?.let { requesters[it] } ?: return false
+        return runCatching { r.requestFocus() }.isSuccess
+    }
+
     /** Focuses the saved card, else the default one. */
     fun restore(): Boolean {
         for (k in listOfNotNull(holder.key, defaultKey).distinct()) {

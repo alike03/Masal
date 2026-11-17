@@ -4,18 +4,25 @@
 IPTV channels (Xtream or M3U, XMLTV guide) in a TV tab and a full-screen live player.
 
 ## Behaviour
-- TV tab: categories, then the channels of a category with logo, name and current programme;
-  favourites are marked. A small live preview plays the focused channel; before its picture
-  starts it shows only a gradient (no "Tuning in" text).
+- TV tab, laid out like Home: the focused channel plays in the top-right picture frame with its
+  colours around it (look.md); top left its info (category, full name, now with time and progress,
+  description, next), or, before a channel has focus, the category's name and channel count.
+  Below, on a dark band over the lower edge of the picture: categories on the left, the channels
+  of the selected one on the right (number, logo, full name, current programme, time, next; the
+  star button marks favourites). No key hints, no LIVE badge anywhere in Masal: the context is
+  clear. Channel names are never cut off; a long name wraps.
+- Category order: "Last watched" and "Favourites" first, then the categories in the user's order
+  (Settings, see setup.md), categories not placed by the user after them in the provider's order.
+  The live player's channel list uses the same order.
 - Live player: full-screen channel with an overlay for the channel list. The info banner shows
-  logo, number, name, now and next on the left and, on the right, the current programme's
+  logo, number, full name (wraps, no LIVE badge), now and next on the left and, on the right, the current programme's
   description from the guide, or "No guide information for this channel." / "No description for
   this programme." No key hints.
 - Opening a channel whose preview is already running hands that stream to the player: no
-  restart, no new connection. From Home the picture zooms from its frame to full screen; leaving
-  the player (Back) zooms it back into the frame on Home, and when the channel is still the one
-  opened, it keeps playing there. From the TV tab or search the player opens and closes normally
-  (still without restart when the preview was running).
+  restart, no new connection. From Home and the TV tab the picture zooms from its frame to full
+  screen; leaving the player (Back) zooms it back into the frame, and when the channel is still the
+  one opened, it keeps playing there. From search the player opens and closes normally (still
+  without restart when the preview was running).
 - Previews stop before full-screen playback (providers often allow one connection); leaving the
   live player releases the stream at once. Back from the player, the preview of the channel just
   watched waits until the focus moves (see home.md).

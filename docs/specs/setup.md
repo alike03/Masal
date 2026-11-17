@@ -36,8 +36,13 @@ Enter Plex and IPTV logins with the phone instead of the remote.
   - Live TV row on Home: "Channel category" opens a list of the loaded categories plus "None";
     OK picks, Back returns without change. "Row title" opens a text field with the TV keyboard;
     Done saves, Back cancels.
+  - TV tab: "Category order" (value: as the provider lists them, or own order) opens the
+    categories numbered in their order. OK picks one up, Up/Down move it (stored at once), OK or
+    Back put it down; Back again returns. "Back to the provider's order" (only with an own order)
+    clears it. New categories from the provider appear after the ordered ones.
   - Home rows: one line per Plex row and collection, grouped by library, with a check mark when
-    shown; OK switches it.
+    shown; OK switches it. Collections say whether they are a movie or a TV show collection
+    (also on the phone page).
   - Live TV sources: names only; adding and removing happens on the phone page.
 - Changes apply at once and are the same settings as on the phone page.
 - Logins stay in the app's private storage, excluded from cloud backup and device transfer;
@@ -48,3 +53,4 @@ Enter Plex and IPTV logins with the phone instead of the remote.
 - On the TV, switch a collection on: it is checked on the phone page after a reload, and on Home.
 - Pick Deutsch on the phone page: the page is German at once; reopen Settings on the TV: German.
 - Pick a category on the TV, Back: the setting is unchanged; OK: the live TV row shows it.
+- Move a category up in "Category order": the TV tab and the live player's list show it there.

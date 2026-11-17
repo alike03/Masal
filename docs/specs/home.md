@@ -27,11 +27,14 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
 - Info block per item:
   - Plex title: logo art (or title text), episode title, facts line (S1 • E5, date, runtime,
     rating), two-line summary, top three cast. Smaller and lower, like Plex.
-  - Channel: logo, LIVE chip, name, current programme with time and progress, next programme.
+  - Channel: logo, full name (wraps, no LIVE badge), current programme with time and progress,
+    description, next programme.
     The channel plays in the picture frame (see look.md); OK zooms it to full screen (live-tv.md).
   - App and "Edit" card: only the time (HH:mm, large) top left, and the photo behind; no app name,
     no photo credit. Moving along the apps the time stays put (no animation). This is the only
     clock in Masal outside the player; the side menu has none.
+- The background picture behaves the same: on another row it changes at once without showing
+  the previous row's picture (look.md).
 - The info block follows the focus after 90 ms within a row. Moving to another row it changes at
   once and the old text disappears without fading: the new row's slot opens right away and must
   never show the previous row's text.
@@ -44,8 +47,9 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
 ## As the device's home screen
 - Masal can replace the stock launcher (it declares a HOME activity, `singleTask`). Whether it
   is the home screen is decided on the device, never by the app.
-- When it is the default home screen, Back on Home with the side menu focused does nothing
-  (there is nothing to leave to). As a normal app, Back there leaves the app.
+- When it is the default home screen, Back on Home with the side menu focused goes to the top of
+  Home: the first row opens and its first card gets focus (there is nothing to leave to). As a
+  normal app, Back there leaves the app.
 - The Home key closes all open pages and returns to the Home tab, focus restored there. Pressing
   it in another app or the player brings Masal back the same way.
 - It starts with the device, often before the network is up: when a network becomes available,
@@ -63,7 +67,8 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
 - Switch a collection on in Settings: it appears on Home at once, without reloading channels.
 - Flicking through the live TV row: gradient behind, picture fades in, no logo placeholder.
 - Home key on the TV tab or a title page: Home tab, first focus restored, pages closed.
-- With Masal as default home screen: Back in the menu on Home stays; as a normal app it leaves.
+- With Masal as default home screen: Back in the menu on Home goes to the first app; as a normal
+  app it leaves.
 - Start the device with the network cable out, plug it in: channels and Plex rows appear.
 
 ## Open points

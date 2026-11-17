@@ -95,6 +95,14 @@ class Settings(context: Context) {
         }
         set(v) = prefs.edit().putString("home_apps", JSONArray(v).toString()).apply()
 
+    /** Channel categories in the user's order (exact names); categories not listed follow in the provider's order. */
+    var categoryOrder: List<String>
+        get() {
+            val arr = runCatching { JSONArray(prefs.getString("category_order", "[]")) }.getOrDefault(JSONArray())
+            return (0 until arr.length()).map { arr.getString(it) }
+        }
+        set(v) = prefs.edit().putString("category_order", JSONArray(v).toString()).apply()
+
     /** IPTV category shown as a row on Home (matched without accents and provider prefix); empty hides the row. */
     var homeLiveGroup: String
         get() = prefs.getString("home_live_group", "") ?: ""

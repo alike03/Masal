@@ -475,12 +475,9 @@ fun HeroLive(channel: Channel, programmes: List<Programme>?, modifier: Modifier 
     val (now, next) = programmes?.nowAndNext() ?: (null to null)
     val fmt = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
     Column(modifier.width(400.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip(stringResource(R.string.common_live), highlight = true)
-            Text(channel.group, color = TextDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        Text(channel.name, color = TextMain, fontSize = 28.sp, fontWeight = FontWeight.Bold, maxLines = 1,
-            overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+        Text(channel.group, color = TextDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(channel.name, color = TextMain, fontSize = 28.sp, fontWeight = FontWeight.Bold, lineHeight = 32.sp,
+            modifier = Modifier.padding(top = 4.dp))
         if (now != null) {
             Text(now.title, color = TextMain, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 4.dp))

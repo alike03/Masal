@@ -32,15 +32,22 @@ text #F2EEE8, dim text #A8A29A. Focus frame on cards is amber.
 - The fill is always there while a frame is shown and fades together with the frame: its colours
   glide over the same 450 ms as the picture's cross-fade, so frame and fill never change apart.
 - Apps use one Bing photo of the day for all apps, never movie artwork.
+- A cut instead of a cross-fade: moving to another row on Home, switching to another page or to
+  a page without picture, the old picture and its fill disappear at once and the new one fades in
+  (300 ms). Within a row the cross-fade stays. A page never shows the previous page's artwork,
+  and a row never shows the previous row's picture behind its text.
 
 ## Motion
 - Rows and lazy lists move with a critically damped spring (no bounce, no lag on key repeat).
 - Info block follows focus after 90 ms; background after 150 ms, cross-fade 450 ms, colours glide.
+  To another row both change at once (cut, see above).
 - Page switch from the menu after resting 150 ms; library tabs after 150 ms.
 - Images fade in over 300 ms (switched off in JVM tests, see `ImageFades`).
 
 ## Checks
 - Fast D-pad repeat along a row: the row follows smoothly and stops with the focus.
 - Between two titles the background never flashes dark.
+- Flicking fast down through the Home rows: no picture of an earlier row appears.
+- Movies to TV in the menu: the movie picture is gone before the TV tab shows.
 - From a title to a live channel and back: frame and colour fill change together, no visible edge.
 - No visible edge where the picture meets the colour fill.

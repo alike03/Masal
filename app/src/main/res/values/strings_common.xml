@@ -14,7 +14,6 @@
     <string name="common_last_watched">Last watched</string>
     <string name="common_favourites">Favourites</string>
     <string name="common_no_playable_file">This item has no playable file.</string>
-    <string name="common_live">LIVE</string>
     <string name="common_next">Next %1$s  %2$s</string>
     <string name="common_no_guide">No guide information</string>
     <string name="common_tuning_in">Tuning in</string>

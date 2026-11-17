@@ -129,6 +129,8 @@ class MainActivity : ComponentActivity() {
     internal var isHome by mutableStateOf(false) // internal: the UI tests set it
     /** Counts Home key presses while Masal runs; each one returns to the start of Home. */
     private var homePresses by mutableIntStateOf(0)
+    /** Back in the side menu on Home while Masal is the home screen: Home goes back to its top. */
+    private var homeTop by mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -157,7 +159,7 @@ class MainActivity : ComponentActivity() {
                 var railFocused by remember { mutableStateOf(false) }
                 val scope = rememberCoroutineScope()
                 // Back: close a page, then go to the menu, then to Home, then leave the app
-                // (unless Masal is the home screen: there is nothing to leave to).
+                // (unless Masal is the home screen: there is nothing to leave to, Back goes to Home's top).
                 BackHandler(enabled = stack.isNotEmpty() || !railFocused || tab != NavTab.Home || isHome) {
                     when {
                         stack.isNotEmpty() -> {
@@ -171,7 +173,7 @@ class MainActivity : ComponentActivity() {
                             selectTab(NavTab.Home, false)
                             scope.launch { delay(40); runCatching { railRequester.requestFocus() } }
                         }
-                        else -> Unit // home screen, already on Home
+                        else -> homeTop++ // home screen, menu on Home: back to the first card
                     }
                 }
 
@@ -218,7 +220,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Box(Modifier.fillMaxSize().background(Bg)) {
-                    AmbientBackground(ambients[screenKey])
+                    AmbientBackground(ambients[screenKey], screen = screenKey)
                     AnimatedContent(
                         modifier = Modifier.fillMaxSize().padding(start = RailWidth),
                         targetState = screenKey,
@@ -254,10 +256,12 @@ class MainActivity : ComponentActivity() {
                                         onPlayChannel = { name, list, i -> playChannels(name, list, i, fromHome = true) },
                                         onApp = { Apps.launch(this@MainActivity, it.pkg) },
                                         onEditApps = { editApps = true; selectTab(NavTab.Apps, true) },
+                                        topRequests = homeTop,
                                     )
                                     t == NavTab.Search -> SearchScreen(vm, autoFocus, openItem, ::playChannels)
                                     t == NavTab.Apps -> AppsScreen(vm, autoFocus, editApps) { Apps.launch(this@MainActivity, it.pkg) }
-                                    t == NavTab.Tv -> TvScreen(vm, autoFocus, ::playChannels)
+                                    // The TV tab's picture sits in the same frame as Home's: it zooms in and back out the same way.
+                                    t == NavTab.Tv -> TvScreen(vm, autoFocus) { name, list, i -> playChannels(name, list, i, fromHome = true) }
                                     t is NavTab.Library -> LibraryScreen(
                                         vm, t.section, autoFocus, openItem,
                                         onPlay = { playPlex(it, fromStart = false) },
@@ -343,7 +347,7 @@ class MainActivity : ComponentActivity() {
             add(name to list)
             if (recent.isNotEmpty()) add(getString(R.string.common_last_watched) to recent)
             if (favs.isNotEmpty()) add(getString(R.string.common_favourites) to favs)
-            addAll(all.groupBy { it.group }.toList())
+            addAll(com.alike.masal.data.CategoryOrder.groups(all.groupBy { it.group }.toList(), vm.categoryOrder.value))
         }.distinctBy { it.first }
         Playback.listName = name
         Playback.channels = list

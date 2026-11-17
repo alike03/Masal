@@ -60,7 +60,6 @@
         <item quantity="one">%d Sender</item>
         <item quantity="other">%d Sender</item>
     </plurals>
-    <string name="tv_favourite_hint">▶ auf einem Sender setzt den Favoriten-Stern</string>
     <string name="tv_no_guide">Keine Programminfos</string>
     <string name="tv_next">Danach %1$s</string>
     <string name="tv_remove_favourite">Aus Favoriten entfernen</string>

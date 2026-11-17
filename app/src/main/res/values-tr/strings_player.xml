@@ -51,7 +51,6 @@
     <string name="player_position_higher">Daha yüksek</string>
 
     <!-- Live TV -->
-    <string name="live_badge">CANLI</string>
     <string name="live_next">"Sonra %1$s  %2$s"</string>
     <string name="live_no_guide">Bu kanal için yayın akışı bilgisi yok.</string>
     <string name="live_no_description">Bu program için açıklama yok.</string>

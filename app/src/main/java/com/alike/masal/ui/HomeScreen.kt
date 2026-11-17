@@ -78,6 +78,8 @@ fun HomeScreen(
     onPlayChannel: (String, List<Channel>, Int) -> Unit,
     onApp: (TvApp) -> Unit,
     onEditApps: () -> Unit,
+    /** Raised by Back in the side menu (Masal as home screen): go to the first card of the first row. */
+    topRequests: Int = 0,
 ) {
     val channels by vm.channels.collectAsState()
     val epg by vm.epg.collectAsState()
@@ -112,6 +114,7 @@ fun HomeScreen(
 
     // Until something has focus, show the first title of Continue Watching.
     val shown = hero ?: onDeck.firstOrNull()?.let { Hero.Plex(it, resume = true) }
+    val rowsState = rememberRowsState()
     ReportAmbient(
         when (shown) {
             is Hero.Live -> liveAmbient(shown.channel)
@@ -120,7 +123,8 @@ fun HomeScreen(
             is Hero.App -> backdropFor(shown.app.pkg, backdrops)?.let { Ambient("app:" + it.url, it.url) }
             Hero.EditApps -> backdrops.firstOrNull()?.let { Ambient("app:" + it.url, it.url) }
             null -> null
-        }
+        },
+        group = rowsState.focusedKey,
     )
 
     val rows = buildList {
@@ -229,7 +233,6 @@ fun HomeScreen(
     // The hero text follows the focus once it rests for a moment, so holding a key does not flicker.
     // Moving to another row it follows at once: that row's info slot opens right away and must not
     // show the previous row's text, not even for a frame.
-    val rowsState = rememberRowsState()
     var heroShown by remember { mutableStateOf(shown) }
     var heroRow by remember { mutableStateOf<String?>(null) }
     var rowJump by remember { mutableStateOf(false) }
@@ -238,6 +241,14 @@ fun HomeScreen(
         val jump = row != heroRow
         if (!jump) delay(HeroSettle)
         rowJump = jump; heroRow = row; heroShown = shown
+    }
+
+    LaunchedEffect(topRequests) {
+        if (topRequests == 0) return@LaunchedEffect
+        rowsState.focusedKey = rowsState.order.firstOrNull() ?: return@LaunchedEffect
+        // The first row is composed once it is the focused one; then its first card can take focus.
+        repeat(2) { androidx.compose.runtime.withFrameNanos { } }
+        if (!focus.focusDefault()) rowsState.focusCurrent()
     }
 
     FoldingRows(rows, RowsTop, rowsState) {

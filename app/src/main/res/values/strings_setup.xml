@@ -96,4 +96,14 @@
     <string name="setup_name_playlist_placeholder">My playlist</string>
     <string name="setup_playlist_url">Playlist URL</string>
     <string name="setup_m3u_epg">Guide (XMLTV) URL, optional</string>
+    <string name="settings_kind_movie_collection">Movie collection</string>
+    <string name="settings_kind_show_collection">TV show collection</string>
+    <string name="settings_tv_tab_heading">TV tab</string>
+    <string name="settings_category_order">Category order</string>
+    <string name="settings_category_order_default">As the provider lists them</string>
+    <string name="settings_category_order_custom">Own order</string>
+    <string name="settings_category_order_note">OK picks a category up, ▲ ▼ move it, OK puts it down. Last watched and Favourites always stay on top.</string>
+    <string name="settings_category_order_reset">Back to the provider\'s order</string>
+    <string name="settings_category_order_empty">No channel categories loaded yet.</string>
+    <string name="settings_category_order_moving">moving</string>
 </resources>

@@ -51,7 +51,6 @@
     <string name="player_position_higher">Höher</string>
 
     <!-- Live TV -->
-    <string name="live_badge">LIVE</string>
     <string name="live_next">"Danach %1$s  %2$s"</string>
     <string name="live_no_guide">Keine Programminfos für diesen Sender.</string>
     <string name="live_no_description">Keine Beschreibung für diese Sendung.</string>

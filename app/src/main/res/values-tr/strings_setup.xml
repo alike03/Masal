@@ -96,4 +96,14 @@
     <string name="setup_name_playlist_placeholder">Listem</string>
     <string name="setup_playlist_url">Liste URL\'si</string>
     <string name="setup_m3u_epg">Rehber (XMLTV) URL\'si, isteğe bağlı</string>
+    <string name="settings_kind_movie_collection">Film koleksiyonu</string>
+    <string name="settings_kind_show_collection">Dizi koleksiyonu</string>
+    <string name="settings_tv_tab_heading">TV sekmesi</string>
+    <string name="settings_category_order">Kategori sırası</string>
+    <string name="settings_category_order_default">Sağlayıcının sırası</string>
+    <string name="settings_category_order_custom">Kendi sıran</string>
+    <string name="settings_category_order_note">OK kategoriyi alır, ▲ ▼ taşır, OK bırakır. Son izlenenler ve Favoriler her zaman en üstte kalır.</string>
+    <string name="settings_category_order_reset">Sağlayıcının sırasına dön</string>
+    <string name="settings_category_order_empty">Henüz kanal kategorisi yüklenmedi.</string>
+    <string name="settings_category_order_moving">taşınıyor</string>
 </resources>

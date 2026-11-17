@@ -5,7 +5,11 @@ package com.alike.masal.data
  * collection ([id] is "collection:<ratingKey>"). [group] is "Plex" or the collection's library;
  * [defaultOn] means Plex itself shows it on its Home.
  */
-data class HomeRowOption(val id: String, val title: String, val group: String, val defaultOn: Boolean)
+data class HomeRowOption(
+    val id: String, val title: String, val group: String, val defaultOn: Boolean,
+    /** Library type of a collection ("movie", "show"), shown so movie and TV collections can be told apart. */
+    val kind: String? = null,
+)
 
 object HomeRows {
     const val PlexGroup = "Plex"
@@ -31,7 +35,7 @@ object HomeRows {
             }
         }
         val libraryRows = collections.map { (s, c) ->
-            HomeRowOption("collection:${c.ratingKey}", c.title, s.title, c.ratingKey in promoted)
+            HomeRowOption("collection:${c.ratingKey}", c.title, s.title, c.ratingKey in promoted, s.type)
         }
         return (plexRows + libraryRows).distinctBy { it.id }
     }

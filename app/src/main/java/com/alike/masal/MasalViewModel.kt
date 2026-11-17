@@ -225,6 +225,20 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
         favorites.value = set
     }
 
+    /** Channel categories in the user's order (see [CategoryOrder]). */
+    val categoryOrder = MutableStateFlow(Graph.settings.categoryOrder)
+
+    /** Category names of the loaded channels, in the user's order. */
+    fun categoryNames(): List<String> =
+        com.alike.masal.data.CategoryOrder.apply(channels.value.map { it.group }.filter { it.isNotBlank() }.distinct(), categoryOrder.value)
+
+    fun moveCategory(name: String, delta: Int) = setCategoryOrder(com.alike.masal.data.CategoryOrder.move(categoryNames(), name, delta))
+
+    fun setCategoryOrder(order: List<String>) {
+        Graph.settings.categoryOrder = order
+        categoryOrder.value = order
+    }
+
     fun toggleHomeApp(pkg: String) {
         val list = homeApps.value.toMutableList()
         if (!list.remove(pkg)) list.add(pkg)

@@ -60,7 +60,6 @@
         <item quantity="one">%d channel</item>
         <item quantity="other">%d channels</item>
     </plurals>
-    <string name="tv_favourite_hint">press ▶ on a channel for the favourite star</string>
     <string name="tv_no_guide">No guide information</string>
     <string name="tv_next">Next %1$s</string>
     <string name="tv_remove_favourite">Remove favourite</string>
