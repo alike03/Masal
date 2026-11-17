@@ -177,10 +177,10 @@ fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier, screen: 
             // covered (also while the new one waits for its colours): no dip to black.
             else -> fadeIn(tween(450, easing = androidx.compose.animation.core.FastOutSlowInEasing)) togetherWith
                 fadeOut(tween(150, delayMillis = 900))
-        }
+        } using null // always full screen: no size animation (an empty layer would grow from a corner)
     }
     Box(modifier.fillMaxSize().background(Bg)) {
-        AnimatedContent(target, transitionSpec = spec, contentKey = { it.contentKey }, label = "ambient") { shown ->
+        AnimatedContent(target, Modifier.fillMaxSize(), transitionSpec = spec, contentKey = { it.contentKey }, label = "ambient") { shown ->
             val a = shown.ambient
             val alpha = shownAlpha(a, cornersByKey)
             Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = alpha }) {
@@ -198,16 +198,18 @@ fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier, screen: 
                 PreviewVideo(video, Modifier.fillMaxSize(), onColors = if (live) { c -> videoCorners = c } else null)
             }
         }
-        AnimatedContent(target, transitionSpec = spec, contentKey = { it.contentKey }, label = "fill") { shown ->
+        AnimatedContent(target, Modifier.fillMaxSize(), transitionSpec = spec, contentKey = { it.contentKey }, label = "fill") { shown ->
             val a = shown.ambient
             val framedHere = a != null && (a.image != null || a.video != null || a.logo != null)
             val alpha = shownAlpha(a, cornersByKey)
             // Composed only once its colours are known, so it starts with them (no glide from grey);
             // later changes (a live picture's colours) glide.
             val c = a?.let { cornersByKey[it.key] }
-            if (framedHere && c != null) Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = alpha }) {
-                TintAroundArt(c)
-                TextScrims()
+            Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = alpha }) {
+                if (framedHere && c != null) {
+                    TintAroundArt(c)
+                    TextScrims()
+                }
             }
         }
     }

@@ -132,6 +132,14 @@ fun SearchScreen(
         }
     }
 
+    // New results start at the top. A lazy list otherwise keeps its old first row in view, and a
+    // row that is now above it (e.g. channels before films) would be hidden: it looks scrolled down.
+    val resultsState = androidx.compose.foundation.lazy.rememberLazyListState()
+    var inResults by remember { mutableStateOf(false) }
+    LaunchedEffect(q, hubs, channelHits) {
+        if (!inResults) resultsState.scrollToItem(0)
+    }
+
     Column(Modifier.fillMaxSize().padding(top = 26.dp)) {
         Text(stringResource(R.string.search_title), color = TextMain, fontSize = 30.sp, fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = EdgePadding))
@@ -153,9 +161,10 @@ fun SearchScreen(
             Text(status, color = TextDim, fontSize = 14.sp, modifier = Modifier.padding(start = EdgePadding, top = 22.dp))
         }
         LazyColumn(
+            state = resultsState,
             contentPadding = PaddingValues(top = 18.dp, bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().onFocusChanged { inResults = it.hasFocus },
         ) {
             if (q.length >= 2) hubs.forEachIndexed { h, hub ->
                 item(key = "hub:" + hub.id) {
