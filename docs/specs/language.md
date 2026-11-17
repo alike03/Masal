@@ -14,7 +14,11 @@ Masal in English, German or Turkish, chosen in Settings.
 - Not translated: content from Plex (titles, summaries, genres, cast), channel and category names
   from the IPTV provider, the user's own row title, the name "Masal".
 - Plex's own texts (row titles such as "Recently Added Movies") are requested in the chosen
-  language (`X-Plex-Language`); whether they come translated depends on the Plex server.
+  language (`X-Plex-Language`), but servers send them in English anyway. So Masal translates the
+  known ones itself (`PlexNames`): row titles by their hub identifier (the name inside, e.g. the
+  library in "Recently Added in Movies", is kept or translated too), and the default library names
+  "Movies" / "TV Shows" (menu, pages, Settings). Collections, own library names, genres and people
+  stay as Plex sends them. IPTV channels without a category land in "Other" in the app's language.
 - German uses Swiss spelling (ss, never ß) and addresses the user with "du"; Turkish uses "sen".
   Times are 24-hour everywhere.
 - Texts live in `res/values*/strings_*.xml` (one file per area, keys prefixed by area);

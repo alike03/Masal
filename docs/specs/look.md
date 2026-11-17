@@ -42,7 +42,8 @@ text #F2EEE8, dim text #A8A29A. Focus frame on cards is amber.
 
 ## Side menu
 - Closed: icons on a soft shade, the open page marked by an amber bar and amber icon. Above the
-  icons the small Masal mark (no lettering), always in the same place.
+  icons the small Masal mark, always in the same place; the name "Masal" joins it when the menu
+  opens.
 - Open (focus in the menu): a solid panel (#1A1816) with a 1 px line as its edge slides out with
   the labels; the page behind dims slightly (30 % black). Focus is a soft light field (white
   12 %), no glow, no zoom; the open page stays amber.

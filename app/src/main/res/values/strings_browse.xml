@@ -75,4 +75,30 @@
     <string name="appspage_all_apps">All apps</string>
     <string name="home_movie_collection">Movies</string>
     <string name="home_show_collection">TV shows</string>
+    <!-- Plex sends its row and library names in English: known ones in the app's language. -->
+    <string name="plex_lib_movies">Movies</string>
+    <string name="plex_lib_shows">TV Shows</string>
+    <string name="plex_on_deck">On Deck</string>
+    <string name="plex_recent_movies">Recently Added Movies</string>
+    <string name="plex_recent_tv">Recently Added TV</string>
+    <string name="plex_recent_music">Recently Added Music</string>
+    <string name="plex_recent_photos">Recently Added Photos</string>
+    <string name="plex_recent_videos">Recently Added Videos</string>
+    <string name="plex_recent_playlists">Recent Playlists</string>
+    <string name="plex_recently_added_in">Recently Added in %1$s</string>
+    <string name="plex_recently_released_movies">Recently Released Movies</string>
+    <string name="plex_top_movies_in">Top Movies in %1$s</string>
+    <string name="plex_top_movies_by">Top Movies by %1$s</string>
+    <string name="plex_top_unwatched_movies">Top Unwatched Movies</string>
+    <string name="plex_recently_watched_movies">Recently Watched Movies</string>
+    <string name="plex_recently_released_episodes">Recently Released Episodes</string>
+    <string name="plex_start_watching">Start Watching</string>
+    <string name="plex_rediscover">Rediscover</string>
+    <string name="plex_more_in">More in %1$s</string>
+    <string name="plex_top_rated_tv">Top Rated TV</string>
+    <string name="plex_recently_watched_episodes">Recently Watched Episodes</string>
+    <string name="plex_search_movies">Movies</string>
+    <string name="plex_search_shows">Shows</string>
+    <string name="plex_search_episodes">Episodes</string>
+    <string name="tv_other">Other</string>
 </resources>

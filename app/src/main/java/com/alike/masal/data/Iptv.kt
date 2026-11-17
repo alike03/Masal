@@ -56,7 +56,7 @@ object M3u {
                         key = "$sourceId|$display",
                         name = display,
                         logo = a["tvg-logo"]?.takeIf { it.isNotBlank() },
-                        group = a["group-title"]?.takeIf { it.isNotBlank() } ?: extGroup ?: "Other",
+                        group = a["group-title"]?.takeIf { it.isNotBlank() } ?: extGroup ?: Language.text(R.string.tv_other),
                         url = line,
                         epgId = a["tvg-id"]?.takeIf { it.isNotBlank() },
                     )
@@ -96,7 +96,7 @@ object Xtream {
                 key = "${s.id}|$name",
                 name = name,
                 logo = o.optString("stream_icon").takeIf { it.startsWith("http") },
-                group = catNames[o.optString("category_id")] ?: "Other",
+                group = catNames[o.optString("category_id")] ?: Language.text(R.string.tv_other),
                 url = "${base(s)}/live/${Uri.encode(s.user)}/${Uri.encode(s.pass)}/$id.ts",
                 epgId = o.optString("epg_channel_id").takeIf { it.isNotBlank() && it != "null" },
             )

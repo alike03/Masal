@@ -118,11 +118,16 @@ fun SideRail(
                 }
                 .padding(top = 22.dp, bottom = 22.dp),
         ) {
-            // Only the small mark, always in the same place above the icons, no lettering.
-            androidx.compose.foundation.Image(
-                androidx.compose.ui.res.painterResource(com.alike.masal.R.drawable.masal_mark), null,
-                Modifier.padding(start = (RailWidth - MarkSize) / 2).size(MarkSize),
-            )
+            // The small mark, always in the same place above the icons; the name joins it when the menu opens.
+            Row(Modifier.padding(start = (RailWidth - MarkSize) / 2).clipToBounds(), verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.foundation.Image(
+                    androidx.compose.ui.res.painterResource(com.alike.masal.R.drawable.masal_mark), null,
+                    Modifier.size(MarkSize),
+                )
+                Text("Masal", color = TextMain, fontSize = 19.sp, fontFamily = MasalWordmarkFont, fontWeight = FontWeight.SemiBold,
+                    maxLines = 1, softWrap = false,
+                    modifier = Modifier.padding(start = 10.dp).graphicsLayer { alpha = p; translationX = (1f - p) * -12f })
+            }
             Column(
                 Modifier.weight(1f).fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),

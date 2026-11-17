@@ -54,11 +54,17 @@ abstract class LocaleScreensBase(private val lang: String, private val continueW
         rule.waitForIdle(); rule.mainClock.advanceTimeBy(1_000); rule.waitForIdle()
         rule.onRoot().captureRoboImage("build/locale-shots/$lang-01-home.png")
         assertTrue("Continue Watching in $lang", rule.onAllNodesWithText(continueWatching).fetchSemanticsNodes().isNotEmpty())
+        // A library with Plex's default English name: the menu shows it in the device language.
+        vm.sections.value = listOf(com.alike.masal.data.PlexSection("1", com.alike.masal.data.PlexNames.section("Movies"), "movie", null))
+        rule.waitForIdle()
         press(KeyEvent.KEYCODE_DPAD_LEFT)
-        press(KeyEvent.KEYCODE_DPAD_DOWN, times = 3)
+        rule.onRoot().captureRoboImage("build/locale-shots/$lang-02-menu.png")
+        val movies = com.alike.masal.data.PlexNames.section("Movies")
+        assertTrue("library name in $lang ($movies)", movies != "Movies" && rule.onAllNodesWithText(movies).fetchSemanticsNodes().isNotEmpty())
+        press(KeyEvent.KEYCODE_DPAD_DOWN, times = 4)
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
         rule.mainClock.advanceTimeBy(1_000); rule.waitForIdle()
-        rule.onRoot().captureRoboImage("build/locale-shots/$lang-02-settings.png")
+        rule.onRoot().captureRoboImage("build/locale-shots/$lang-03-settings.png")
         assertTrue("Settings in $lang", rule.onAllNodesWithText(settings).fetchSemanticsNodes().isNotEmpty())
     }
 }

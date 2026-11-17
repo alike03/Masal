@@ -199,7 +199,8 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings)
     private fun hubs(mc: JSONObject): List<PlexHub> {
         val arr = mc.optJSONArray("Hub") ?: return emptyList()
         return (0 until arr.length()).map { arr.getJSONObject(it) }.map { h ->
-            PlexHub(h.optString("hubIdentifier"), h.optString("title"), items(h))
+            val id = h.optString("hubIdentifier")
+            PlexHub(id, PlexNames.hub(id, h.optString("title")), items(h))
         }.filter { it.items.isNotEmpty() }
     }
 
@@ -270,7 +271,7 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings)
         val arr = get("/library/sections").optJSONArray("Directory") ?: return emptyList()
         return (0 until arr.length()).map { arr.getJSONObject(it) }
             .filter { it.optString("type") == "movie" || it.optString("type") == "show" }
-            .map { PlexSection(it.optString("key"), it.optString("title"), it.optString("type"), it.optString("art").ifBlank { null }) }
+            .map { PlexSection(it.optString("key"), PlexNames.section(it.optString("title")), it.optString("type"), it.optString("art").ifBlank { null }) }
     }
 
     fun image(path: String?, w: Int, h: Int): String? {
