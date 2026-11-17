@@ -8,27 +8,46 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.alike.masal.data.Channel
 import com.alike.masal.data.USER_AGENT
 
+/** Media playback with audio focus: another app pauses while Masal plays, and Masal pauses in turn. */
+val mediaAudio: AudioAttributes =
+    AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build()
+
+/**
+ * [live]: starts a channel after about 1 s of buffer instead of ExoPlayer's 2.5 s, so switching
+ * channels is quicker; after a stall it still waits for the default 5 s, so a weak stream does not
+ * stutter. Plex and the previews keep the defaults.
+ * [audioFocus] false: for a player that plays muted next to the audible one (the live player's
+ * next channel), which must not take the audio focus from it (that would pause it).
+ */
 @OptIn(UnstableApi::class)
-fun buildPlayer(context: Context): ExoPlayer {
+fun buildPlayer(context: Context, live: Boolean = false, audioFocus: Boolean = true): ExoPlayer {
     val http = DefaultHttpDataSource.Factory()
         .setUserAgent(USER_AGENT)
         .setAllowCrossProtocolRedirects(true)
         .setConnectTimeoutMs(15_000)
         .setReadTimeoutMs(30_000)
-    return ExoPlayer.Builder(context)
+    val builder = ExoPlayer.Builder(context)
         .setMediaSourceFactory(DefaultMediaSourceFactory(context).setDataSourceFactory(http))
         // Ask Android for audio focus while playing, so another app (e.g. YouTube left playing
         // in the background) pauses, and Masal pauses in turn when another app takes over.
-        .setAudioAttributes(
-            AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),
-            /* handleAudioFocus = */ true,
+        .setAudioAttributes(mediaAudio, /* handleAudioFocus = */ audioFocus)
+    if (live) {
+        builder.setLoadControl(
+            DefaultLoadControl.Builder().setBufferDurationsMs(
+                DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
+                DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
+                /* bufferForPlaybackMs = */ 1_000,
+                DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS,
+            ).build(),
         )
-        .build()
+    }
+    return builder.build()
 }
 
 fun channelItem(ch: Channel): MediaItem {

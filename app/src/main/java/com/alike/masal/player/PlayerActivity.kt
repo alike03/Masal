@@ -6,6 +6,8 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
+import android.util.Log
 import android.util.TypedValue
 import android.view.KeyEvent
 import android.widget.FrameLayout
@@ -37,8 +39,10 @@ import kotlin.concurrent.thread
 
 @OptIn(UnstableApi::class)
 class PlayerActivity : ComponentActivity() {
+    /** The player on screen (live: the audible channel). */
     private lateinit var player: ExoPlayer
     private lateinit var view: PlayerView
+    private lateinit var overlay: ComposeView
     private val handler = Handler(Looper.getMainLooper())
     private var live = true
     private var scrobbled = false
@@ -56,6 +60,24 @@ class PlayerActivity : ComponentActivity() {
     /** Channel that was playing before the current one ("last channel" key). */
     private var previous: Triple<String, List<Channel>, Int>? = null
     private var tunedKey: String? = null
+
+    /*
+     * Live channel switch with two players: the next channel loads muted in [pending], whose view
+     * lies under [view], while the old channel plays on; on its first frame it takes over (see
+     * promotePending). Never more than these two players.
+     */
+    private var pending: ExoPlayer? = null
+    private var pendingUrl: String? = null
+    private var pendingKey: String? = null
+    /** The second live picture view, under [view]; [pending] renders into it. */
+    private var spareView: PlayerView? = null
+    /** Stream address whose picture [player] has shown; only a player with a picture is kept while switching. */
+    private var pictureUrl: String? = null
+    /** Channel opened on [player] after its pending player failed; see onRenderedFirstFrame. */
+    private var fallbackUrl: String? = null
+    /** Two streams at once failed but one works (provider or decoder limit): switch on one player for this session. */
+    private var singleStream = false
+    private var lastZap = 0L
 
     private val hideInfo = Runnable { state.infoVisible = false }
     private val tune = Runnable { tuneCurrent() }
@@ -87,25 +109,19 @@ class PlayerActivity : ComponentActivity() {
         }
         Playback.handedOver?.takeIf { it !== adopted }?.release()
         Playback.handedOver = null
-        player = adopted ?: buildPlayer(this)
+        player = adopted ?: buildPlayer(this, live = live)
 
-        // Live on a TextureView, which scales with the zoom animation; Plex keeps the SurfaceView (HDR).
-        view = (if (live) layoutInflater.inflate(R.layout.live_player_view, null) as PlayerView else PlayerView(this)).apply {
-            player = this@PlayerActivity.player
-            keepScreenOn = false // only while playing, see updateScreenOn()
-            useController = false
-            setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
-            isFocusable = true
-            isFocusableInTouchMode = true
-        }
+        view = newPlayerView().apply { player = this@PlayerActivity.player }
         // Subtitle look from the player settings (colour, box or outline, size, position).
         subtitleFont = runCatching { ResourcesCompat.getFont(this, R.font.dm_sans) }.getOrNull()
         applySettings()
         val root = FrameLayout(this).apply {
             setBackgroundColor(Color.BLACK)
+            // Live: a second picture view under the visible one, for the next channel while switching.
+            if (live) addView(newPlayerView().also { spareView = it; applySubtitleLook(it) }, FrameLayout.LayoutParams(-1, -1))
             addView(view, FrameLayout.LayoutParams(-1, -1))
         }
-        root.addView(ComposeView(this).apply {
+        overlay = ComposeView(this).apply {
             setContent {
                 MasalTheme {
                     if (live) {
@@ -126,13 +142,16 @@ class PlayerActivity : ComponentActivity() {
                     }
                 }
             }
-        }, FrameLayout.LayoutParams(-1, -1))
+        }
+        root.addView(overlay, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
         view.requestFocus()
 
         listener = object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
                 updateScreenOn()
+                // The next channel is loading: it takes over, or falls back to this player if it fails.
+                if (live && pending != null) return
                 // Live streams drop now and then (provider closes the connection, HLS falls behind): reconnect.
                 if (live && retryLive()) return
                 Toast.makeText(this@PlayerActivity, getString(R.string.player_playback_failed, error.errorCodeName), Toast.LENGTH_LONG).show()
@@ -142,7 +161,7 @@ class PlayerActivity : ComponentActivity() {
                 plex.buffering = s == Player.STATE_BUFFERING
                 updateScreenOn()
                 if (s == Player.STATE_READY) liveRetries = 0
-                if (s == Player.STATE_ENDED && live) retryLive()
+                if (s == Player.STATE_ENDED && live && pending == null) retryLive()
                 if (s == Player.STATE_ENDED && !live) {
                     reportPlex("stopped")
                     finish()
@@ -158,6 +177,18 @@ class PlayerActivity : ComponentActivity() {
             override fun onTracksChanged(tracks: Tracks) {
                 if (!live) onPlexTracks(tracks)
             }
+
+            override fun onRenderedFirstFrame() {
+                if (!live) return
+                pictureUrl = tunedUrl
+                // The channel failed as a second stream but plays on its own: the provider allows one
+                // connection, or the device cannot decode two such streams. Stay with one player.
+                if (fallbackUrl != null && fallbackUrl == tunedUrl) {
+                    singleStream = true
+                    fallbackUrl = null
+                    Log.i(TAG, "one stream at a time: switching channels on one player from now on")
+                }
+            }
         }
         player.addListener(listener)
 
@@ -169,6 +200,7 @@ class PlayerActivity : ComponentActivity() {
                 // Already tuned: select() must not reopen the stream.
                 tunedUrl = opened.url
                 tunedKey = opened.key
+                pictureUrl = opened.url
                 Graph.settings.addRecent(opened.key)
                 updateScreenOn()
             }
@@ -180,7 +212,10 @@ class PlayerActivity : ComponentActivity() {
 
     // ---- live TV ----
 
-    /** Switches to a channel; while zapping quickly the stream is only opened once the user pauses. */
+    /**
+     * Switches to a channel. Tunes at once; only while the user zaps quickly (see [zap]) the stream
+     * opens once they pause, so flicking through the list does not open a stream per channel.
+     */
     private fun select(name: String, list: List<Channel>, i: Int, immediate: Boolean) {
         if (list.isEmpty()) return
         val idx = ((i % list.size) + list.size) % list.size
@@ -190,21 +225,157 @@ class PlayerActivity : ComponentActivity() {
         state.index = idx
         showInfo()
         handler.removeCallbacks(tune)
-        if (immediate) tuneCurrent() else handler.postDelayed(tune, 450)
+        if (immediate) tuneCurrent() else { holdPending(); handler.postDelayed(tune, 300) }
     }
 
     private fun tuneCurrent() {
         val ch = state.current ?: return
+        val s = player.playbackState
+        val alive = player.playerError == null && s != Player.STATE_IDLE && s != Player.STATE_ENDED
         // Compared by stream address: providers list some channel names twice (main and backup stream).
-        if (ch.url == tunedUrl && player.playbackState != Player.STATE_IDLE && player.playbackState != Player.STATE_ENDED) return
+        if (ch.url == tunedUrl && alive) { releasePending(); return }
+        if (ch.url == pendingUrl) return // already loading under the current picture
+        Graph.settings.addRecent(ch.key)
+        fallbackUrl = null
+        // The old channel plays on while the new one loads, if it has a picture to show.
+        if (live && !singleStream && alive && pictureUrl == tunedUrl && spareView != null) tunePending(ch) else tuneOnCurrent(ch)
+    }
+
+    /** The one-player way: the old stream stops, the new one opens on the same player (black until it starts). */
+    private fun tuneOnCurrent(ch: Channel) {
+        releasePending()
+        handler.removeCallbacks(retryTune)
         if (ch.url != tunedUrl) liveRetries = 0
         tunedKey = ch.key
         tunedUrl = ch.url
-        Graph.settings.addRecent(ch.key)
+        player.stop()
         player.setMediaItem(channelItem(ch))
         player.prepare()
         player.playWhenReady = true
     }
+
+    /** Loads [ch] muted in the view under the picture; a pending player is re-tuned, never a third one made. */
+    private fun tunePending(ch: Channel) {
+        val v = spareView ?: return tuneOnCurrent(ch)
+        val p = pending ?: buildPlayer(this, live = true, audioFocus = false).also {
+            it.volume = 0f
+            it.addListener(pendingListener)
+            pending = it
+        }
+        if (v.player !== p) v.player = p
+        pendingUrl = ch.url
+        pendingKey = ch.key
+        p.setMediaItem(channelItem(ch))
+        p.prepare()
+        p.playWhenReady = true
+        handler.removeCallbacks(pendingTimeout)
+        handler.postDelayed(pendingTimeout, PENDING_TIMEOUT_MS)
+    }
+
+    /** Quick zapping: a pending stream for a channel no longer wanted stops (one connection less). */
+    private fun holdPending() {
+        val p = pending ?: return
+        if (pendingUrl == null || pendingUrl == state.current?.url) return
+        handler.removeCallbacks(pendingTimeout)
+        p.stop()
+        pendingUrl = null
+        pendingKey = null
+    }
+
+    private val pendingListener = object : Player.Listener {
+        override fun onRenderedFirstFrame() = promotePending()
+        override fun onPlayerError(error: PlaybackException) = pendingFailedLater(error.errorCodeName)
+        override fun onPlaybackStateChanged(s: Int) { if (s == Player.STATE_ENDED) pendingFailedLater("ended") }
+    }
+
+    /** Not from inside the failing player's own callback: it gets released. */
+    private fun pendingFailedLater(reason: String) {
+        val p = pending
+        val url = pendingUrl ?: return
+        handler.post { if (pending === p && pendingUrl == url) pendingFailed(reason) }
+    }
+
+    private val pendingTimeout = Runnable { if (pendingUrl != null) pendingFailed(null) }
+
+    /**
+     * The next channel did not start as a second stream: open it the old way on the current player.
+     * Many IPTV providers (Xtream accounts in particular) allow only one connection per account, and
+     * a device may not decode two streams at once (e.g. two 4K HEVC channels).
+     */
+    private fun pendingFailed(reason: String?) {
+        val url = pendingUrl ?: return
+        releasePending()
+        val ch = state.current?.takeIf { it.url == url } ?: return
+        Log.i(TAG, "next channel did not start as a second stream (${reason ?: "timeout"}): switching on one player")
+        tuneOnCurrent(ch)
+        // An error (not a slow start) may mean one stream at a time: confirmed once this one plays.
+        if (reason != null) fallbackUrl = url
+    }
+
+    /**
+     * The pending channel shows its first frame: its view goes on top, it becomes the audible
+     * player with audio focus, and the old player is released. The view of the old one becomes
+     * the spare view for the next switch.
+     */
+    private fun promotePending() {
+        val p = pending ?: return
+        val v = spareView ?: return
+        // A late frame from a stream stopped by quick zapping.
+        if (pendingUrl == null || p.playbackState == Player.STATE_IDLE) return
+        handler.removeCallbacks(pendingTimeout)
+        handler.removeCallbacks(retryTune)
+        p.removeListener(pendingListener)
+        val old = player
+        val oldView = view
+        val hadFocus = oldView.hasFocus()
+        // The new picture on top, under the overlay; reordering does not detach the TextureViews.
+        v.bringToFront()
+        overlay.bringToFront()
+        old.removeListener(listener)
+        oldView.player = null
+        oldView.keepScreenOn = false
+        old.release()
+        player = p
+        view = v
+        spareView = oldView
+        pending = null
+        tunedUrl = pendingUrl
+        tunedKey = pendingKey
+        pictureUrl = pendingUrl
+        pendingUrl = null
+        pendingKey = null
+        liveRetries = 0
+        fallbackUrl = null
+        p.volume = 1f
+        // The old player let go of the audio focus on release; the new one takes it now.
+        p.setAudioAttributes(mediaAudio, /* handleAudioFocus = */ true)
+        p.addListener(listener)
+        if (hadFocus) v.requestFocus()
+        updateScreenOn()
+    }
+
+    private fun releasePending() {
+        handler.removeCallbacks(pendingTimeout)
+        val p = pending ?: return
+        pending = null
+        pendingUrl = null
+        pendingKey = null
+        p.removeListener(pendingListener)
+        spareView?.takeIf { it.player === p }?.player = null
+        p.release()
+    }
+
+    /** Live on a TextureView, which scales with the zoom animation; Plex keeps the SurfaceView (HDR). */
+    private fun newPlayerView(): PlayerView =
+        (if (live) layoutInflater.inflate(R.layout.live_player_view, null) as PlayerView else PlayerView(this)).apply {
+            keepScreenOn = false // only while playing, see updateScreenOn()
+            useController = false
+            setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+            isFocusable = true
+            isFocusableInTouchMode = true
+            // Opaque, so the next channel loading in the view underneath stays hidden (also beside a 4:3 picture).
+            if (live) setBackgroundColor(Color.BLACK)
+        }
 
     /** The screen stays on only while something plays or buffers to play; paused or failed, the TV may dim and sleep. */
     private fun updateScreenOn() {
@@ -238,7 +409,13 @@ class PlayerActivity : ComponentActivity() {
         KeyEvent.KEYCODE_LAST_CHANNEL,
     ) + (KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9)
 
-    private fun zap(delta: Int) = select(state.listName, state.channels, state.index + delta, immediate = false)
+    /** A zap within 400 ms of the previous one counts as quick zapping: the stream waits for a pause. */
+    private fun zap(delta: Int) {
+        val now = SystemClock.uptimeMillis()
+        val quick = now - lastZap < 400
+        lastZap = now
+        select(state.listName, state.channels, state.index + delta, immediate = !quick)
+    }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         logKey(event)
@@ -291,9 +468,12 @@ class PlayerActivity : ComponentActivity() {
      */
     private fun leaveLive() {
         val ch = state.current
+        handler.removeCallbacks(tune)
+        // A channel still loading never goes back to Home.
+        releasePending()
         // The stream moves to Home's frame right away, where it plays on under the shrinking window
         // (which keeps its last picture), so the end of the zoom out has no gap.
-        if (fromHome && ch != null && ch.key == openedKey && player.playerError == null &&
+        if (fromHome && ch != null && ch.key == openedKey && ch.url == tunedUrl && player.playerError == null &&
             player.playbackState != Player.STATE_IDLE && player.playbackState != Player.STATE_ENDED) {
             handler.removeCallbacksAndMessages(null)
             player.removeListener(listener)
@@ -539,9 +719,13 @@ class PlayerActivity : ComponentActivity() {
     /** Applies the stored player settings: subtitle look now, skip lengths on buttons and keys. */
     private fun applySettings() {
         val s = Graph.settings
-        view.subtitleView?.let { PlayerSettings.applySubtitles(it, s, subtitleFont) }
+        applySubtitleLook(view)
         plex.skipBack = s.skipBackSeconds
         plex.skipForward = s.skipForwardSeconds
+    }
+
+    private fun applySubtitleLook(v: PlayerView) {
+        v.subtitleView?.let { PlayerSettings.applySubtitles(it, Graph.settings, subtitleFont) }
     }
 
     private fun openSettings(focus: Int? = null) { plex.panel = settingsPanel(focus) }
@@ -670,6 +854,8 @@ class PlayerActivity : ComponentActivity() {
         super.onStop()
         handler.removeCallbacks(progressTick)
         handler.removeCallbacks(retryTune)
+        handler.removeCallbacks(tune)
+        if (live) releasePending()
         reportPlex("stopped")
         // Given back to Home's preview, the stream keeps playing there: only let go of it.
         if (handedBack) { view.player = null; finish(); return }
@@ -690,6 +876,13 @@ class PlayerActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacksAndMessages(null)
+        releasePending()
         if (!handedBack) player.release()
+    }
+
+    private companion object {
+        const val TAG = "MasalLive"
+        /** A next channel without a picture by then is opened the one-player way. */
+        const val PENDING_TIMEOUT_MS = 8_000L
     }
 }

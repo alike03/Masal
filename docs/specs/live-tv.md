@@ -19,6 +19,21 @@ IPTV channels (Xtream or M3U, XMLTV guide) in a TV tab and a full-screen live pl
 - Previews stop before full-screen playback (providers often allow one connection); leaving the
   live player releases the stream at once. Back from the player, the preview of the channel just
   watched waits until the focus moves (see home.md).
+- Switching channels: the old channel keeps playing (picture and sound) until the new one shows
+  its first picture, then the picture changes in one step. The new channel loads muted in a
+  second player underneath; there are never more than two live players. A single press tunes at
+  once; while the user presses quickly (less than 400 ms apart) the stream opens only 300 ms
+  after the last press, so flicking through channels does not open a stream per channel. The
+  info banner follows every press at once. The channel list, the last-channel key and digits
+  switch the same way.
+- Fallback to one stream: if the new channel fails as a second stream, or shows no picture within
+  8 s, it is opened the old way (old stream stops, black with a buffering spinner until the new one
+  starts). Many providers (Xtream in particular) allow one connection per account, and a device
+  may not decode two streams at once. When a channel fails as a second stream but then plays on
+  its own, the rest of the session switches the old way. A provider that cuts the old stream when
+  the new one connects needs no fallback: the old picture stays until the new one starts.
+- Live streams start after about 1 s of buffer (Plex keeps ExoPlayer's 2.5 s); after a stall they
+  still wait for 5 s, so a weak stream does not stutter.
 - A dropped stream reconnects by itself, up to five times with growing pauses (2 to 10 s).
 - Channels with the same name (main and backup stream) are told apart by their stream address.
 - The guide covers the next 24 h; after more than 3 h in the background channels and guide reload.
@@ -28,7 +43,11 @@ IPTV channels (Xtream or M3U, XMLTV guide) in a TV tab and a full-screen live pl
 - OK: channel list. Back: leave.
 
 ## Checks
-- Switching channels with ◀ ▶ ▲ ▼ in the live player.
+- Switching channels with ◀ ▶ ▲ ▼ in the live player: no black and no spinner between channels,
+  the old channel plays on until the new one appears. Holding or quickly pressing ▲: the banner
+  runs through the channels, a stream opens only when the presses stop.
+- With a one-connection account or a channel the device cannot decode next to another one:
+  switching still works, with a short black picture (`adb logcat -s MasalLive` shows the fallback).
 - Home: rest on a channel until it plays, OK: it zooms to full screen without black or buffering.
   Back: it zooms back into the frame and keeps playing. Zap first, then Back: zoom out, preview
   of the channel on Home waits for the focus to move.
