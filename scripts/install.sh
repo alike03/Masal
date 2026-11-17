@@ -3,8 +3,9 @@
 # Configuration comes from .env in the project root (copy .env.dist and fill it in).
 # 1. Network ADB to TV_ADB (the TV must have allowed this computer once).
 # 2. Optional fallback: Home Assistant's Android TV integration (upload + pm install), when HA_URL is set.
-# After installing, the app is compiled on the device (a debug APK otherwise runs from the APK
-# and cold-starts slowly; Android compiles debuggable apps only to "quicken") and then opened.
+# After installing, the app is compiled on the device (otherwise it runs from the APK and
+# cold-starts slowly; Android compiles a debug build only to "quicken", a release build fully)
+# and then opened.
 # Installing ends the running app, so on a sleeping TV it is also opened (in the background, the
 # screen stays off): otherwise the TV wakes up with the previous app in front. NO_START=1 installs only.
 set -euo pipefail
@@ -22,7 +23,13 @@ fi
 
 : "${TV_ADB:?Set TV_ADB (ip:port of the TV) in .env, see .env.dist}"
 ADB="${ANDROID_HOME:+$ANDROID_HOME/platform-tools/}adb"
-APK=app/build/outputs/apk/debug/app-debug.apk
+# The signed release build (the same as on GitHub) when the release key is set up in .env,
+# otherwise the debug build. BUILD=debug forces the debug build. The two are signed differently:
+# switching between them needs an uninstall first (which deletes the app's settings).
+if [ -z "${BUILD:-}" ]; then
+  if [ -n "${MASAL_KEYSTORE_FILE:-}" ] && [ -f "$MASAL_KEYSTORE_FILE" ]; then BUILD=release; else BUILD=debug; fi
+fi
+APK=app/build/outputs/apk/$BUILD/app-$BUILD.apk
 PKG=com.alike.masal
 # Opens Masal; am start does not wake a sleeping TV.
 START="am start -n $PKG/.MainActivity >/dev/null || true"
@@ -35,7 +42,7 @@ if [ "${SKIP_BUILD:-0}" = 1 ]; then
   fi
 else
   # A failed build stops the script (set -e); an unchanged APK is simply up to date.
-  ./gradlew assembleDebug -q --console=plain
+  if [ "$BUILD" = release ]; then ./gradlew assembleRelease -q --console=plain; else ./gradlew assembleDebug -q --console=plain; fi
 fi
 
 "$ADB" connect "$TV_ADB" >/dev/null 2>&1 || true

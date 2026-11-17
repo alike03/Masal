@@ -14,6 +14,12 @@ val dotEnv: Map<String, String> = rootProject.file(".env").takeIf { it.exists() 
 /** A setting from the environment (CI) or from .env (local). */
 fun setting(key: String): String? = System.getenv(key)?.ifBlank { null } ?: dotEnv[key]?.ifBlank { null }
 
+/** Output of a git command in the project, or null (no git, e.g. a source download). */
+fun git(vararg args: String): String? = runCatching {
+    providers.exec { commandLine("git", *args); workingDir = rootDir; isIgnoreExitValue = true }
+        .standardOutput.asText.get().trim().ifEmpty { null }
+}.getOrNull()
+
 /** Release signing key; only present on the release pipeline and on machines that have it. */
 val releaseKeystore: File? = setting("MASAL_KEYSTORE_FILE")?.let { rootProject.file(it) }?.takeIf { it.exists() }
 
@@ -25,9 +31,12 @@ android {
         applicationId = "com.alike.masal"
         minSdk = 26
         targetSdk = 35
-        // Set by the release pipeline from the tag (v1.2.3 -> 1.2.3) and the run number.
-        versionCode = setting("MASAL_VERSION_CODE")?.toIntOrNull() ?: 1
-        versionName = setting("MASAL_VERSION_NAME") ?: "0.1.0"
+        // Version code: the number of commits, locally and on the release pipeline alike, so the
+        // GitHub release of a commit and a local build of it match, and a newer commit always
+        // installs over an older one. Version name: from the tag (v1.2.3 -> 1.2.3) on the pipeline,
+        // git describe locally.
+        versionCode = setting("MASAL_VERSION_CODE")?.toIntOrNull() ?: git("rev-list", "--count", "HEAD")?.toIntOrNull() ?: 1
+        versionName = setting("MASAL_VERSION_NAME") ?: git("describe", "--tags", "--always")?.removePrefix("v") ?: "0.1.0"
     }
     signingConfigs {
         if (releaseKeystore != null) create("release") {

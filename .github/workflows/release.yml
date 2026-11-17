@@ -22,6 +22,8 @@ jobs:
     steps:
       # Actions are pinned to commit SHAs (tags can be moved); the comment names the version.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # full history: the version code is the number of commits
 
       - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
@@ -51,7 +53,7 @@ jobs:
           MASAL_KEY_PASSWORD: ${{ secrets.MASAL_KEY_PASSWORD }}
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then version="${GITHUB_REF_NAME#v}"; else version="0.0.0-dev.$GITHUB_RUN_NUMBER"; fi
-          export MASAL_VERSION_NAME="$version" MASAL_VERSION_CODE="$GITHUB_RUN_NUMBER"
+          export MASAL_VERSION_NAME="$version" MASAL_VERSION_CODE="$(git rev-list --count HEAD)"
           ./gradlew assembleRelease --console=plain
           apk="masal-$version.apk"
           cp app/build/outputs/apk/release/app-release.apk "$apk"

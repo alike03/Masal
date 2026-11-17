@@ -49,7 +49,7 @@ cp .env.dist .env        # then fill in TV_ADB (and JAVA_HOME / ANDROID_HOME if 
 scripts/install.sh       # build and install on the TV over network ADB
 ```
 
-`scripts/install.sh` installs the app, compiles it on the TV and opens it, also when the TV is in standby (it does not wake it, but the TV comes back to Masal instead of the previous app; `NO_START=1` installs only). Network ADB must be enabled on the TV (developer options) and this computer allowed once. An optional fallback through Home Assistant's Android TV integration can be configured in `.env`.
+`scripts/install.sh` builds the app (the signed release build when the release key from `scripts/create-release-key.sh` is set up, otherwise the debug build), installs it, compiles it on the TV and opens it, also when the TV is in standby (it does not wake it, but the TV comes back to Masal instead of the previous app; `NO_START=1` installs only). Network ADB must be enabled on the TV (developer options) and this computer allowed once. An optional fallback through Home Assistant's Android TV integration can be configured in `.env`.
 
 ## First start
 
