@@ -46,7 +46,8 @@ text #F2EEE8, dim text #A8A29A. Focus frame on cards is amber.
   icons the small Masal mark, always in the same place; the name "Masal" joins it when the menu
   opens.
 - Open (focus in the menu): a rounded card (#1C1A18, 18 dp corners, fine edge, soft shadow)
-  floats over the page with space above, below and to the left, as wide as the longest label in
+  floats over the page, exactly as tall as the entries (the mark and name stay above it at the top
+  of the screen) and as wide as the longest label in
   the current language needs; the page behind dims slightly (25 % black). Focus is a soft light
   field (white 12 %), no glow, no zoom, also while OK is pressed (no dark flash); the open page
   stays amber (its bar shows only while the menu is closed).
