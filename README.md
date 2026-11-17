@@ -73,7 +73,13 @@ Some devices keep their stock launcher anyway (on an NVIDIA Shield it has system
 adb shell pm disable-user --user 0 <stock launcher package>
 ```
 
-Disabling has side effects: on the Shield the system's recommendations service (`com.google.android.tvrecommendations`) then crashes repeatedly, since it expects the stock launcher. To go back, enable it again with `adb shell pm enable <stock launcher package>`. Keep that command at hand: if the home screen fails to start, ADB is the way back. The device settings stay reachable through the "Android settings" tile and the button on Masal's Settings screen.
+On the Shield the system's recommendations service then crashes repeatedly, since it expects the stock launcher, so disable it too:
+
+```sh
+adb shell pm disable-user --user 0 com.google.android.tvrecommendations
+```
+
+To go back, enable both again with `adb shell pm enable <package>`. Keep that command at hand: if the home screen fails to start, ADB is the way back. The device settings stay reachable through the "Android settings" tile and the button on Masal's Settings screen.
 
 ## Releases
 
