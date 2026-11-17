@@ -17,7 +17,7 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
      no category is set. The category is matched without accents and provider prefix such as
      "[XX] ". No category subtitle under the cards.
   5. Plex rows, chosen in Settings (see "Home rows" below). A collection row says next to its
-     title whether it is a movie or a TV show collection. Without hubs (older servers):
+     title whether it holds movies or TV shows ("Movies" / "TV shows"). Without hubs (older servers):
      one "Recently Added" row.
 - Home rows: every Plex Home row (Recently Added Movies/TV and the like) and every collection of
   every movie and TV library can be shown on Home. By default Home shows what Plex shows on its own

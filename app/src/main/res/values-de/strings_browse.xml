@@ -73,6 +73,6 @@
     <string name="appspage_edit">Apps der Startseite bearbeiten</string>
     <string name="appspage_on_home">Auf der Startseite</string>
     <string name="appspage_all_apps">Alle Apps</string>
-    <string name="home_movie_collection">Film-Sammlung</string>
-    <string name="home_show_collection">Serien-Sammlung</string>
+    <string name="home_movie_collection">Filme</string>
+    <string name="home_show_collection">Serien</string>
 </resources>

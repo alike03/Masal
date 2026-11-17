@@ -73,6 +73,6 @@
     <string name="appspage_edit">Ana Sayfa uygulamalarını düzenle</string>
     <string name="appspage_on_home">Ana Sayfa\'da</string>
     <string name="appspage_all_apps">Tüm uygulamalar</string>
-    <string name="home_movie_collection">Film koleksiyonu</string>
-    <string name="home_show_collection">Dizi koleksiyonu</string>
+    <string name="home_movie_collection">Filmler</string>
+    <string name="home_show_collection">Diziler</string>
 </resources>

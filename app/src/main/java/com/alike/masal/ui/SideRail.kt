@@ -67,13 +67,16 @@ import java.util.Locale
 /** Width of the collapsed menu; screens are laid out to the right of it. */
 val RailWidth = 64.dp
 private val RailOpenWidth = 236.dp
+private val MarkSize = 24.dp
+/** The open menu's panel: a shade lighter than the page background. */
+private val RailPanel = Color(0xFF1A1816)
 
 class RailEntry(val title: String, val icon: ImageVector)
 
 /**
- * Menu on the left: small icons while you browse, widening with labels and a
- * dimmed screen as soon as it has focus. Everything follows one animated value,
- * so the menu slides open instead of jumping. Right or OK goes into the page.
+ * Menu on the left: small icons while you browse; with focus it widens into a solid panel with
+ * labels and a clean edge, and the page behind dims slightly. Everything follows one animated
+ * value, so the menu slides open instead of jumping. Right or OK goes into the page.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -89,17 +92,21 @@ fun SideRail(
     val p by animateFloatAsState(if (open) 1f else 0f, tween(300, easing = FastOutSlowInEasing), label = "rail")
 
     Box(Modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxSize().graphicsLayer { alpha = p }.background(Color.Black.copy(alpha = 0.55f)))
+        Box(Modifier.fillMaxSize().graphicsLayer { alpha = p }.background(Color.Black.copy(alpha = 0.3f)))
         Column(
             Modifier
                 .fillMaxHeight()
                 .width(lerp(RailWidth, RailOpenWidth, p))
                 .drawBehind {
+                    // Closed: a soft shade so the icons read over pictures. Open: a solid panel.
                     drawRect(Brush.horizontalGradient(
-                        0f to Bg.copy(alpha = 0.8f + 0.19f * p),
-                        0.7f to Bg.copy(alpha = 0.5f + 0.45f * p),
+                        0f to Bg.copy(alpha = 0.8f),
+                        0.7f to Bg.copy(alpha = 0.5f),
                         1f to Bg.copy(alpha = 0f),
-                    ))
+                    ), alpha = 1f - p)
+                    drawRect(RailPanel, alpha = p)
+                    drawRect(Line, topLeft = androidx.compose.ui.geometry.Offset(size.width - 1.dp.toPx(), 0f),
+                        size = androidx.compose.ui.geometry.Size(1.dp.toPx(), size.height), alpha = p)
                 }
                 .onFocusChanged { open = it.hasFocus; onFocusChange(it.hasFocus) }
                 // Always enter on the open page's entry: the page can change without the menu (Home key),
@@ -111,19 +118,11 @@ fun SideRail(
                 }
                 .padding(top = 22.dp, bottom = 22.dp),
         ) {
-            Row(Modifier.padding(start = 14.dp).clipToBounds(), verticalAlignment = Alignment.CenterVertically) {
-                Row(
-                    Modifier.graphicsLayer { alpha = p; translationX = (1f - p) * -24f },
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    androidx.compose.foundation.Image(
-                        androidx.compose.ui.res.painterResource(com.alike.masal.R.drawable.masal_mark), null,
-                        Modifier.size(30.dp),
-                    )
-                    Text("Masal", color = TextMain, fontSize = 22.sp, fontFamily = MasalWordmarkFont, fontWeight = FontWeight.SemiBold,
-                        maxLines = 1, softWrap = false, modifier = Modifier.padding(start = 6.dp))
-                }
-            }
+            // Only the small mark, always in the same place above the icons, no lettering.
+            androidx.compose.foundation.Image(
+                androidx.compose.ui.res.painterResource(com.alike.masal.R.drawable.masal_mark), null,
+                Modifier.padding(start = (RailWidth - MarkSize) / 2).size(MarkSize),
+            )
             Column(
                 Modifier.weight(1f).fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
@@ -139,22 +138,24 @@ fun SideRail(
 
 @Composable
 private fun RailItem(entry: RailEntry, selected: Boolean, progress: () -> Float, onFocus: () -> Unit, onClick: () -> Unit, modifier: Modifier) {
+    // The open page: amber icon and label, and an amber bar at the edge. Focus: a soft light field
+    // (no glow, no zoom), so moving through the menu stays calm.
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 10.dp)) {
-        Box(Modifier.width(3.dp).height(18.dp).graphicsLayer { alpha = if (selected) 1f - progress() else 0f }
+        Box(Modifier.width(3.dp).height(18.dp).graphicsLayer { alpha = if (selected) 1f else 0f }
             .background(Accent, RoundedCornerShape(2.dp)))
         Spacer(Modifier.width(6.dp))
         Surface(
             onClick = onClick,
             modifier = modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) onFocus() },
-            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(50)),
+            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(10.dp)),
             colors = ClickableSurfaceDefaults.colors(
-                containerColor = if (selected) Color.White.copy(alpha = 0.08f) else Color.Transparent,
+                containerColor = Color.Transparent,
                 contentColor = if (selected) Accent else TextDim,
-                focusedContainerColor = TextMain,
-                focusedContentColor = OnAccent,
+                focusedContainerColor = Color.White.copy(alpha = 0.12f),
+                focusedContentColor = if (selected) Accent else TextMain,
             ),
-            scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f),
-            glow = ClickableSurfaceDefaults.glow(focusedGlow = Glow(Accent.copy(alpha = 0.45f), 10.dp)),
+            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+            glow = ClickableSurfaceDefaults.glow(focusedGlow = Glow(Color.Transparent, 0.dp)),
         ) {
             Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp).clipToBounds(), verticalAlignment = Alignment.CenterVertically) {
                 Icon(entry.icon, contentDescription = entry.title, modifier = Modifier.size(20.dp))

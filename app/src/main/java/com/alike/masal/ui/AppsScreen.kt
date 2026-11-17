@@ -27,6 +27,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -97,9 +98,16 @@ fun AppsScreen(vm: MasalViewModel, autoFocus: Boolean, startEditing: Boolean, on
                 }
                 item(key = "homeRow", span = { GridItemSpan(maxLineSpan) }) {
                     LazyRow(
-                        contentPadding = PaddingValues(vertical = 8.dp),
+                        // The row reaches the screen edges (past the grid's side padding), so scrolled
+                        // and focused (enlarged) cards are not cut off at the grid's content edge.
+                        contentPadding = PaddingValues(horizontal = EdgePadding, vertical = 10.dp),
                         horizontalArrangement = Arrangement.spacedBy(18.dp),
-                        modifier = Modifier.onPreviewKeyEvent { e ->
+                        modifier = Modifier.layout { measurable, constraints ->
+                            val extra = EdgePadding.roundToPx()
+                            val row = measurable.measure(constraints.copy(
+                                minWidth = constraints.minWidth + 2 * extra, maxWidth = constraints.maxWidth + 2 * extra))
+                            layout(constraints.maxWidth, row.height) { row.place(-extra, 0) }
+                        }.onPreviewKeyEvent { e ->
                             val m = moving ?: return@onPreviewKeyEvent false
                             when (e.key) {
                                 Key.DirectionLeft, Key.DirectionRight -> {

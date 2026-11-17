@@ -157,24 +157,23 @@ fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier, screen: 
         else -> null
     }
     val framed = image != null || live
-    // After a cut the new picture and its fill appear together: both wait until the picture's
-    // colours are known, then fade in over the same 300 ms, and the colours are set, not glided
-    // from the previous page's. Otherwise the picture would show with bare corners first.
-    var afterCut by remember { mutableStateOf(false) }
-    val fresh = cut || afterCut
+    // A picture never shows before its colours are known (at most 700 ms, see rememberImageCorners)
+    // when its fill is not already on screen: picture and fill then fade in together over 300 ms,
+    // with the colours set, not glided from the previous page's. Otherwise the picture shows with
+    // bare edges first and the fill follows. Within a row (fill visible) the old colours stay until
+    // the new ones are known, then glide.
     val ready = corners != null
-    LaunchedEffect(cut, ready) {
-        if (cut && !ready) afterCut = true
-        if (ready) afterCut = false
+    val fill = remember { androidx.compose.animation.core.Animatable(0f) }
+    val lastCorners = remember { arrayOf<List<Int>?>(null) }
+    if (corners != null) lastCorners[0] = corners
+    LaunchedEffect(framed, ready, ambient?.key, image) {
+        when {
+            !framed -> if (cut) fill.snapTo(0f) else fill.animateTo(0f, tween(450))
+            !ready -> if (cut || fill.value < 0.5f) fill.snapTo(0f) // hidden until the colours are known
+            else -> fill.animateTo(1f, tween(if (fill.value < 0.05f) 300 else 450))
+        }
     }
-    val waiting = fresh && framed && !ready
-    // Within a row the fill changes together with the frame (same 450 ms); without a picture it
-    // goes at once with the old one.
-    val fill by animateFloatAsState(
-        if (framed && !waiting) 1f else 0f,
-        when { !framed || waiting -> if (fresh) snap() else tween(450); fresh -> tween(300); else -> tween(450) },
-        label = "fill",
-    )
+    val fillHidden = fill.targetValue == 0f
     Box(modifier.fillMaxSize().background(Bg)) {
         AnimatedContent(
             targetState = Shown(ambient, cut || ambient == null),
@@ -191,7 +190,7 @@ fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier, screen: 
         ) { shown ->
             val a = shown.ambient
             // The current picture stays hidden while its colours are still being read after a cut.
-            val hold = waiting && a?.key == ambient?.key
+            val hold = framed && !ready && fillHidden && a?.key == ambient?.key
             val shownAlpha by animateFloatAsState(if (hold) 0f else 1f, if (hold) snap() else tween(300), label = "art")
             Box(Modifier.fillMaxSize().graphicsLayer { alpha = shownAlpha }) {
                 when {
@@ -208,8 +207,8 @@ fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier, screen: 
                 PreviewVideo(video, Modifier.fillMaxSize(), onColors = if (live) { c -> videoCorners = c } else null)
             }
         }
-        if (fill > 0f) Box(Modifier.fillMaxSize().graphicsLayer { alpha = fill }) {
-            TintAroundArt(corners, jump = fresh)
+        if (fill.value > 0f) Box(Modifier.fillMaxSize().graphicsLayer { alpha = fill.value }) {
+            TintAroundArt(corners ?: lastCorners[0], jump = fillHidden || cut)
             TextScrims()
         }
     }

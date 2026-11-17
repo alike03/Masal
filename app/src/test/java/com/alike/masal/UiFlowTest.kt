@@ -119,7 +119,7 @@ class UiFlowTest {
         rule.mainClock.advanceTimeBy(1_000)
         expectFocus("start", "Testplayer")
         assertTrue("a collection row says it holds movies",
-            rule.onAllNodesWithText("Movie collection").fetchSemanticsNodes().isNotEmpty())
+            rule.onAllNodesWithText("Movies").fetchSemanticsNodes().isNotEmpty())
         press(KeyEvent.KEYCODE_DPAD_LEFT)
         press(KeyEvent.KEYCODE_DPAD_DOWN)
         press(KeyEvent.KEYCODE_DPAD_RIGHT)

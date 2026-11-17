@@ -73,6 +73,6 @@
     <string name="appspage_edit">Edit Home apps</string>
     <string name="appspage_on_home">On Home</string>
     <string name="appspage_all_apps">All apps</string>
-    <string name="home_movie_collection">Movie collection</string>
-    <string name="home_show_collection">TV show collection</string>
+    <string name="home_movie_collection">Movies</string>
+    <string name="home_show_collection">TV shows</string>
 </resources>

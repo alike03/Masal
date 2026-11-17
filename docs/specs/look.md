@@ -32,10 +32,20 @@ text #F2EEE8, dim text #A8A29A. Focus frame on cards is amber.
 - The fill is always there while a frame is shown and fades together with the frame: its colours
   glide over the same 450 ms as the picture's cross-fade, so frame and fill never change apart.
 - Apps use one Bing photo of the day for all apps, never movie artwork.
+- A picture never appears before its colours are known while its fill is not on screen (at most
+  700 ms): picture and fill then fade in together (300 ms), the colours set at once. So no picture
+  shows with bare edges and the fill following.
 - A cut instead of a cross-fade: moving to another row on Home, switching to another page or to
   a page without picture, the old picture and its fill disappear at once and the new one fades in
   (300 ms). Within a row the cross-fade stays. A page never shows the previous page's artwork,
   and a row never shows the previous row's picture behind its text.
+
+## Side menu
+- Closed: icons on a soft shade, the open page marked by an amber bar and amber icon. Above the
+  icons the small Masal mark (no lettering), always in the same place.
+- Open (focus in the menu): a solid panel (#1A1816) with a 1 px line as its edge slides out with
+  the labels; the page behind dims slightly (30 % black). Focus is a soft light field (white
+  12 %), no glow, no zoom; the open page stays amber.
 
 ## Motion
 - Rows and lazy lists move with a critically damped spring (no bounce, no lag on key repeat).
