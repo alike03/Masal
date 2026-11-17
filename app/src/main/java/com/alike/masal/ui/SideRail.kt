@@ -66,7 +66,10 @@ import java.util.Locale
 
 /** Width of the collapsed menu; screens are laid out to the right of it. */
 val RailWidth = 64.dp
-private val RailOpenWidth = 236.dp
+/** Font size of the labels; [ItemChrome] is everything around a label in an open entry. */
+private val LabelSize = 16.sp
+/** Bar 3 + gap 6 + padding 12 + icon 20 + gap 14 + label + 8 + padding 12 + end 10, and a little air. */
+private val ItemChrome = 85.dp + 12.dp
 private val MarkSize = 24.dp
 /** The open menu's panel: a shade lighter than the page background. */
 private val RailPanel = Color(0xFF1A1816)
@@ -89,6 +92,14 @@ fun SideRail(
     onFocusChange: (Boolean) -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
+    // Open as wide as the longest label needs (it differs per language), plus icon and padding.
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val labelStyle = androidx.tv.material3.LocalTextStyle.current.merge(androidx.compose.ui.text.TextStyle(fontSize = LabelSize, fontWeight = FontWeight.SemiBold))
+    val openWidth = remember(entries.map { it.title }, labelStyle, density) {
+        val longest = entries.maxOfOrNull { measurer.measure(it.title, labelStyle, maxLines = 1).size.width } ?: 0
+        with(density) { longest.toDp() } + ItemChrome
+    }.coerceIn(RailWidth + 80.dp, 320.dp)
     val p by animateFloatAsState(if (open) 1f else 0f, tween(300, easing = FastOutSlowInEasing), label = "rail")
 
     Box(Modifier.fillMaxSize()) {
@@ -96,7 +107,7 @@ fun SideRail(
         Column(
             Modifier
                 .fillMaxHeight()
-                .width(lerp(RailWidth, RailOpenWidth, p))
+                .width(lerp(RailWidth, openWidth, p))
                 .drawBehind {
                     // Closed: a soft shade so the icons read over pictures. Open: a solid panel.
                     drawRect(Brush.horizontalGradient(
@@ -158,13 +169,16 @@ private fun RailItem(entry: RailEntry, selected: Boolean, progress: () -> Float,
                 contentColor = if (selected) Accent else TextDim,
                 focusedContainerColor = Color.White.copy(alpha = 0.12f),
                 focusedContentColor = if (selected) Accent else TextMain,
+                // Pressing looks like focus (the default pressed colours flash dark before the page opens).
+                pressedContainerColor = Color.White.copy(alpha = 0.12f),
+                pressedContentColor = if (selected) Accent else TextMain,
             ),
             scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
             glow = ClickableSurfaceDefaults.glow(focusedGlow = Glow(Color.Transparent, 0.dp)),
         ) {
             Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp).clipToBounds(), verticalAlignment = Alignment.CenterVertically) {
                 Icon(entry.icon, contentDescription = entry.title, modifier = Modifier.size(20.dp))
-                Text(entry.title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false,
+                Text(entry.title, fontSize = LabelSize, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false,
                     modifier = Modifier.padding(start = 14.dp, end = 8.dp)
                         .graphicsLayer { val p = progress(); alpha = p; translationX = (1f - p) * -16f })
             }

@@ -143,56 +143,47 @@ fun plexAmbient(item: PlexItem): Ambient {
 @Composable
 fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier, screen: String? = null) {
     val lastScreen = remember { arrayOf(screen) }
-    val cut = ambient?.cut == true || screen != lastScreen[0]
-    androidx.compose.runtime.SideEffect { lastScreen[0] = screen }
     val image = ambient?.image
     // A live channel: no artwork, its stream plays in the frame.
     val live = ambient != null && image == null && (ambient.video != null || ambient.logo != null)
+    val framed = image != null || live
+    // A cut (other row, other page, or nothing to show) replaces the old picture at once instead of
+    // fading the new one over it: it must not show behind the new row's or page's text.
+    val cut = ambient?.cut == true || screen != lastScreen[0] || !framed
+    androidx.compose.runtime.SideEffect { lastScreen[0] = screen }
     // Colours of the running live picture, per channel (neutral until its picture runs).
     var videoCorners by remember(ambient?.key) { mutableStateOf<List<Int>?>(null) }
-    // Plex's own tint when it has one, otherwise colours read from the picture.
+    // Plex's own tint when it has one, otherwise colours read from the picture. Kept per picture,
+    // so a picture that is fading out keeps its own fill.
     val corners = when {
         image != null -> ambient.colors.takeIf { c -> c.size == 4 } ?: rememberImageCorners(image)
         live -> videoCorners ?: LiveTint
         else -> null
     }
-    val framed = image != null || live
-    // A picture never shows before its colours are known (at most 700 ms, see rememberImageCorners)
-    // when its fill is not already on screen: picture and fill then fade in together over 300 ms,
-    // with the colours set, not glided from the previous page's. Otherwise the picture shows with
-    // bare edges first and the fill follows. Within a row (fill visible) the old colours stay until
-    // the new ones are known, then glide.
-    val ready = corners != null
-    val fill = remember { androidx.compose.animation.core.Animatable(0f) }
-    val lastCorners = remember { arrayOf<List<Int>?>(null) }
-    if (corners != null) lastCorners[0] = corners
-    LaunchedEffect(framed, ready, ambient?.key, image) {
+    val cornersByKey = remember { androidx.compose.runtime.mutableStateMapOf<String, List<Int>>() }
+    if (ambient != null && corners != null) cornersByKey[ambient.key] = corners
+
+    // Picture and fill are drawn by two transitions over the same state with the same timing, so
+    // they always come and go together (the video plays between them). Each picture waits for
+    // its colours (at most 700 ms, see rememberImageCorners), then picture and fill fade in.
+    val target = Shown(ambient, cut)
+    val spec: androidx.compose.animation.AnimatedContentTransitionScope<Shown>.() -> androidx.compose.animation.ContentTransform = {
         when {
-            !framed -> if (cut) fill.snapTo(0f) else fill.animateTo(0f, tween(450))
-            !ready -> if (cut || fill.value < 0.5f) fill.snapTo(0f) // hidden until the colours are known
-            else -> fill.animateTo(1f, tween(if (fill.value < 0.05f) 300 else 450))
+            // Nothing to show: the old picture and its fill fade out together, quickly.
+            targetState.ambient?.let { it.image != null || it.video != null || it.logo != null } != true ->
+                fadeIn(snap()) togetherWith fadeOut(tween(200))
+            targetState.cut -> fadeIn(tween(300)) togetherWith fadeOut(snap())
+            // Within a row: the new picture fades in over the old one, which stays until it is
+            // covered (also while the new one waits for its colours): no dip to black.
+            else -> fadeIn(tween(450, easing = androidx.compose.animation.core.FastOutSlowInEasing)) togetherWith
+                fadeOut(tween(150, delayMillis = 900))
         }
     }
-    val fillHidden = fill.targetValue == 0f
     Box(modifier.fillMaxSize().background(Bg)) {
-        AnimatedContent(
-            targetState = Shown(ambient, cut || ambient == null),
-            // The new picture fades in over the old one, which stays until it is covered:
-            // no dip to black between two pictures. A cut (other row, other screen, no picture)
-            // removes the old one at once: it must not show behind the new row's or page's text.
-            transitionSpec = {
-                if (targetState.cut) fadeIn(tween(300)) togetherWith fadeOut(snap())
-                else fadeIn(tween(450, easing = androidx.compose.animation.core.FastOutSlowInEasing)) togetherWith
-                    fadeOut(tween(150, delayMillis = 450))
-            },
-            contentKey = { it.ambient?.key + "|" + it.ambient?.image },
-            label = "ambient",
-        ) { shown ->
+        AnimatedContent(target, transitionSpec = spec, contentKey = { it.contentKey }, label = "ambient") { shown ->
             val a = shown.ambient
-            // The current picture stays hidden while its colours are still being read after a cut.
-            val hold = framed && !ready && fillHidden && a?.key == ambient?.key
-            val shownAlpha by animateFloatAsState(if (hold) 0f else 1f, if (hold) snap() else tween(300), label = "art")
-            Box(Modifier.fillMaxSize().graphicsLayer { alpha = shownAlpha }) {
+            val alpha = shownAlpha(a, cornersByKey)
+            Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = alpha }) {
                 when {
                     a?.image != null -> ArtFrame(Modifier.graphicsLayer { clip = true }) { KenBurns(a.image) }
                     // Live channel: no logo placeholder, just a calm gradient in the frame until the picture fades in.
@@ -207,15 +198,32 @@ fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier, screen: 
                 PreviewVideo(video, Modifier.fillMaxSize(), onColors = if (live) { c -> videoCorners = c } else null)
             }
         }
-        if (fill.value > 0f) Box(Modifier.fillMaxSize().graphicsLayer { alpha = fill.value }) {
-            TintAroundArt(corners ?: lastCorners[0], jump = fillHidden || cut)
-            TextScrims()
+        AnimatedContent(target, transitionSpec = spec, contentKey = { it.contentKey }, label = "fill") { shown ->
+            val a = shown.ambient
+            val framedHere = a != null && (a.image != null || a.video != null || a.logo != null)
+            val alpha = shownAlpha(a, cornersByKey)
+            // Composed only once its colours are known, so it starts with them (no glide from grey);
+            // later changes (a live picture's colours) glide.
+            val c = a?.let { cornersByKey[it.key] }
+            if (framedHere && c != null) Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = alpha }) {
+                TintAroundArt(c)
+                TextScrims()
+            }
         }
     }
 }
 
+/** 0 while a picture's colours are unknown, then fading to 1 over 300 ms (same for picture and fill). */
+@Composable
+private fun shownAlpha(a: Ambient?, cornersByKey: Map<String, List<Int>>): Float {
+    val ready = a == null || cornersByKey[a.key] != null
+    val alpha by animateFloatAsState(if (ready) 1f else 0f, if (ready) tween(300) else snap(), label = "ready")
+    return alpha
+}
+
 /** What the background shows and whether it replaces the previous picture without a crossfade. */
 private class Shown(val ambient: Ambient?, val cut: Boolean) {
+    val contentKey get() = ambient?.key + "|" + ambient?.image
     // Equal by picture only: a changed cut flag alone must not start a transition.
     override fun equals(other: Any?) = other is Shown && other.ambient?.key == ambient?.key && other.ambient?.image == ambient?.image
     override fun hashCode() = (ambient?.key + "|" + ambient?.image).hashCode()
@@ -255,11 +263,9 @@ private fun TextScrims() {
  * picture's own edge, so the fade has no dark band. The colours glide to the next title's.
  */
 @Composable
-private fun TintAroundArt(corners: List<Int>?, jump: Boolean = false) {
-    val target = corners ?: NeutralCorners
-    // [jump]: the new page's colours are set at once, not glided from the previous page's.
+private fun TintAroundArt(corners: List<Int>) {
     val c = List(4) { i ->
-        androidx.compose.animation.animateColorAsState(Color(target[i]), if (jump) snap() else tween(450), label = "tint$i").value
+        androidx.compose.animation.animateColorAsState(Color(corners[i]), tween(450), label = "tint$i").value
     }
     val (tl, tr, br, bl) = c
     Box(
