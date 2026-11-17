@@ -104,4 +104,24 @@
     <string name="settings_category_order_reset">Back to the provider\'s order</string>
     <string name="settings_category_order_empty">No channel categories loaded yet.</string>
     <string name="settings_category_order_moving">moving</string>
+    <string name="settings_profiles">Profiles</string>
+    <string name="settings_profiles_value_none">None</string>
+    <string name="settings_profiles_note">Members of your Plex Home. Choose their rows under Home rows: they load as that member, and what is watched from them counts for that member.</string>
+    <string name="settings_profiles_home">Plex Home</string>
+    <string name="settings_profiles_loading">Loading the members of your Plex Home</string>
+    <string name="settings_profiles_failed">Plex Home could not be loaded.</string>
+    <string name="settings_profiles_none">No other members in your Plex Home.</string>
+    <string name="settings_profile_added">Added</string>
+    <string name="settings_profile_signed_out">Signed out, sign in again</string>
+    <string name="settings_profile_adding">Signing in</string>
+    <string name="settings_profile_pin">Add, needs the PIN</string>
+    <string name="settings_profile_add">Add</string>
+    <string name="settings_profile_failed">Could not sign in as this member. Try again.</string>
+    <string name="settings_profile_note">Choose this profile\'s rows under Home rows. Removing deletes its sign-in and its row choices.</string>
+    <string name="settings_profile_signed_out_note">Plex no longer accepts this profile\'s sign-in. Sign in again or remove it.</string>
+    <string name="settings_profile_sign_in">Sign in</string>
+    <string name="settings_profile_remove">Remove</string>
+    <string name="settings_profile_wrong_pin">Wrong PIN.</string>
+    <string name="settings_profile_pin_note">The member\'s Plex PIN. It is used once to sign in and is not stored.</string>
+    <string name="setup_plex_profiles">Profiles: %1$s. Add or remove them in Settings on the TV.</string>
 </resources>

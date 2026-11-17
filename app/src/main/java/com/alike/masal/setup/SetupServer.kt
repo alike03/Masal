@@ -157,7 +157,10 @@ class SetupServer(
             else """<ul class="list">$sources</ul>"""
         val plexLinked = settings.plexToken.isNotBlank() && settings.plexUrl.isNotBlank()
         val plexChip = if (plexLinked) """<span class="chip on">${t(R.string.setup_connected)}</span>""" else """<span class="chip">${t(R.string.setup_not_connected)}</span>"""
-        val plexDetail = if (plexLinked) """<p class="muted">${t(R.string.setup_plex_server, host(settings.plexUrl))}</p>"""
+        // Profiles are added on the TV (profiles.md); the page only names them. t() escapes the names.
+        val profileNames = settings.profiles.joinToString(", ") { it.name }
+        val plexDetail = if (plexLinked) """<p class="muted">${t(R.string.setup_plex_server, host(settings.plexUrl))}</p>""" +
+            (if (profileNames.isEmpty()) "" else """<p class="muted">${t(R.string.setup_plex_profiles, profileNames)}</p>""")
             else """<p class="muted">${t(R.string.setup_plex_easiest, "\u0001").replace("\u0001", "<strong>plex.tv/link</strong>")}</p>"""
         val tokenHint = t(if (settings.plexToken.isNotBlank()) R.string.setup_token_saved else R.string.setup_token_not_set)
         // Home row: pick one of the loaded categories. A saved category that is not (yet) in the list

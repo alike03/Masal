@@ -114,6 +114,36 @@ class Settings(context: Context) {
             ?: runCatching { Language.text(com.alike.masal.R.string.common_live_tv) }.getOrDefault("Live TV")
         set(v) = prefs.edit().putString("home_live_title", v.trim()).apply()
 
+    /** Plex Home members added as profiles, in the order they were added (profiles.md). Holds their tokens. */
+    var profiles: List<PlexProfile>
+        get() = runCatching {
+            val a = JSONArray(prefs.getString("plex_profiles", "[]"))
+            (0 until a.length()).map { a.getJSONObject(it) }.map { PlexProfile(it.getString("id"), it.getString("name"), it.getString("token")) }
+        }.getOrDefault(emptyList())
+        set(v) = prefs.edit().putString("plex_profiles", JSONArray().apply {
+            v.forEach { put(JSONObject().put("id", it.id).put("name", it.name).put("token", it.token)) }
+        }.toString()).apply()
+
+    /** Profiles whose token the server refused; Settings offers to sign in again. */
+    var profilesRejected: Set<String>
+        get() = prefs.getStringSet("plex_profiles_rejected", emptySet())?.toSet() ?: emptySet()
+        set(v) = prefs.edit().putStringSet("plex_profiles_rejected", v).apply()
+
+    fun saveProfile(p: PlexProfile) {
+        val list = profiles
+        profiles = if (list.any { it.id == p.id }) list.map { if (it.id == p.id) p else it } else list + p
+        profilesRejected = profilesRejected - p.id
+    }
+
+    /** Removes the profile, its token and its Home row choices. */
+    fun removeProfile(id: String) {
+        profiles = profiles.filter { it.id != id }
+        profilesRejected = profilesRejected - id
+        val prefix = HomeRows.profilePrefix(id)
+        homeRowsOn = homeRowsOn.filterTo(HashSet()) { !it.startsWith(prefix) }
+        homeRowsOff = homeRowsOff.filterTo(HashSet()) { !it.startsWith(prefix) }
+    }
+
     /** Home rows switched on although Plex does not show them on its Home (see [homeRowShown]). */
     var homeRowsOn: Set<String>
         get() = prefs.getStringSet("home_rows_on", emptySet())?.toSet() ?: emptySet()

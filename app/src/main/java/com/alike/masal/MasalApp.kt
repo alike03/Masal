@@ -29,6 +29,19 @@ object Graph {
     lateinit var http: OkHttpClient
     lateinit var plex: PlexClient
     lateinit var iptv: IptvRepository
+    private val profileClients = java.util.concurrent.ConcurrentHashMap<String, PlexClient>()
+
+    /**
+     * The Plex client for a profile id (an item's [PlexItem.profile]): requests go out as that Home
+     * member. The main account's client for null or a profile that was removed.
+     */
+    fun plexFor(profileId: String?): PlexClient {
+        if (profileId == null) return plex
+        val p = settings.profiles.firstOrNull { it.id == profileId } ?: return plex
+        return profileClients[profileId]?.takeIf { it.profile == p } ?: PlexClient(http, settings, p).also { profileClients[profileId] = it }
+    }
+
+    fun plexFor(item: PlexItem?): PlexClient = plexFor(item?.profile)
 
     fun init(app: Application) {
         settings = Settings(app)
@@ -38,6 +51,7 @@ object Graph {
             .followRedirects(true)
             .build()
         plex = PlexClient(http, settings)
+        profileClients.clear()
         iptv = IptvRepository(http, settings, app.cacheDir)
     }
 }

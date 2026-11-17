@@ -104,4 +104,24 @@
     <string name="settings_category_order_reset">Sağlayıcının sırasına dön</string>
     <string name="settings_category_order_empty">Henüz kanal kategorisi yüklenmedi.</string>
     <string name="settings_category_order_moving">taşınıyor</string>
+    <string name="settings_profiles">Profiller</string>
+    <string name="settings_profiles_value_none">Yok</string>
+    <string name="settings_profiles_note">Plex Home üyelerin. Satırlarını Ana Sayfa satırları altında seç: o üye olarak yüklenir ve oradan izlenenler o üyeye sayılır.</string>
+    <string name="settings_profiles_home">Plex Home</string>
+    <string name="settings_profiles_loading">Plex Home üyeleri yükleniyor</string>
+    <string name="settings_profiles_failed">Plex Home yüklenemedi.</string>
+    <string name="settings_profiles_none">Plex Home\'da başka üye yok.</string>
+    <string name="settings_profile_added">Eklendi</string>
+    <string name="settings_profile_signed_out">Oturum kapandı, yeniden giriş yap</string>
+    <string name="settings_profile_adding">Giriş yapılıyor</string>
+    <string name="settings_profile_pin">Ekle, PIN gerekli</string>
+    <string name="settings_profile_add">Ekle</string>
+    <string name="settings_profile_failed">Bu üye olarak giriş yapılamadı. Tekrar dene.</string>
+    <string name="settings_profile_note">Bu profilin satırlarını Ana Sayfa satırları altında seç. Kaldırmak girişini ve satır seçimlerini siler.</string>
+    <string name="settings_profile_signed_out_note">Plex bu profilin girişini artık kabul etmiyor. Yeniden giriş yap veya kaldır.</string>
+    <string name="settings_profile_sign_in">Giriş yap</string>
+    <string name="settings_profile_remove">Kaldır</string>
+    <string name="settings_profile_wrong_pin">Yanlış PIN.</string>
+    <string name="settings_profile_pin_note">Üyenin Plex PIN\'i. Bir kez giriş için kullanılır ve saklanmaz.</string>
+    <string name="setup_plex_profiles">Profiller: %1$s. TV\'deki Ayarlar\'dan eklenir veya kaldırılır.</string>
 </resources>

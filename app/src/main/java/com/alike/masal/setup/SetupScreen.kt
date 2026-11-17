@@ -87,7 +87,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-private enum class SettingsPage { Main, Language, Category, Title, Order }
+private enum class SettingsPage { Main, Language, Category, Title, Order, Profiles }
 
 /**
  * Settings on the TV: the QR code for the phone page (logins, sources, Plex server) on the left,
@@ -182,6 +182,8 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
     val titleRow = remember { FocusRequester() }
     val languageRow = remember { FocusRequester() }
     val orderRow = remember { FocusRequester() }
+    val profilesRow = remember { FocusRequester() }
+    var profilesView by remember { mutableStateOf<ProfilesView>(ProfilesView.List) }
     val categoryOrder by vm.categoryOrder.collectAsState()
     // The category being moved on the order page; Back then puts it down instead of leaving the page.
     var moving by remember { mutableStateOf<String?>(null) }
@@ -214,7 +216,11 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
         // key never reaches the side menu's Back handling.
         Box(Modifier.weight(1f).onPreviewKeyEvent { e ->
             if (page == SettingsPage.Main || e.key != Key.Back) return@onPreviewKeyEvent false
-            if (e.type == KeyEventType.KeyUp) { if (moving != null) moving = null else page = SettingsPage.Main }
+            if (e.type == KeyEventType.KeyUp) when {
+                moving != null -> moving = null
+                page == SettingsPage.Profiles && profilesView != ProfilesView.List -> profilesView = ProfilesView.List
+                else -> page = SettingsPage.Main
+            }
             true
         }) {
             when (page) {
@@ -236,6 +242,8 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                         onTitle = { back = titleRow; page = SettingsPage.Title },
                         orderValue = stringResource(if (categoryOrder.isEmpty()) R.string.settings_category_order_default else R.string.settings_category_order_custom),
                         onOrder = { back = orderRow; moving = null; page = SettingsPage.Order },
+                        profilesRow = profilesRow,
+                        onProfiles = { back = profilesRow; profilesView = ProfilesView.List; page = SettingsPage.Profiles },
                         options = options,
                         onToggle = { o ->
                             Graph.settings.setHomeRowShown(o, !Graph.settings.homeRowShown(o))
@@ -281,6 +289,7 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                     onMove = { name, delta -> vm.moveCategory(name, delta) },
                     onReset = { moving = null; vm.setCategoryOrder(emptyList()) },
                 )
+                SettingsPage.Profiles -> ProfilesPage(profilesView, { profilesView = it }) { vm.refreshPlex() }
                 SettingsPage.Title -> TitleEditor(liveTitle, onCancel = { page = SettingsPage.Main }) { t ->
                     Graph.settings.homeLiveTitle = t
                     Graph.settings.homeChanged()
@@ -320,6 +329,8 @@ private fun MainList(
     onTitle: () -> Unit,
     orderValue: String,
     onOrder: () -> Unit,
+    profilesRow: FocusRequester,
+    onProfiles: () -> Unit,
     options: List<HomeRowOption>,
     onToggle: (HomeRowOption) -> Unit,
     sourceNames: List<String>,
@@ -353,6 +364,11 @@ private fun MainList(
                     MasalButton(stringResource(R.string.settings_android_settings), onAndroidSettings, icon = Icons.Filled.Settings, primary = false)
                 }
             }
+        }
+        if (Graph.plex.configured) item {
+            val names = remember(homeVersion) { Graph.settings.profiles.joinToString(", ") { it.name } }
+            SettingRow(stringResource(R.string.settings_profiles), names.ifBlank { stringResource(R.string.settings_profiles_value_none) },
+                onProfiles, Modifier.focusRequester(profilesRow))
         }
 
         item { Heading(stringResource(R.string.language_title)) }
@@ -406,7 +422,7 @@ private fun SettingRow(label: String, value: String, onClick: () -> Unit, modifi
 
 /** A choice with a check mark when it is on (or picked). */
 @Composable
-private fun OptionRow(label: String, detail: String?, checked: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+internal fun OptionRow(label: String, detail: String?, checked: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     ListSurface(onClick, modifier) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.width(30.dp)) {

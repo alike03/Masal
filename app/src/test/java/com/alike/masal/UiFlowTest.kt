@@ -151,6 +151,31 @@ class UiFlowTest {
         assertTrue("as a normal app, Back on Home leaves", !rule.activity.onBackPressedDispatcher.hasEnabledCallbacks())
     }
 
+    /** A profile's rows (profiles.md): its Continue Watching right after the main one, named; its collection after the main rows. */
+    @Test
+    fun profileRows() {
+        val vm = seed()
+        val films = vm.sectionCache.getValue("1")
+        val own = films.take(3).map { it.copy(title = "Profilfilm " + it.title.substringAfterLast(' '), profile = "kid-2") }
+        vm.profileDecks.value = listOf(PlexHub("p:kid-2:continue", "Continue Watching", own, owner = "Tester Kind"))
+        vm.homeHubs.value = listOf(
+            PlexHub("collection:5", "Testsammlung", films),
+            PlexHub("p:kid-2:collection:5", "Testsammlung", own, owner = "Tester Kind"),
+        )
+        rule.mainClock.advanceTimeBy(1_000)
+        expectFocus("start", "Testplayer")
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        rule.mainClock.advanceTimeBy(600)
+        assertTrue("main Continue Watching first", rule.onAllNodesWithText("Testfilm Alpha").fetchSemanticsNodes().isNotEmpty())
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        rule.mainClock.advanceTimeBy(600)
+        assertTrue("the profile's Continue Watching is next",
+            rule.onAllNodesWithText("Profilfilm 1").fetchSemanticsNodes().isNotEmpty())
+        assertTrue("its row is named after the profile",
+            rule.onAllNodesWithText("Tester Kind").fetchSemanticsNodes().isNotEmpty())
+        shot("13-profile-row")
+    }
+
     /** Settings with the remote: live TV row category (Back cancels, OK picks) and Home rows. */
     @Test
     fun settingsScreen() {

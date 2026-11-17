@@ -46,6 +46,8 @@ data class PlexItem(
     val sectionId: String? = null,
     /** Plex's background tint (topLeft, topRight, bottomRight, bottomLeft) as ARGB. */
     val blur: List<Int> = emptyList(),
+    /** Id of the profile the item was loaded as (see profiles.md); null for the main account. */
+    val profile: String? = null,
 ) {
     val playable get() = type == "movie" || type == "episode" || type == "clip"
     val progress get() = if (duration > 0 && viewOffset > 0) viewOffset.toFloat() / duration else 0f
@@ -67,7 +69,19 @@ data class PlexStream(
 )
 
 /** A row of titles as Plex groups them (Continue Watching, Recently Added, a collection, ...). */
-data class PlexHub(val id: String, val title: String, val items: List<PlexItem>)
+data class PlexHub(val id: String, val title: String, val items: List<PlexItem>, val owner: String? = null)
+
+/** A member of the main account's Plex Home, added so Home can show rows loaded as that member. */
+data class PlexProfile(val id: String, val name: String, val token: String)
+
+/** A member of the main account's Plex Home as plex.tv lists it. */
+data class PlexHomeUser(val id: String, val name: String, val protected: Boolean)
+
+/** Thrown when the server no longer accepts a profile's token (removed from Plex Home, PIN changed). */
+class ProfileRejectedException : Exception("profile signed out")
+
+/** Thrown when plex.tv refuses a Home member's PIN. */
+class WrongPinException : Exception("wrong PIN")
 
 private val SearchTypes = setOf("movie", "show", "season", "episode")
 
@@ -76,11 +90,14 @@ data class SubtitleResult(val key: String, val codec: String, val language: Stri
     val score: Double, val hearingImpaired: Boolean, val forced: Boolean)
 
 /** Minimal Plex Media Server client (JSON API, direct play). */
-class PlexClient(private val http: OkHttpClient, private val settings: Settings) {
+class PlexClient(private val http: OkHttpClient, private val settings: Settings, val profile: PlexProfile? = null) {
 
     val configured get() = settings.plexUrl.isNotBlank() && settings.plexToken.isNotBlank()
 
-    private fun Request.Builder.plexHeaders(token: String? = settings.plexToken): Request.Builder = apply {
+    /** The token requests go out with: the profile's, or the main account's. */
+    private val authToken get() = profile?.token ?: settings.plexToken
+
+    private fun Request.Builder.plexHeaders(token: String? = authToken): Request.Builder = apply {
         header("Accept", "application/json")
         header("X-Plex-Product", "Masal")
         header("X-Plex-Version", "0.1")
@@ -95,6 +112,7 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings)
     private fun get(path: String): JSONObject {
         val req = Request.Builder().url(settings.plexUrl + path).plexHeaders().build()
         http.newCall(req).execute().use { r ->
+            if (r.code == 401 && profile != null) throw ProfileRejectedException()
             if (!r.isSuccessful) error("Plex HTTP ${r.code}")
             return JSONObject(r.body!!.string()).getJSONObject("MediaContainer")
         }
@@ -193,6 +211,7 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings)
                     b.optString(k).takeIf { it.length == 6 }?.toLongOrNull(16)?.let { (0xFF000000 or it).toInt() }
                 }.takeIf { it.size == 4 }
             }.orEmpty(),
+            profile = profile?.id,
         )
     }
 
@@ -286,7 +305,7 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings)
 
     fun streamUrl(partKey: String) =
         if (partKey.startsWith("http")) partKey
-        else settings.plexUrl + partKey + (if ('?' in partKey) "&" else "?") + "X-Plex-Token=" + settings.plexToken
+        else settings.plexUrl + partKey + (if ('?' in partKey) "&" else "?") + "X-Plex-Token=" + authToken
 
     private val trailers = java.util.concurrent.ConcurrentHashMap<String, Any>()
     private object NoTrailer
@@ -346,6 +365,54 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings)
             if (!r.isSuccessful) error("plex.tv HTTP ${r.code}")
             return JSONObject(r.body!!.string()).optString("authToken").takeIf { it.isNotBlank() && it != "null" }
         }
+    }
+
+    // ---- Plex Home members (profiles.md) ----
+
+    /** Members of the main account's Plex Home, the main account itself left out. */
+    fun homeUsers(): List<PlexHomeUser> {
+        val req = Request.Builder().url("$accountBase/api/v2/home/users").plexHeaders(settings.plexToken).build()
+        val users = http.newCall(req).execute().use { r ->
+            if (!r.isSuccessful) error("plex.tv HTTP ${r.code}")
+            JSONObject(r.body!!.string()).optJSONArray("users") ?: JSONArray()
+        }
+        return (0 until users.length()).map { users.getJSONObject(it) }
+            .filter { !it.optBoolean("admin") && it.optString("uuid").isNotBlank() }
+            .map { PlexHomeUser(it.optString("uuid"), it.optString("title").ifBlank { it.optString("username") }, it.optBoolean("protected")) }
+    }
+
+    /**
+     * Signs in as a Home member (with its PIN where it has one, used once and never stored) and
+     * returns the member's token for this server. Throws [WrongPinException] for a refused PIN.
+     */
+    fun profileToken(userId: String, pin: String?): String {
+        val url = "$accountBase/api/v2/home/users/${Uri.encode(userId)}/switch" +
+            (if (pin.isNullOrBlank()) "" else "?pin=${Uri.encode(pin)}")
+        val req = Request.Builder().url(url).post(ByteArray(0).toRequestBody(null)).plexHeaders(settings.plexToken).build()
+        val userToken = http.newCall(req).execute().use { r ->
+            if (r.code == 401 || r.code == 403) throw WrongPinException()
+            if (!r.isSuccessful) error("plex.tv HTTP ${r.code}")
+            val o = JSONObject(r.body!!.string())
+            o.optString("authToken").ifBlank { o.optString("authenticationToken") }.takeIf { it.isNotBlank() && it != "null" }
+                ?: error("plex.tv: no token")
+        }
+        return serverToken(userToken) ?: userToken
+    }
+
+    /** The token a member's account has for this server (servers hand out their own access tokens). */
+    private fun serverToken(userToken: String): String? {
+        val req = Request.Builder().url("$accountBase/api/v2/resources?includeHttps=1&includeRelay=0").plexHeaders(userToken).build()
+        val arr = http.newCall(req).execute().use { r -> if (!r.isSuccessful) return null; JSONArray(r.body!!.string()) }
+        val servers = (0 until arr.length()).map { arr.getJSONObject(it) }.filter { it.optString("provides").contains("server") }
+        val host = Uri.parse(settings.plexUrl).host.orEmpty()
+        fun matches(s: JSONObject): Boolean {
+            val cons = s.optJSONArray("connections") ?: return false
+            return (0 until cons.length()).map { cons.getJSONObject(it) }.any { c ->
+                c.optString("address") == host || Uri.parse(c.optString("uri")).host == host
+            }
+        }
+        val server = servers.firstOrNull(::matches) ?: servers.singleOrNull()
+        return server?.optString("accessToken")?.takeIf { it.isNotBlank() && it != "null" }
     }
 
     /** Finds a local address of the user's own Plex server. */

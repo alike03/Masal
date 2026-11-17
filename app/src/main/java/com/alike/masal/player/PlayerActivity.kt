@@ -602,7 +602,7 @@ class PlayerActivity : ComponentActivity() {
         plex.item = start
         // Full metadata lists the subtitle and audio streams; lists (Continue Watching) do not.
         thread {
-            val full = runCatching { Graph.plex.metadata(start.ratingKey) }.getOrNull()
+            val full = runCatching { Graph.plexFor(start).metadata(start.ratingKey) }.getOrNull()
                 ?.takeIf { it.partKey != null }?.copy(viewOffset = start.viewOffset) ?: start
             runOnUiThread {
                 if (isFinishing) return@runOnUiThread
@@ -632,11 +632,11 @@ class PlayerActivity : ComponentActivity() {
                 "vtt", "webvtt" -> MimeTypes.TEXT_VTT
                 else -> return@mapNotNull null
             }
-            MediaItem.SubtitleConfiguration.Builder(Uri.parse(Graph.plex.streamUrl(s.key!!)))
+            MediaItem.SubtitleConfiguration.Builder(Uri.parse(Graph.plexFor(item).streamUrl(s.key!!)))
                 .setMimeType(mime).setLanguage(s.languageCode.ifBlank { null }).setLabel(s.title)
                 .setId("plex:${s.id}").build()
         }
-        return MediaItem.Builder().setUri(Graph.plex.streamUrl(item.partKey!!)).setSubtitleConfigurations(subs).build()
+        return MediaItem.Builder().setUri(Graph.plexFor(item).streamUrl(item.partKey!!)).setSubtitleConfigurations(subs).build()
     }
 
     private fun groups(type: Int) = player.currentTracks.groups.filter { it.type == type && it.isSupported }
@@ -698,7 +698,7 @@ class PlayerActivity : ComponentActivity() {
     /** Remembers the choice in Plex too. */
     private fun remember(param: String, streamId: Long) {
         val part = current?.partId ?: return
-        thread { Graph.plex.selectStream(part, param, streamId) }
+        thread { Graph.plexFor(current).selectStream(part, param, streamId) }
     }
 
     // ---- Plex: subtitle and audio panels ----
@@ -792,6 +792,7 @@ class PlayerActivity : ComponentActivity() {
         val item = current ?: return
         plex.panel = Panel(getString(R.string.player_search_subtitles), note = getString(R.string.player_searching))
         thread {
+            // Search and download stay with the main account: they change the library, which Home members may not.
             val found = runCatching { Graph.plex.searchSubtitles(item.ratingKey, lang) }
             runOnUiThread {
                 if (plex.panel?.title != getString(R.string.player_search_subtitles)) return@runOnUiThread
@@ -819,7 +820,7 @@ class PlayerActivity : ComponentActivity() {
                 var fresh: PlexItem? = null
                 for (i in 0 until 20) {
                     Thread.sleep(1_500)
-                    val m = Graph.plex.metadata(item.ratingKey)
+                    val m = Graph.plexFor(item).metadata(item.ratingKey)
                     if (m.streams.any { it.type == 3 && it.id !in before }) { fresh = m; break }
                 }
                 fresh ?: error(getString(R.string.player_download_unfinished))
@@ -852,8 +853,8 @@ class PlayerActivity : ComponentActivity() {
         val scrobble = !scrobbled && dur > 0 && pos > dur * 0.9
         if (scrobble) scrobbled = true
         thread {
-            Graph.plex.timeline(item, state, pos, dur)
-            if (scrobble) Graph.plex.scrobble(item.ratingKey)
+            Graph.plexFor(item).timeline(item, state, pos, dur)
+            if (scrobble) Graph.plexFor(item).scrobble(item.ratingKey)
         }
     }
 

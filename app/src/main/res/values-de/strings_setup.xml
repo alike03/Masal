@@ -104,4 +104,24 @@
     <string name="settings_category_order_reset">Reihenfolge des Anbieters wiederherstellen</string>
     <string name="settings_category_order_empty">Noch keine Senderkategorien geladen.</string>
     <string name="settings_category_order_moving">wird verschoben</string>
+    <string name="settings_profiles">Profile</string>
+    <string name="settings_profiles_value_none">Keine</string>
+    <string name="settings_profiles_note">Mitglieder deines Plex Home. Deren Zeilen wählst du unter «Zeilen auf der Startseite»: Sie laden als dieses Mitglied, und was daraus geschaut wird, zählt für dieses Mitglied.</string>
+    <string name="settings_profiles_home">Plex Home</string>
+    <string name="settings_profiles_loading">Mitglieder deines Plex Home werden geladen</string>
+    <string name="settings_profiles_failed">Plex Home konnte nicht geladen werden.</string>
+    <string name="settings_profiles_none">Keine weiteren Mitglieder in deinem Plex Home.</string>
+    <string name="settings_profile_added">Hinzugefügt</string>
+    <string name="settings_profile_signed_out">Abgemeldet, neu anmelden</string>
+    <string name="settings_profile_adding">Anmelden …</string>
+    <string name="settings_profile_pin">Hinzufügen, braucht die PIN</string>
+    <string name="settings_profile_add">Hinzufügen</string>
+    <string name="settings_profile_failed">Anmelden als dieses Mitglied ging nicht. Versuche es nochmals.</string>
+    <string name="settings_profile_note">Die Zeilen dieses Profils wählst du unter «Zeilen auf der Startseite». Entfernen löscht seine Anmeldung und seine Zeilenauswahl.</string>
+    <string name="settings_profile_signed_out_note">Plex akzeptiert die Anmeldung dieses Profils nicht mehr. Melde es neu an oder entferne es.</string>
+    <string name="settings_profile_sign_in">Anmelden</string>
+    <string name="settings_profile_remove">Entfernen</string>
+    <string name="settings_profile_wrong_pin">Falsche PIN.</string>
+    <string name="settings_profile_pin_note">Die Plex-PIN des Mitglieds. Sie wird einmal zum Anmelden verwendet und nicht gespeichert.</string>
+    <string name="setup_plex_profiles">Profile: %1$s. Hinzufügen und entfernen in den Einstellungen auf dem TV.</string>
 </resources>

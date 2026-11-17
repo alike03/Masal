@@ -23,7 +23,8 @@ Enter Plex and IPTV logins with the phone instead of the remote.
   plus "None" to hide the row) and the row title. A saved category that is not in the loaded list
   stays selected and marked, so a late load never clears it.
 - Home rows: checkboxes for Plex's Home rows and every collection, grouped by library (so two
-  collections with the same name are told apart), with "Save rows". Same choice as on the TV.
+  collections with the same name are told apart), then the same per profile, with "Save rows".
+  Same choice as on the TV. The Plex card names the added profiles; they are added on the TV.
 - Plex: status chip (Connected / Not connected) with the server host; the hint to use the code on
   the TV at plex.tv/link; manual server URL and token folded away below.
 - Changes apply on the TV at once. The page shows the Masal favicon.
@@ -31,6 +32,7 @@ Enter Plex and IPTV logins with the phone instead of the remote.
 - Left: the QR code and address of the phone page, for logins, sources and the Plex server.
 - Right, a list moved with the remote:
   - Plex: status and link code, "Link Plex again", "Android settings" (the device's own settings).
+    "Profiles" (once Plex is linked) adds and removes members of the Plex Home (profiles.md).
   - Language (after Plex): "Language" shows the current choice and opens a list (Device language,
     English, Deutsch, Türkçe); OK picks and redraws the app in it, Back returns without change.
   - Live TV row on Home: "Channel category" opens a list of the loaded categories plus "None";

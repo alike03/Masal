@@ -491,18 +491,20 @@ fun ListPage(title: String, subtitle: String?, autoFocus: Boolean, load: suspend
 
 /** Detail page for a film or a series (with seasons and episodes). */
 @Composable
-fun DetailScreen(ratingKey: String, initialSeason: String?, autoFocus: Boolean, onPlay: (PlexItem, Boolean) -> Unit) {
+fun DetailScreen(ratingKey: String, initialSeason: String?, autoFocus: Boolean, profile: String? = null, onPlay: (PlexItem, Boolean) -> Unit) {
+    // Opened from a profile's row: seasons, next episode and watched marks are that member's.
+    val plex = remember(profile) { Graph.plexFor(profile) }
     val meta by produceState<Result<PlexItem>?>(null, ratingKey) {
-        value = withContext(Dispatchers.IO) { runCatching { Graph.plex.metadata(ratingKey) } }
+        value = withContext(Dispatchers.IO) { runCatching { plex.metadata(ratingKey) } }
     }
     val item = meta?.getOrNull()
     val isShow = item?.type == "show"
 
     val seasons by produceState(emptyList<PlexItem>(), ratingKey, isShow) {
-        if (isShow) value = withContext(Dispatchers.IO) { runCatching { Graph.plex.children(ratingKey) }.getOrDefault(emptyList()) }
+        if (isShow) value = withContext(Dispatchers.IO) { runCatching { plex.children(ratingKey) }.getOrDefault(emptyList()) }
     }
     val nextUp by produceState<PlexItem?>(null, ratingKey, isShow) {
-        if (isShow) value = withContext(Dispatchers.IO) { runCatching { Graph.plex.showOnDeck(ratingKey) }.getOrNull() }
+        if (isShow) value = withContext(Dispatchers.IO) { runCatching { plex.showOnDeck(ratingKey) }.getOrNull() }
     }
     var seasonKey by rememberSaveable { mutableStateOf(initialSeason) }
     val activeSeason = seasons.firstOrNull { it.ratingKey == seasonKey }
@@ -511,7 +513,7 @@ fun DetailScreen(ratingKey: String, initialSeason: String?, autoFocus: Boolean, 
     val episodes by produceState(emptyList<PlexItem>(), activeSeason?.ratingKey) {
         val key = activeSeason?.ratingKey ?: return@produceState
         value = emptyList()
-        value = withContext(Dispatchers.IO) { runCatching { Graph.plex.children(key) }.getOrDefault(emptyList()) }
+        value = withContext(Dispatchers.IO) { runCatching { plex.children(key) }.getOrDefault(emptyList()) }
     }
     var focusedEpisode by remember { mutableStateOf<PlexItem?>(null) }
     // Series without progress have no "next up" from Plex: offer the first episode of the shown season.

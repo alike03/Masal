@@ -87,6 +87,7 @@ fun HomeScreen(
     val onDeck by vm.onDeck.collectAsState()
     val recentlyAdded by vm.recentlyAdded.collectAsState()
     val hubs by vm.homeHubs.collectAsState()
+    val profileDecks by vm.profileDecks.collectAsState()
     val allApps by vm.apps.collectAsState()
     val homeKeys by vm.homeApps.collectAsState()
     val backdrops by vm.backdrops.collectAsState()
@@ -188,6 +189,22 @@ fun HomeScreen(
                 }
             }
         })
+        profileDecks.forEach { deck ->
+            add(RowSpec("hub:${deck.id}", PosterRowHeight) {
+                PosterRow(deck.title, owner = deck.owner) {
+                    // Keyed by position like the main Continue Watching.
+                    itemsIndexed(deck.items, key = { i, _ -> "${deck.id}:$i" }) { i, item ->
+                        PosterCard(
+                            item, Graph.plex.image(item.poster, 240, 360),
+                            onClick = { onPlayItem(item) },
+                            onFocus = { hero = Hero.Plex(item, resume = true) },
+                            cardModifier = focus.modifier("${deck.id}:$i"),
+                            width = RowPosterWidth, showLabels = false,
+                        )
+                    }
+                }
+            })
+        }
         if (tvRow.isNotEmpty()) add(RowSpec("tv", BannerRowHeight) {
             Column {
                 RowTitle(Graph.settings.homeLiveTitle)
@@ -216,7 +233,7 @@ fun HomeScreen(
         }
         plexRows.forEach { hub ->
             add(RowSpec("hub:${hub.id}", PosterRowHeight) {
-                PosterRow(hub.title, collectionKind(hub)) {
+                PosterRow(hub.title, collectionKind(hub), hub.owner) {
                     items(hub.items, key = { "h:${hub.id}:" + it.ratingKey }) { item ->
                         PosterCard(
                             item, Graph.plex.image(item.poster, 240, 360),
@@ -274,12 +291,15 @@ fun HomeScreen(
 }
 
 @Composable
-fun PosterRow(title: String, kind: String? = null, content: LazyListScope.() -> Unit) {
+fun PosterRow(title: String, kind: String? = null, owner: String? = null, content: LazyListScope.() -> Unit) {
     Column {
-        if (kind == null) RowTitle(title)
+        if (kind == null && owner == null) RowTitle(title)
         else Row(verticalAlignment = Alignment.Bottom) {
             RowTitle(title)
-            Text(kind, color = TextDim, fontSize = 13.sp, maxLines = 1, modifier = Modifier.padding(start = 10.dp, bottom = 4.dp))
+            // A profile's row: the member's name first, then Movies / TV shows (profiles.md).
+            listOfNotNull(owner, kind).forEach {
+                Text(it, color = TextDim, fontSize = 13.sp, maxLines = 1, modifier = Modifier.padding(start = 10.dp, bottom = 4.dp))
+            }
         }
         LazyRow(
             contentPadding = PaddingValues(horizontal = EdgePadding, vertical = 10.dp),
@@ -292,7 +312,7 @@ fun PosterRow(title: String, kind: String? = null, content: LazyListScope.() -> 
 /** For a collection row: whether it holds movies or TV shows (a collection's title alone does not tell). */
 @Composable
 private fun collectionKind(hub: com.alike.masal.data.PlexHub): String? {
-    if (!hub.id.startsWith("collection:")) return null
+    if (!hub.id.startsWith("collection:") && ":collection:" !in hub.id) return null
     val types = hub.items.mapTo(HashSet()) { if (it.type == "movie") "movie" else if (it.type in setOf("show", "season", "episode")) "show" else it.type }
     return when (types.singleOrNull()) {
         "movie" -> stringResource(R.string.home_movie_collection)

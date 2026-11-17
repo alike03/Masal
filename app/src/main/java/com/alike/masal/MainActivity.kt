@@ -116,10 +116,12 @@ data class Detail(
     val kind: String = "item",
     val title: String = "",
     val section: String = "",
+    /** The profile the title was opened from (profiles.md); null for the main account. */
+    val profile: String? = null,
 ) {
     // Section and season are part of the key: genre ids repeat across libraries, and a show opened
-    // from another season must not restore the old page state.
-    val key get() = "page:$kind:$section:$ratingKey:${season.orEmpty()}"
+    // from another season must not restore the old page state. The profile too: its watch state differs.
+    val key get() = "page:$kind:$section:$ratingKey:${season.orEmpty()}:${profile.orEmpty()}"
 }
 
 class MainActivity : ComponentActivity() {
@@ -180,9 +182,9 @@ class MainActivity : ComponentActivity() {
 
                 val openItem: (PlexItem) -> Unit = { item ->
                     when (item.type) {
-                        "movie", "show" -> open(Detail(item.ratingKey, null))
-                        "season" -> open(Detail(item.parentRatingKey ?: item.ratingKey, item.ratingKey))
-                        "collection" -> open(Detail(item.ratingKey, kind = "collection", title = item.title))
+                        "movie", "show" -> open(Detail(item.ratingKey, null, profile = item.profile))
+                        "season" -> open(Detail(item.parentRatingKey ?: item.ratingKey, item.ratingKey, profile = item.profile))
+                        "collection" -> open(Detail(item.ratingKey, kind = "collection", title = item.title, profile = item.profile))
                         else -> playPlex(item, fromStart = false)
                     }
                 }
@@ -241,10 +243,10 @@ class MainActivity : ComponentActivity() {
                                 val t = tabs.firstOrNull { it.key == key }
                                 when {
                                     detail != null && detail.kind == "collection" -> ListPage(detail.title, stringResource(R.string.common_collection), autoFocus,
-                                        { Graph.plex.collectionItems(detail.ratingKey) }, openItem)
+                                        { Graph.plexFor(detail.profile).collectionItems(detail.ratingKey) }, openItem)
                                     detail != null && detail.kind == "genre" -> ListPage(detail.title, stringResource(R.string.common_category), autoFocus,
                                         { Graph.plex.genreItems(detail.section, detail.ratingKey) }, openItem)
-                                    detail != null -> DetailScreen(detail.ratingKey, detail.season, autoFocus) { item, fromStart ->
+                                    detail != null -> DetailScreen(detail.ratingKey, detail.season, autoFocus, detail.profile) { item, fromStart ->
                                         playPlex(item, fromStart)
                                     }
                                     t == NavTab.Home -> HomeScreen(
@@ -363,7 +365,7 @@ class MainActivity : ComponentActivity() {
     private fun playPlex(item: PlexItem, fromStart: Boolean) {
         lifecycleScope.launch {
             val full = if (item.partKey != null) item else withContext(Dispatchers.IO) {
-                runCatching { Graph.plex.metadata(item.ratingKey) }.getOrNull()
+                runCatching { Graph.plexFor(item).metadata(item.ratingKey) }.getOrNull()
             }
             if (full?.partKey == null) {
                 Toast.makeText(this@MainActivity, getString(R.string.common_no_playable_file), Toast.LENGTH_LONG).show()

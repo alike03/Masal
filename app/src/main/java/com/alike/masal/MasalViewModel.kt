@@ -30,6 +30,11 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
     val recentlyAdded = MutableStateFlow<List<PlexItem>>(emptyList())
     /** The Plex rows shown on Home, as chosen in Settings; Continue Watching comes from [onDeck]. */
     val homeHubs = MutableStateFlow<List<PlexHub>>(emptyList())
+    /** Continue Watching of each profile whose row is switched on, in profile order (profiles.md). */
+    val profileDecks = MutableStateFlow<List<PlexHub>>(emptyList())
+    /** What was loaded as each profile: Continue Watching, Plex's Home rows and collections per library. */
+    private class ProfileRows(val deck: List<PlexItem>, val hubs: List<PlexHub>, val collections: List<Pair<PlexSection, PlexItem>>)
+    @Volatile private var profileRows: Map<String, ProfileRows> = emptyMap()
     /** Everything that can be shown as a row on Home (Plex's rows and all collections), for Settings. */
     val homeRowOptions = MutableStateFlow<List<HomeRowOption>>(emptyList())
     /** Plex's own Home rows as loaded, before the user's choice. */
@@ -129,7 +134,7 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
     fun refreshPlex() {
         if (!Graph.plex.configured) {
             onDeck.value = emptyList(); recentlyAdded.value = emptyList(); sections.value = emptyList(); homeHubs.value = emptyList()
-            homeRowOptions.value = emptyList(); plexHomeHubs = emptyList()
+            homeRowOptions.value = emptyList(); plexHomeHubs = emptyList(); profileRows = emptyMap(); profileDecks.value = emptyList()
             return
         }
         plexJob?.cancel()
@@ -148,8 +153,32 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
                 ensureActive()
                 recent.onSuccess { recentlyAdded.value = it }
             }
+            profileRows = loadProfiles()
+            ensureActive()
             buildHomeRows()
         }
+    }
+
+    /** Each profile's rows, loaded as that member; a profile whose token the server refuses is marked and skipped. */
+    private suspend fun loadProfiles(): Map<String, ProfileRows> {
+        val out = LinkedHashMap<String, ProfileRows>()
+        for (p in Graph.settings.profiles) {
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            val client = Graph.plexFor(p.id)
+            val deck = runCatching { client.onDeck() }
+            if (deck.exceptionOrNull() is com.alike.masal.data.ProfileRejectedException) {
+                Graph.settings.profilesRejected = Graph.settings.profilesRejected + p.id
+                continue
+            }
+            if (deck.isSuccess) Graph.settings.profilesRejected = Graph.settings.profilesRejected - p.id
+            val hubs = runCatching { client.homeHubs() }.getOrDefault(emptyList())
+                .filter { it.id != "home.continue" && it.id != "home.ondeck" }
+            val collections = sections.value.flatMap { s ->
+                runCatching { client.collections(s.key) }.getOrDefault(emptyList()).map { s to it }
+            }
+            out[p.id] = ProfileRows(deck.getOrDefault(emptyList()), hubs, collections)
+        }
+        return out
     }
 
     fun rebuildHomeRows() {
@@ -169,7 +198,6 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
         val hubs = plexHomeHubs
         val options = HomeRows.options(hubs, collections)
         kotlinx.coroutines.currentCoroutineContext().ensureActive()
-        homeRowOptions.value = options
         val shown = options.filter { Graph.settings.homeRowShown(it) }
         val shownIds = shown.mapTo(HashSet()) { it.id }
         val rows = ArrayList<PlexHub>()
@@ -184,7 +212,37 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
                 ?: runCatching { Graph.plex.collectionItems(key).take(20) }.getOrNull()?.also { extraRowCache[key] = it }
             if (!items.isNullOrEmpty()) rows += PlexHub(o.id, o.title, items)
         }
+        // Profiles: their Continue Watching goes after the main one, their other rows after the main rows.
+        val decks = ArrayList<PlexHub>()
+        val allOptions = ArrayList(options)
+        val continueTitle = com.alike.masal.data.Language.text(R.string.home_continue_watching)
+        for (p in Graph.settings.profiles) {
+            val loaded = profileRows[p.id] ?: continue
+            val pOptions = HomeRows.profileOptions(p, continueTitle, loaded.hubs, loaded.collections)
+            allOptions += pOptions
+            val on = pOptions.filter { Graph.settings.homeRowShown(it) }
+            val onIds = on.mapTo(HashSet()) { it.rowId }
+            if (HomeRows.Continue in onIds && loaded.deck.isNotEmpty()) {
+                decks += PlexHub(HomeRows.profilePrefix(p.id) + HomeRows.Continue, continueTitle, loaded.deck, owner = p.name)
+            }
+            val pRows = ArrayList<PlexHub>()
+            for (h in loaded.hubs) {
+                val id = HomeRows.collectionKey(h.id)?.let { "collection:$it" } ?: h.id
+                if (id in onIds && pRows.none { it.id.endsWith(":$id") }) pRows += h.copy(id = HomeRows.profilePrefix(p.id) + id, owner = p.name)
+            }
+            for (o in on) {
+                val rowId = o.rowId
+                if (!rowId.startsWith("collection:") || pRows.any { it.id == o.id }) continue
+                val key = rowId.removePrefix("collection:")
+                val items = extraRowCache[o.id]
+                    ?: runCatching { Graph.plexFor(p.id).collectionItems(key).take(20) }.getOrNull()?.also { extraRowCache[o.id] = it }
+                if (!items.isNullOrEmpty()) pRows += PlexHub(o.id, o.title, items, owner = p.name)
+            }
+            rows += pRows
+        }
         kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        homeRowOptions.value = allOptions
+        profileDecks.value = decks
         homeHubs.value = rows
     }
 
