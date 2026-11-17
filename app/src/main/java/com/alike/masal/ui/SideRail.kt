@@ -74,8 +74,7 @@ private val MarkSize = 24.dp
 /** The open menu's card: a shade lighter than the page background, floating with space around it. */
 private val RailPanel = Color(0xFF1C1A18)
 private val CardInsetX = 6.dp
-/** Space inside the card above the first and below the last entry. */
-private val CardPadding = 6.dp
+private val CardInsetY = 12.dp
 private val CardCorner = 18.dp
 
 class RailEntry(val title: String, val icon: ImageVector)
@@ -120,6 +119,17 @@ fun SideRail(
                         0.7f to Bg.copy(alpha = 0.5f),
                         1f to Bg.copy(alpha = 0f),
                     ), alpha = 1f - p)
+                    if (p > 0f) {
+                        val inset = androidx.compose.ui.geometry.Offset(CardInsetX.toPx(), CardInsetY.toPx())
+                        val card = androidx.compose.ui.geometry.Size(size.width - inset.x, size.height - 2 * inset.y)
+                        val corner = androidx.compose.ui.geometry.CornerRadius(CardCorner.toPx())
+                        // A soft shadow under the card, then the card and its fine edge.
+                        for (i in 1..3) drawRoundRect(Color.Black, inset + androidx.compose.ui.geometry.Offset(0f, i * 2.dp.toPx()), card,
+                            corner, alpha = p * 0.12f)
+                        drawRoundRect(RailPanel, inset, card, corner, alpha = p)
+                        drawRoundRect(Line, inset, card, corner, alpha = p,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
+                    }
                 }
                 .onFocusChanged { open = it.hasFocus; onFocusChange(it.hasFocus) }
                 // Always enter on the open page's entry: the page can change without the menu (Home key),
@@ -141,31 +151,13 @@ fun SideRail(
                     maxLines = 1, softWrap = false,
                     modifier = Modifier.padding(start = 10.dp).graphicsLayer { alpha = p; translationX = (1f - p) * -12f })
             }
-            // The entries, centred; the open card is exactly as tall as they are (the mark stays above it).
-            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .drawBehind {
-                            if (p > 0f) {
-                                val inset = androidx.compose.ui.geometry.Offset(CardInsetX.toPx(), 0f)
-                                val card = androidx.compose.ui.geometry.Size(size.width - inset.x, size.height)
-                                val corner = androidx.compose.ui.geometry.CornerRadius(CardCorner.toPx())
-                                // A soft shadow under the card, then the card and its fine edge.
-                                for (i in 1..3) drawRoundRect(Color.Black, inset + androidx.compose.ui.geometry.Offset(0f, i * 2.dp.toPx()), card,
-                                    corner, alpha = p * 0.12f)
-                                drawRoundRect(RailPanel, inset, card, corner, alpha = p)
-                                drawRoundRect(Line, inset, card, corner, alpha = p,
-                                    style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
-                            }
-                        }
-                        .padding(vertical = CardPadding),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    entries.forEachIndexed { i, e ->
-                        RailItem(e, i == selected, { p }, { onFocusEntry(i) }, { onFocusEntry(i); onEnter() },
-                            if (i == selected) Modifier.focusRequester(selectedRequester) else Modifier)
-                    }
+            Column(
+                Modifier.weight(1f).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
+            ) {
+                entries.forEachIndexed { i, e ->
+                    RailItem(e, i == selected, { p }, { onFocusEntry(i) }, { onFocusEntry(i); onEnter() },
+                        if (i == selected) Modifier.focusRequester(selectedRequester) else Modifier)
                 }
             }
         }

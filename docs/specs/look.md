@@ -32,10 +32,13 @@ text #F2EEE8, dim text #A8A29A. Focus frame on cards is amber.
 - The fill is always there while a frame is shown and fades together with the frame: its colours
   glide over the same 450 ms as the picture's cross-fade, so frame and fill never change apart.
 - Apps use one Bing photo of the day for all apps, never movie artwork.
-- Picture and fill are one unit: they fade in and out together, always (two transitions over the
-  same state and timing, the video between them). A picture appears only once its colours are
-  known (at most 700 ms), then picture and fill fade in over 300 ms. To a page or tab without
-  picture both fade out together (200 ms).
+- Picture, video and fill are one layer, faded as a whole: half way through a fade the picture's
+  hard edges never show through a half transparent fill, and a trailer fades out with its picture
+  (its playback stops at once, so two live channels never run together). A picture appears only
+  once its colours are known (at most 700 ms), then the layer fades in over 300 ms. To a page or
+  tab without picture it fades out (200 ms).
+- Videos in the frame (trailers, live channels) fill it like a photo: another shape (4:3, 21:9) is
+  scaled up and cut at the edges, never stretched.
 - A cut instead of a cross-fade: moving to another row on Home, switching to another page or to
   a page without picture, the old picture and its fill disappear at once and the new one fades in
   (300 ms). Within a row the cross-fade stays. A page never shows the previous page's artwork,
@@ -46,8 +49,7 @@ text #F2EEE8, dim text #A8A29A. Focus frame on cards is amber.
   icons the small Masal mark, always in the same place; the name "Masal" joins it when the menu
   opens.
 - Open (focus in the menu): a rounded card (#1C1A18, 18 dp corners, fine edge, soft shadow)
-  floats over the page, exactly as tall as the entries (the mark and name stay above it at the top
-  of the screen) and as wide as the longest label in
+  floats over the page with space above, below and to the left, as wide as the longest label in
   the current language needs; the page behind dims slightly (25 % black). Focus is a soft light
   field (white 12 %), no glow, no zoom, also while OK is pressed (no dark flash); the open page
   stays amber (its bar shows only while the menu is closed).

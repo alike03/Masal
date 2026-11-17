@@ -163,9 +163,8 @@ fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier, screen: 
     val cornersByKey = remember { androidx.compose.runtime.mutableStateMapOf<String, List<Int>>() }
     if (ambient != null && corners != null) cornersByKey[ambient.key] = corners
 
-    // Picture and fill are drawn by two transitions over the same state with the same timing, so
-    // they always come and go together (the video plays between them). Each picture waits for
-    // its colours (at most 700 ms, see rememberImageCorners), then picture and fill fade in.
+    // Each picture waits for its colours (at most 700 ms, see rememberImageCorners), then picture,
+    // video and fill fade in as one.
     val target = Shown(ambient, cut)
     val spec: androidx.compose.animation.AnimatedContentTransitionScope<Shown>.() -> androidx.compose.animation.ContentTransform = {
         when {
@@ -180,33 +179,30 @@ fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier, screen: 
         } using null // always full screen: no size animation (an empty layer would grow from a corner)
     }
     Box(modifier.fillMaxSize().background(Bg)) {
+        // Picture, video and fill are one layer, faded as a whole (a layer with alpha below 1 is
+        // composed off screen first), so half way through a fade the picture's hard edges never
+        // show through a half transparent fill, and a trailer fades out with its picture.
         AnimatedContent(target, Modifier.fillMaxSize(), transitionSpec = spec, contentKey = { it.contentKey }, label = "ambient") { shown ->
             val a = shown.ambient
             val alpha = shownAlpha(a, cornersByKey)
+            val current = a != null && a.key == ambient?.key
             Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = alpha }) {
                 when {
                     a?.image != null -> ArtFrame(Modifier.graphicsLayer { clip = true }) { KenBurns(a.image) }
                     // Live channel: no logo placeholder, just a calm gradient in the frame until the picture fades in.
                     a?.logo != null || a?.video != null -> ArtFrame(Modifier) { Box(Modifier.fillMaxSize().background(LiveGradient)) }
                 }
-            }
-        }
-        val video = ambient?.video
-        if (video != null) {
-            // Trailers and live channels play in the picture's frame.
-            ArtFrame(Modifier) {
-                PreviewVideo(video, Modifier.fillMaxSize(), onColors = if (live) { c -> videoCorners = c } else null)
-            }
-        }
-        AnimatedContent(target, Modifier.fillMaxSize(), transitionSpec = spec, contentKey = { it.contentKey }, label = "fill") { shown ->
-            val a = shown.ambient
-            val framedHere = a != null && (a.image != null || a.video != null || a.logo != null)
-            val alpha = shownAlpha(a, cornersByKey)
-            // Composed only once its colours are known, so it starts with them (no glide from grey);
-            // later changes (a live picture's colours) glide.
-            val c = a?.let { cornersByKey[it.key] }
-            Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = alpha }) {
-                if (framedHere && c != null) {
+                a?.video?.let { video ->
+                    // Trailers and live channels play in the picture's frame; a cropped (scaled-up) preview stays in it.
+                    ArtFrame(Modifier.graphicsLayer { clip = true }) {
+                        // Only the current picture's video plays: one that is fading out stops at once, so two
+                        // live channels never run together (providers often allow one connection).
+                        PreviewVideo(video.takeIf { current }, Modifier.fillMaxSize(),
+                            onColors = if (current && a.image == null) { c -> videoCorners = c } else null)
+                    }
+                }
+                val c = a?.let { cornersByKey[it.key] }
+                if (c != null && (a.image != null || a.video != null || a.logo != null)) {
                     TintAroundArt(c)
                     TextScrims()
                 }
@@ -377,13 +373,37 @@ private fun KenBurns(url: String) {
  * player (and taken back), so a running live stream continues without reconnecting.
  */
 private class PreviewPlayer(private val context: android.content.Context, private val listener: Player.Listener) {
-    var player: ExoPlayer = buildPlayer(context).also { it.addListener(listener) }
+    // Declared before the player, which adds it while it is created.
+    private val cropper = object : Player.Listener {
+        override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) = fit()
+    }
+    var player: ExoPlayer = buildPlayer(context).also { it.addListener(listener); it.addListener(cropper) }
         private set
     private var texture: TextureView? = null
     /** False after a handover: the surface still shows the handed-off player's last picture. */
     private var attached = false
 
-    fun attach(view: TextureView) { texture = view; player.setVideoTextureView(view); attached = true }
+    fun attach(view: TextureView) {
+        texture = view; player.setVideoTextureView(view); attached = true
+        view.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fit() }
+    }
+
+    /**
+     * A preview fills its frame like a photo: a video of another shape (4:3, 21:9) is scaled up
+     * and cut at the edges, never stretched. (A TextureView stretches its picture to the view.)
+     */
+    private fun fit() {
+        val t = texture ?: return
+        val v = player.videoSize
+        if (v.width == 0 || v.height == 0 || t.width == 0 || t.height == 0) return
+        val video = v.width * v.pixelWidthHeightRatio / v.height
+        val view = t.width.toFloat() / t.height
+        val m = android.graphics.Matrix()
+        if (video > view) m.setScale(video / view, 1f, t.width / 2f, t.height / 2f)
+        else m.setScale(1f, view / video, t.width / 2f, t.height / 2f)
+        t.setTransform(m)
+    }
+
 
     /** Before loading something new: the surface back to this preview's own player. */
     fun ensureAttached() { if (!attached) texture?.let { player.setVideoTextureView(it); attached = true } }
@@ -395,25 +415,26 @@ private class PreviewPlayer(private val context: android.content.Context, privat
      */
     fun handOff(): ExoPlayer {
         val p = player
-        p.removeListener(listener)
-        player = buildPlayer(context).also { it.addListener(listener) }
+        p.removeListener(listener); p.removeListener(cropper)
+        player = buildPlayer(context).also { it.addListener(listener); it.addListener(cropper) }
         attached = false
         return p
     }
 
     /** Continues with a player given back by the full-screen player: its picture moves into this frame. */
     fun adopt(p: ExoPlayer) {
-        player.removeListener(listener)
+        player.removeListener(listener); player.removeListener(cropper)
         player.release()
-        player = p.also { it.addListener(listener) }
+        player = p.also { it.addListener(listener); it.addListener(cropper) }
         texture?.let { p.setVideoTextureView(it) }
         attached = texture != null
+        fit()
     }
 
     /** Average colours of the current picture's quarters, for the colour fill (null before a picture). */
     fun frameColors(): List<Int>? = texture?.takeIf { it.isAvailable }?.getBitmap(32, 18)?.let { imageCorners(it) }
 
-    fun release() { player.removeListener(listener); player.release() }
+    fun release() { player.removeListener(listener); player.removeListener(cropper); player.release() }
 }
 
 /**
