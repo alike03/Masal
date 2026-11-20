@@ -7,6 +7,9 @@
     <string name="player_subtitles">Subtitles</string>
     <string name="player_audio">Audio</string>
     <string name="player_settings">Settings</string>
+    <string name="player_open_in_plex">Open in Plex</string>
+    <string name="player_plex_missing">Plex is not installed</string>
+    <string name="player_plex_unreachable">Plex server not reachable</string>
     <string name="player_forced">Forced</string>
     <string name="player_external">External</string>
     <string name="player_hearing_impaired">Hearing impaired</string>

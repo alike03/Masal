@@ -132,6 +132,8 @@ class PlexActions(
     val audio: () -> Unit,
     val touch: () -> Unit,
     val settings: () -> Unit = {},
+    /** Opens the title in the Plex app (player.md). */
+    val openInPlex: () -> Unit = {},
 )
 
 @Composable
@@ -211,7 +213,11 @@ private fun Controls(state: PlexUiState, actions: PlexActions) {
                 Spacer(Modifier.width(12.dp))
                 PillButton(PlayerIcons.Audio, state.audioLabel.ifBlank { audio }, actions.touch, actions.audio)
                 Spacer(Modifier.width(12.dp))
-                PillButton(PlayerIcons.Settings, stringResource(R.string.player_settings), actions.touch, actions.settings)
+                RoundButton(PlayerIcons.External, null, actions.touch, description = stringResource(R.string.player_open_in_plex),
+                    onClick = actions.openInPlex)
+                Spacer(Modifier.width(12.dp))
+                RoundButton(PlayerIcons.Settings, null, actions.touch, description = stringResource(R.string.player_settings),
+                    onClick = actions.settings)
             }
         }
     }
@@ -256,6 +262,7 @@ private fun RoundButton(
     touch: () -> Unit,
     modifier: Modifier = Modifier,
     big: Boolean = false,
+    description: String? = null,
     onClick: () -> Unit,
 ) {
     val size = if (big) 56.dp else 44.dp
@@ -271,7 +278,7 @@ private fun RoundButton(
         glow = ClickableSurfaceDefaults.glow(focusedGlow = Glow(Accent.copy(alpha = 0.5f), 12.dp)),
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(if (big) 30.dp else 26.dp))
+            Icon(icon, contentDescription = description, modifier = Modifier.size(if (big) 30.dp else 22.dp))
             if (badge != null) Text(badge, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
         }
     }
@@ -440,6 +447,13 @@ object PlayerIcons {
         }
         close()
         moveTo(15f, 12f); arcTo(3f, 3f, 0f, true, true, 9f, 12f); arcTo(3f, 3f, 0f, true, true, 15f, 12f); close()
+    }
+    /** Open elsewhere: a square open at the top right, an arrow leaving through the gap. */
+    val External = icon("external") {
+        moveTo(11f, 5f); horizontalLineTo(6f); quadTo(4f, 5f, 4f, 7f); verticalLineTo(18f); quadTo(4f, 20f, 6f, 20f)
+        horizontalLineTo(17f); quadTo(19f, 20f, 19f, 18f); verticalLineTo(13f)
+        moveTo(14f, 4f); horizontalLineTo(20f); verticalLineTo(10f)
+        moveTo(20f, 4f); lineTo(11f, 13f)
     }
     val Audio = icon("audio") {
         moveTo(4f, 9.5f); horizontalLineTo(8f); lineTo(13f, 5f); verticalLineTo(19f); lineTo(8f, 14.5f); horizontalLineTo(4f); close()

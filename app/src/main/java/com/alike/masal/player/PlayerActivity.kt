@@ -1,5 +1,7 @@
 package com.alike.masal.player
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
@@ -138,6 +140,7 @@ class PlayerActivity : ComponentActivity() {
                             audio = ::openAudio,
                             touch = ::touch,
                             settings = { openSettings() },
+                            openInPlex = ::openInPlex,
                         ))
                     }
                 }
@@ -737,6 +740,33 @@ class PlayerActivity : ComponentActivity() {
         v.subtitleView?.let { PlayerSettings.applySubtitles(it, Graph.settings, subtitleFont) }
     }
 
+    /**
+     * Hands the title to the Plex app (player.md): its library link without autoplay, so Plex
+     * shows the title's page where its version supports that. This player stops; onStop reports
+     * the position, so Plex offers to resume there.
+     */
+    private fun openInPlex() {
+        val item = current ?: Playback.plexItem ?: return
+        player.pause()
+        thread {
+            val id = runCatching { Graph.plex.serverId() }.getOrNull()
+            runOnUiThread {
+                if (isFinishing) return@runOnUiThread
+                if (id == null) { plex.message = getString(R.string.player_plex_unreachable); return@runOnUiThread }
+                val uri = Uri.parse("plex://server://$id/com.plexapp.plugins.library/library/metadata/${item.ratingKey}")
+                val intent = Intent(Intent.ACTION_VIEW, uri).setPackage(PlexApp)
+                    .putExtra("android.intent.extra.START_PLAYBACK", false)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                try {
+                    startActivity(intent)
+                    finish()
+                } catch (_: ActivityNotFoundException) {
+                    plex.message = getString(R.string.player_plex_missing)
+                }
+            }
+        }
+    }
+
     private fun openSettings(focus: Int? = null) { plex.panel = settingsPanel(focus) }
 
     /** One line per setting with its value; OK opens its choices (stored for all titles). */
@@ -894,5 +924,6 @@ class PlayerActivity : ComponentActivity() {
         const val TAG = "MasalLive"
         /** A next channel without a picture by then is opened the one-player way. */
         const val PENDING_TIMEOUT_MS = 8_000L
+        const val PlexApp = "com.plexapp.android"
     }
 }

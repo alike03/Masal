@@ -7,6 +7,9 @@
     <string name="player_subtitles">Altyazı</string>
     <string name="player_audio">Ses</string>
     <string name="player_settings">Ayarlar</string>
+    <string name="player_open_in_plex">Plex\'te aç</string>
+    <string name="player_plex_missing">Plex yüklü değil</string>
+    <string name="player_plex_unreachable">Plex sunucusuna ulaşılamıyor</string>
     <string name="player_forced">Zorunlu</string>
     <string name="player_external">Harici</string>
     <string name="player_hearing_impaired">İşitme engelliler için</string>

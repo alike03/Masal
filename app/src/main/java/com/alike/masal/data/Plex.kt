@@ -227,6 +227,11 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings,
     fun recentlyAdded() = items(get("/library/recentlyAdded?X-Plex-Container-Start=0&X-Plex-Container-Size=40"))
     fun sectionItems(key: String) = items(get("/library/sections/$key/all"))
     fun children(ratingKey: String) = items(get("/library/metadata/$ratingKey/children"))
+    @Volatile private var serverIdCache: String? = null
+
+    /** The server's machine identifier, which the Plex app's links name the server by. */
+    fun serverId(): String = serverIdCache ?: get("/identity").getString("machineIdentifier").also { serverIdCache = it }
+
     fun metadata(ratingKey: String) = items(get("/library/metadata/$ratingKey")).first()
 
     /** Plex's own home rows (Continue Watching, Recently Added, promoted collections). */
