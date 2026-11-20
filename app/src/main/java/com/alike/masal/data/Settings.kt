@@ -155,6 +155,7 @@ class Settings(context: Context) {
         val prefix = HomeRows.profilePrefix(id)
         homeRowsOn = homeRowsOn.filterTo(HashSet()) { !it.startsWith(prefix) }
         homeRowsOff = homeRowsOff.filterTo(HashSet()) { !it.startsWith(prefix) }
+        seerrUsers = seerrUsers - id
     }
 
     /** Home rows switched on although Plex does not show them on its Home (see [homeRowShown]). */
@@ -174,6 +175,37 @@ class Settings(context: Context) {
     fun setHomeRowShown(option: HomeRowOption, shown: Boolean) {
         homeRowsOn = if (shown && !option.defaultOn) homeRowsOn + option.id else homeRowsOn - option.id
         homeRowsOff = if (!shown && option.defaultOn) homeRowsOff + option.id else homeRowsOff - option.id
+    }
+
+    // ---- Seerr (seerr.md) ----
+
+    var seerrUrl: String
+        get() = prefs.getString("seerr_url", "") ?: ""
+        set(v) = prefs.edit().putString("seerr_url", v.trim().trimEnd('/')).apply()
+
+    /** Seerr's API key: a login like the Plex token, never shown again after it is entered. */
+    var seerrKey: String
+        get() = prefs.getString("seerr_key", "") ?: ""
+        set(v) = prefs.edit().putString("seerr_key", v.trim()).apply()
+
+    /** Name of the Seerr user the key belongs to, shown in Settings. */
+    var seerrUserName: String
+        get() = prefs.getString("seerr_user_name", "") ?: ""
+        set(v) = prefs.edit().putString("seerr_user_name", v).apply()
+
+    /** Seerr user chosen per profile ("" = main account) as id and name; missing: matched by name. */
+    var seerrUsers: Map<String, Pair<Int, String>>
+        get() = runCatching {
+            val o = JSONObject(prefs.getString("seerr_users", "{}"))
+            o.keys().asSequence().associateWith { k -> o.getJSONObject(k).let { it.getInt("id") to it.getString("name") } }
+        }.getOrDefault(emptyMap())
+        set(v) = prefs.edit().putString("seerr_users", JSONObject().apply {
+            v.forEach { (k, u) -> put(k, JSONObject().put("id", u.first).put("name", u.second)) }
+        }.toString()).apply()
+
+    /** Forgets Seerr: address, key, user choices. */
+    fun clearSeerr() {
+        prefs.edit().remove("seerr_url").remove("seerr_key").remove("seerr_user_name").remove("seerr_users").apply()
     }
 
     // ---- Plex player (choices in player/PlayerSettings.kt) ----

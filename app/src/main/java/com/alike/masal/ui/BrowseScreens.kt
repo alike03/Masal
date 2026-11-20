@@ -491,7 +491,14 @@ fun ListPage(title: String, subtitle: String?, autoFocus: Boolean, load: suspend
 
 /** Detail page for a film or a series (with seasons and episodes). */
 @Composable
-fun DetailScreen(ratingKey: String, initialSeason: String?, autoFocus: Boolean, profile: String? = null, onPlay: (PlexItem, Boolean) -> Unit) {
+fun DetailScreen(
+    ratingKey: String,
+    initialSeason: String?,
+    autoFocus: Boolean,
+    profile: String? = null,
+    onPerson: (com.alike.masal.data.CastMember) -> Unit = {},
+    onPlay: (PlexItem, Boolean) -> Unit,
+) {
     // Opened from a profile's row: seasons, next episode and watched marks are that member's.
     val plex = remember(profile) { Graph.plexFor(profile) }
     val meta by produceState<Result<PlexItem>?>(null, ratingKey) {
@@ -521,6 +528,13 @@ fun DetailScreen(ratingKey: String, initialSeason: String?, autoFocus: Boolean, 
     // Focus only once the Play button exists, otherwise nothing on the page would have focus.
     val focus = rememberRestorableFocus(autoFocus, item != null && playTarget != null)
     focus.defaultKey = "play"
+
+    // Cast & Crew row (people.md): Seerr's cast where it knows the title, else Plex's.
+    val cast by produceState(emptyList<com.alike.masal.data.CastMember>(), item) {
+        val it = item ?: return@produceState
+        value = it.people
+        value = castFor(it)
+    }
 
     val trailer by produceState<PlexItem?>(null, ratingKey) {
         value = withContext(Dispatchers.IO) { Graph.plex.trailer(ratingKey) }
@@ -603,6 +617,9 @@ fun DetailScreen(ratingKey: String, initialSeason: String?, autoFocus: Boolean, 
                             }
                         }
                     }
+                }
+                if (cast.isNotEmpty()) item(key = "cast") {
+                    CastRow(cast, onPerson) { i -> focus.modifier("cast:$i") }
                 }
             }
         }

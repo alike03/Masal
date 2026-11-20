@@ -101,4 +101,6 @@
     <string name="plex_search_shows">Shows</string>
     <string name="plex_search_episodes">Episodes</string>
     <string name="tv_other">Other</string>
+    <string name="search_not_in_library">Not in your library</string>
+    <string name="search_people">People</string>
 </resources>

@@ -1,5 +1,9 @@
 package com.alike.masal.player
 
+import androidx.compose.runtime.mutableStateListOf
+import com.alike.masal.data.CastMember
+import com.alike.masal.data.SeerrTitle
+import com.alike.masal.ui.PersonCard
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -123,6 +127,18 @@ class PlexUiState {
     /** Skip lengths in seconds, from the settings. */
     var skipBack by mutableIntStateOf(10)
     var skipForward by mutableIntStateOf(30)
+    /** The title's main cast and directors, shown while paused (people.md). */
+    var cast by mutableStateOf<List<CastMember>>(emptyList())
+    /** Person and Seerr pages opened over the paused player; the last one is shown. */
+    val pages = mutableStateListOf<PlayerPage>()
+    /** A title in Plex picked on such a page (ratingKey, title): asks before leaving the player. */
+    var leaveFor by mutableStateOf<Pair<String, String>?>(null)
+}
+
+/** A page over the paused player. */
+sealed interface PlayerPage {
+    data class Person(val person: CastMember) : PlayerPage
+    data class Title(val title: SeerrTitle) : PlayerPage
 }
 
 class PlexActions(
@@ -134,6 +150,8 @@ class PlexActions(
     val settings: () -> Unit = {},
     /** Opens the title in the Plex app (player.md). */
     val openInPlex: () -> Unit = {},
+    /** Opens a person's page over the paused player (people.md). */
+    val openPerson: (CastMember) -> Unit = {},
 )
 
 @Composable
@@ -185,9 +203,12 @@ private fun Controls(state: PlexUiState, actions: PlexActions) {
             color = TextMain, fontSize = 18, bold = true)
 
         // Bottom: timeline and buttons.
-        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(230.dp)
+        // Paused: the cast above the seek bar, so the dark band reaches higher.
+        val showCast = !state.playing && state.cast.isNotEmpty()
+        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(if (showCast) 400.dp else 230.dp)
             .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)))))
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 48.dp, vertical = 28.dp)) {
+            if (showCast) CastStrip(state.cast, actions)
             val pos = state.seekTarget ?: state.position
             val dur = state.duration.coerceAtLeast(1)
             SeekBar(pos, state.buffered, dur, seek, actions)
@@ -219,6 +240,21 @@ private fun Controls(state: PlexUiState, actions: PlexActions) {
                 RoundButton(PlayerIcons.Settings, null, actions.touch, description = stringResource(R.string.player_settings),
                     onClick = actions.settings)
             }
+        }
+    }
+}
+
+/** The paused title's cast: Up from the seek bar, OK opens the person. */
+@Composable
+private fun CastStrip(cast: List<CastMember>, actions: PlexActions) {
+    Text(stringResource(R.string.people_cast_crew), color = TextMain, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    androidx.compose.foundation.lazy.LazyRow(
+        contentPadding = PaddingValues(vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.padding(bottom = 10.dp),
+    ) {
+        itemsIndexed(cast, key = { i, p -> "$i:${p.name}" }) { _, p ->
+            PersonCard(p, { actions.touch(); actions.openPerson(p) }, size = 64.dp, onFocus = actions.touch)
         }
     }
 }

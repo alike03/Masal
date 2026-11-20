@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cast and person pages (people.md) and Seerr (seerr.md) -->
+    <string name="people_cast_crew">Oyuncular ve Ekip</string>
+    <string name="people_as">%1$s rolünde</string>
+    <string name="people_acting">Oyuncu</string>
+    <string name="people_job_director">Yönetmen</string>
+    <string name="people_job_screenplay">Senaryo</string>
+    <string name="people_job_writer">Yazar</string>
+    <string name="people_job_creator">Yaratıcı</string>
+    <string name="people_job_producer">Yapımcı</string>
+    <string name="people_known_acting">Oyuncu</string>
+    <string name="people_known_directing">Yönetmen</string>
+    <string name="people_known_writing">Yazar</string>
+    <string name="people_known_production">Yapımcı</string>
+    <string name="people_born">Doğum: %1$s</string>
+    <string name="people_born_in">Doğum: %1$s, %2$s</string>
+    <string name="people_died">Ölüm: %1$s</string>
+    <string name="people_more">Devamı</string>
+    <string name="people_filter_all">Tümü</string>
+    <string name="people_filter_in_plex">Plex\'te</string>
+    <string name="people_no_titles">Başlık bulunamadı</string>
+    <string name="people_leave_player">Oynatıcıdan çıkılsın mı?</string>
+    <string name="people_leave_player_note">%1$s açılacak. Şu anki başlıktaki yerin kaydedilir.</string>
+    <string name="people_leave_yes">Evet</string>
+    <string name="people_leave_no">Hayır</string>
+    <string name="seerr_status_in_plex">Plex\'te</string>
+    <string name="seerr_status_requested">İstendi</string>
+    <string name="seerr_status_processing">İşleniyor</string>
+    <string name="seerr_request">İste</string>
+    <string name="seerr_request_confirm">%1$s istensin mi?</string>
+    <string name="seerr_cancel">Vazgeç</string>
+    <string name="seerr_sending">Gönderiliyor…</string>
+    <string name="seerr_requested">İstendi</string>
+    <string name="seerr_request_failed">İstek başarısız: %1$s</string>
+    <string name="seerr_requested_on">%1$s: %2$s</string>
+    <string name="seerr_open">Aç</string>
+    <string name="seerr_seasons_title">Sezon iste</string>
+    <string name="seerr_seasons_note">Plex\'te olan veya zaten istenmiş sezonlar seçilemez.</string>
+    <string name="seerr_season">Sezon %1$d</string>
+    <plurals name="seerr_seasons_count">
+        <item quantity="one">%1$d sezon</item>
+        <item quantity="other">%1$d sezon</item>
+    </plurals>
+    <plurals name="seerr_episodes">
+        <item quantity="one">%1$d bölüm</item>
+        <item quantity="other">%1$d bölüm</item>
+    </plurals>
+    <plurals name="seerr_request_seasons">
+        <item quantity="one">%1$d sezon iste</item>
+        <item quantity="other">%1$d sezon iste</item>
+    </plurals>
+</resources>

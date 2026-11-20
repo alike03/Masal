@@ -91,6 +91,29 @@ class SetupServer(
             settings.homeLiveTitle = p["title"].orEmpty()
             str(R.string.setup_saved_home_row) to false
         }
+        // Seerr (seerr.md): checked before it is stored; changes nothing that needs a reload.
+        "seerr" -> {
+            val url = p["url"].orEmpty().ifBlank { settings.seerrUrl }
+            val key = p["key"].orEmpty().ifBlank { settings.seerrKey }
+            when {
+                url.isBlank() || key.isBlank() -> str(R.string.setup_seerr_missing)
+                else -> runCatching { com.alike.masal.Graph.seerr.me(url, key) }.fold(
+                    { user ->
+                        settings.seerrUrl = url; settings.seerrKey = key; settings.seerrUserName = user.name
+                        str(R.string.setup_seerr_saved, user.name)
+                    },
+                    { e ->
+                        if (e is com.alike.masal.data.SeerrException && (e.code == 401 || e.code == 403)) str(R.string.setup_seerr_refused)
+                        else str(R.string.setup_seerr_failed, e.message.orEmpty())
+                    },
+                )
+            } to false
+        }
+        "seerr_remove" -> {
+            settings.clearSeerr()
+            com.alike.masal.Graph.seerr.cache.clear()
+            str(R.string.setup_seerr_removed) to false
+        }
         "rows" -> {
             // Unchecked boxes are not sent: every row listed on the page comes along as "all".
             val listed = all["all"].orEmpty().toSet()
@@ -163,6 +186,20 @@ class SetupServer(
             (if (profileNames.isEmpty()) "" else """<p class="muted">${t(R.string.setup_plex_profiles, profileNames)}</p>""")
             else """<p class="muted">${t(R.string.setup_plex_easiest, "\u0001").replace("\u0001", "<strong>plex.tv/link</strong>")}</p>"""
         val tokenHint = t(if (settings.plexToken.isNotBlank()) R.string.setup_token_saved else R.string.setup_token_not_set)
+        val seerrSet = settings.seerrUrl.isNotBlank() && settings.seerrKey.isNotBlank()
+        val seerrChip = if (seerrSet) """<span class="chip on">${t(R.string.setup_connected)}</span>""" else """<span class="chip">${t(R.string.setup_not_connected)}</span>"""
+        // The key is never sent back to the page: the field only says whether one is stored.
+        val seerrCard = """<section class="card" aria-labelledby="h-seerr">
+<div class="head"><h2 id="h-seerr">Seerr</h2>$seerrChip</div>
+<p class="muted">${if (seerrSet) t(R.string.setup_seerr_connected, settings.seerrUserName, host(settings.seerrUrl)) else t(R.string.setup_seerr_lead)}</p>
+<form method="post" action="$base" class="fields"><input type="hidden" name="action" value="seerr">
+<div class="field"><label for="seerr-url">${t(R.string.setup_seerr_url)}</label><input type="url" id="seerr-url" name="url" value="${esc(settings.seerrUrl)}" placeholder="http://seerr:5055" autocapitalize="off" autocorrect="off"></div>
+<div class="field"><label for="seerr-key">${t(R.string.setup_seerr_key)}</label><input type="password" id="seerr-key" name="key" autocomplete="off" placeholder="${t(if (settings.seerrKey.isNotBlank()) R.string.setup_token_saved else R.string.setup_token_not_set)}"></div>
+<p class="muted">${t(R.string.setup_seerr_key_hint)}</p>
+<div class="actions"><button class="btn">${t(R.string.setup_seerr_save)}</button></div>
+</form>${if (seerrSet) """
+<form method="post" action="$base"><input type="hidden" name="action" value="seerr_remove"><div class="actions"><button class="btn ghost">${t(R.string.setup_seerr_remove)}</button></div></form>""" else ""}
+</section>"""
         // Home row: pick one of the loaded categories. A saved category that is not (yet) in the list
         // stays selectable, so loading sources late or a renamed category never clears the setting.
         val groups = channelGroups()
@@ -303,6 +340,7 @@ $sourceList
 <p class="muted">${t(R.string.setup_home_rows_lead)}</p>
 $rowsBody
 </section>
+$seerrCard
 <section class="card" aria-labelledby="h-plex">
 <div class="head"><h2 id="h-plex">Plex</h2>$plexChip</div>
 $plexDetail

@@ -100,4 +100,6 @@
     <string name="plex_search_shows">Diziler</string>
     <string name="plex_search_episodes">Bölümler</string>
     <string name="tv_other">Diğer</string>
+    <string name="search_not_in_library">Kütüphanende yok</string>
+    <string name="search_people">Kişiler</string>
 </resources>

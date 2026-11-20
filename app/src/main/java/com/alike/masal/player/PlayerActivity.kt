@@ -1,5 +1,22 @@
 package com.alike.masal.player
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
+import com.alike.masal.ui.Bg
+import com.alike.masal.ui.LeavePlayerDialog
+import com.alike.masal.ui.PeopleActions
+import com.alike.masal.ui.PersonScreen
+import com.alike.masal.ui.SeerrTitleScreen
+import com.alike.masal.ui.castFor
+import com.alike.masal.ui.stripCast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Color
@@ -141,7 +158,9 @@ class PlayerActivity : ComponentActivity() {
                             touch = ::touch,
                             settings = { openSettings() },
                             openInPlex = ::openInPlex,
+                            openPerson = { plex.pages.add(PlayerPage.Person(it)) },
                         ))
+                        PlayerPages()
                     }
                 }
             }
@@ -501,7 +520,7 @@ class PlayerActivity : ComponentActivity() {
 
     // ---- Plex: controls ----
 
-    private val hideControls = Runnable { if (plex.panel == null && player.isPlaying) setControls(false) }
+    private val hideControls = Runnable { if (plex.panel == null && plex.pages.isEmpty() && player.isPlaying) setControls(false) }
     private val tickPosition = object : Runnable {
         override fun run() {
             plex.position = player.currentPosition
@@ -552,6 +571,12 @@ class PlayerActivity : ComponentActivity() {
 
     private fun plexKey(e: KeyEvent): Boolean {
         val down = e.action == KeyEvent.ACTION_DOWN
+        // Person and Seerr pages over the paused player handle every key themselves (Back included,
+        // through their BackHandlers); play/pause closes them and plays on.
+        if (plex.pages.isNotEmpty() || plex.leaveFor != null) {
+            if (e.keyCode !in mediaKeys) return super.dispatchKeyEvent(e)
+            plex.pages.clear(); plex.leaveFor = null
+        }
         when (e.keyCode) {
             KeyEvent.KEYCODE_BACK -> {
                 if (!down) when {
@@ -610,6 +635,7 @@ class PlayerActivity : ComponentActivity() {
             runOnUiThread {
                 if (isFinishing) return@runOnUiThread
                 load(full, start.viewOffset)
+                loadCast(full)
                 handler.postDelayed(progressTick, 10_000)
                 handler.post(tickPosition)
                 setControls(true)
@@ -764,6 +790,53 @@ class PlayerActivity : ComponentActivity() {
                     plex.message = getString(R.string.player_plex_missing)
                 }
             }
+        }
+    }
+
+    // ---- cast and person pages (people.md) ----
+
+    /** The cast for the paused strip: an episode's own, else its show's; Seerr's where it knows the title. */
+    private fun loadCast(item: PlexItem) {
+        plex.cast = stripCast(item.people)
+        lifecycleScope.launch {
+            val show = if (item.type == "episode") item.grandparentRatingKey?.let { key ->
+                withContext(Dispatchers.IO) { runCatching { Graph.plexFor(item).metadata(key) }.getOrNull() }
+            } else null
+            val cast = stripCast(castFor(item, show))
+            if (current?.ratingKey == item.ratingKey) plex.cast = cast
+        }
+    }
+
+    @Composable
+    private fun PlayerPages() {
+        val page = plex.pages.lastOrNull()
+        if (page != null) {
+            BackHandler {
+                plex.pages.removeAt(plex.pages.lastIndex)
+                if (plex.pages.isEmpty()) { setControls(true); plex.focusTick++ }
+            }
+            val profile = current?.profile
+            val actions = PeopleActions(
+                onPerson = { plex.pages.add(PlayerPage.Person(it)) },
+                onSeerrTitle = { plex.pages.add(PlayerPage.Title(it)) },
+                onPlexTitle = { rk, title -> plex.leaveFor = rk to title },
+            )
+            Box(Modifier.fillMaxSize().background(Bg.copy(alpha = 0.97f))) {
+                androidx.compose.runtime.key(plex.pages.size, page) {
+                    when (page) {
+                        is PlayerPage.Person -> PersonScreen(page.person, true, profile, actions)
+                        is PlayerPage.Title -> SeerrTitleScreen(page.title.mediaType, page.title.tmdbId, true, profile, actions)
+                    }
+                }
+            }
+        }
+        plex.leaveFor?.let { (rk, title) ->
+            LeavePlayerDialog(title, onLeave = {
+                // Leaving reports the position as usual (onStop); Masal then opens the title.
+                Playback.openAfter = rk to current?.profile
+                plex.leaveFor = null
+                finish()
+            }, onStay = { plex.leaveFor = null })
         }
     }
 

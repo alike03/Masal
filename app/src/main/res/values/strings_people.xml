@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cast and person pages (people.md) and Seerr (seerr.md) -->
+    <string name="people_cast_crew">Cast &amp; Crew</string>
+    <string name="people_as">as %1$s</string>
+    <string name="people_acting">Actor</string>
+    <string name="people_job_director">Director</string>
+    <string name="people_job_screenplay">Screenplay</string>
+    <string name="people_job_writer">Writer</string>
+    <string name="people_job_creator">Creator</string>
+    <string name="people_job_producer">Producer</string>
+    <string name="people_known_acting">Actor</string>
+    <string name="people_known_directing">Director</string>
+    <string name="people_known_writing">Writer</string>
+    <string name="people_known_production">Producer</string>
+    <string name="people_born">Born %1$s</string>
+    <string name="people_born_in">Born %1$s in %2$s</string>
+    <string name="people_died">Died %1$s</string>
+    <string name="people_more">More</string>
+    <string name="people_filter_all">All</string>
+    <string name="people_filter_in_plex">In Plex</string>
+    <string name="people_no_titles">No titles found</string>
+    <string name="people_leave_player">Leave the player?</string>
+    <string name="people_leave_player_note">%1$s opens. Your place in the current title is saved.</string>
+    <string name="people_leave_yes">Yes</string>
+    <string name="people_leave_no">No</string>
+    <string name="seerr_status_in_plex">In Plex</string>
+    <string name="seerr_status_requested">Requested</string>
+    <string name="seerr_status_processing">Processing</string>
+    <string name="seerr_request">Request</string>
+    <string name="seerr_request_confirm">Request %1$s?</string>
+    <string name="seerr_cancel">Cancel</string>
+    <string name="seerr_sending">Sending…</string>
+    <string name="seerr_requested">Requested</string>
+    <string name="seerr_request_failed">Request failed: %1$s</string>
+    <string name="seerr_requested_on">%1$s on %2$s</string>
+    <string name="seerr_open">Open</string>
+    <string name="seerr_seasons_title">Request seasons</string>
+    <string name="seerr_seasons_note">Seasons in Plex or already requested cannot be picked.</string>
+    <string name="seerr_season">Season %1$d</string>
+    <plurals name="seerr_seasons_count">
+        <item quantity="one">%1$d season</item>
+        <item quantity="other">%1$d seasons</item>
+    </plurals>
+    <plurals name="seerr_episodes">
+        <item quantity="one">%1$d episode</item>
+        <item quantity="other">%1$d episodes</item>
+    </plurals>
+    <plurals name="seerr_request_seasons">
+        <item quantity="one">Request %1$d season</item>
+        <item quantity="other">Request %1$d seasons</item>
+    </plurals>
+</resources>

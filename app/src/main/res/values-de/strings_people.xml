@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cast and person pages (people.md) and Seerr (seerr.md) -->
+    <string name="people_cast_crew">Besetzung &amp; Team</string>
+    <string name="people_as">als %1$s</string>
+    <string name="people_acting">Schauspiel</string>
+    <string name="people_job_director">Regie</string>
+    <string name="people_job_screenplay">Drehbuch</string>
+    <string name="people_job_writer">Drehbuch</string>
+    <string name="people_job_creator">Idee</string>
+    <string name="people_job_producer">Produktion</string>
+    <string name="people_known_acting">Schauspiel</string>
+    <string name="people_known_directing">Regie</string>
+    <string name="people_known_writing">Drehbuch</string>
+    <string name="people_known_production">Produktion</string>
+    <string name="people_born">Geboren am %1$s</string>
+    <string name="people_born_in">Geboren am %1$s in %2$s</string>
+    <string name="people_died">Gestorben am %1$s</string>
+    <string name="people_more">Mehr</string>
+    <string name="people_filter_all">Alle</string>
+    <string name="people_filter_in_plex">In Plex</string>
+    <string name="people_no_titles">Keine Titel gefunden</string>
+    <string name="people_leave_player">Player verlassen?</string>
+    <string name="people_leave_player_note">%1$s wird geöffnet. Die Stelle im aktuellen Titel wird gespeichert.</string>
+    <string name="people_leave_yes">Ja</string>
+    <string name="people_leave_no">Nein</string>
+    <string name="seerr_status_in_plex">In Plex</string>
+    <string name="seerr_status_requested">Angefragt</string>
+    <string name="seerr_status_processing">In Arbeit</string>
+    <string name="seerr_request">Anfragen</string>
+    <string name="seerr_request_confirm">%1$s anfragen?</string>
+    <string name="seerr_cancel">Abbrechen</string>
+    <string name="seerr_sending">Wird gesendet…</string>
+    <string name="seerr_requested">Angefragt</string>
+    <string name="seerr_request_failed">Anfrage fehlgeschlagen: %1$s</string>
+    <string name="seerr_requested_on">%1$s am %2$s</string>
+    <string name="seerr_open">Öffnen</string>
+    <string name="seerr_seasons_title">Staffeln anfragen</string>
+    <string name="seerr_seasons_note">Staffeln, die in Plex sind oder schon angefragt wurden, können nicht gewählt werden.</string>
+    <string name="seerr_season">Staffel %1$d</string>
+    <plurals name="seerr_seasons_count">
+        <item quantity="one">%1$d Staffel</item>
+        <item quantity="other">%1$d Staffeln</item>
+    </plurals>
+    <plurals name="seerr_episodes">
+        <item quantity="one">%1$d Folge</item>
+        <item quantity="other">%1$d Folgen</item>
+    </plurals>
+    <plurals name="seerr_request_seasons">
+        <item quantity="one">%1$d Staffel anfragen</item>
+        <item quantity="other">%1$d Staffeln anfragen</item>
+    </plurals>
+</resources>

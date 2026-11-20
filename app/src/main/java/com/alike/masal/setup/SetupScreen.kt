@@ -87,7 +87,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-private enum class SettingsPage { Main, Language, Category, Title, Order, Profiles, Rows }
+private enum class SettingsPage { Main, Language, Category, Title, Order, Profiles, Rows, Seerr }
 
 /**
  * Settings on the TV: the QR code for the phone page (logins, sources, Plex server) on the left,
@@ -185,6 +185,9 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
     val orderRow = remember { FocusRequester() }
     val profilesRow = remember { FocusRequester() }
     var profilesView by remember { mutableStateOf<ProfilesView>(ProfilesView.List) }
+    val seerrRow = remember { FocusRequester() }
+    // Seerr page: the profile whose request user is being picked ("" = main account), null for the list.
+    var seerrPick by remember { mutableStateOf<String?>(null) }
     // Home rows: one entry per profile ("" = the main account), each opening that profile's rows.
     var rowsProfile by remember { mutableStateOf("") }
     val rowsEntries = remember { mutableMapOf<String, FocusRequester>() }
@@ -223,6 +226,7 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
             if (e.type == KeyEventType.KeyUp) when {
                 moving != null -> moving = null
                 page == SettingsPage.Profiles && profilesView != ProfilesView.List -> profilesView = ProfilesView.List
+                page == SettingsPage.Seerr && seerrPick != null -> seerrPick = null
                 else -> page = SettingsPage.Main
             }
             true
@@ -248,6 +252,8 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                         onOrder = { back = orderRow; moving = null; page = SettingsPage.Order },
                         profilesRow = profilesRow,
                         onProfiles = { back = profilesRow; profilesView = ProfilesView.List; page = SettingsPage.Profiles },
+                        seerrRow = seerrRow,
+                        onSeerr = { back = seerrRow; seerrPick = null; page = SettingsPage.Seerr },
                         options = options,
                         rowsEntry = { key -> rowsEntries.getOrPut(key) { FocusRequester() } },
                         onRows = { key -> back = rowsEntries[key]; rowsProfile = key; page = SettingsPage.Rows },
@@ -306,6 +312,7 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                     Graph.settings.homeChanged()
                 }
                 SettingsPage.Profiles -> ProfilesPage(profilesView, { profilesView = it }) { vm.refreshPlex() }
+                SettingsPage.Seerr -> SeerrPage(seerrPick) { seerrPick = it }
                 SettingsPage.Title -> TitleEditor(liveTitle, onCancel = { page = SettingsPage.Main }) { t ->
                     Graph.settings.homeLiveTitle = t
                     Graph.settings.homeChanged()
@@ -347,6 +354,8 @@ private fun MainList(
     onOrder: () -> Unit,
     profilesRow: FocusRequester,
     onProfiles: () -> Unit,
+    seerrRow: FocusRequester,
+    onSeerr: () -> Unit,
     options: List<HomeRowOption>,
     rowsEntry: (String) -> FocusRequester,
     onRows: (String) -> Unit,
@@ -386,6 +395,13 @@ private fun MainList(
             val names = remember(homeVersion) { Graph.settings.profiles.joinToString(", ") { it.name } }
             SettingRow(stringResource(R.string.settings_profiles), names.ifBlank { stringResource(R.string.settings_profiles_value_none) },
                 onProfiles, Modifier.focusRequester(profilesRow))
+        }
+        if (Graph.plex.configured) item {
+            val value = remember(homeVersion) {
+                if (Graph.seerr.configured) context.getString(R.string.settings_seerr_connected, Graph.settings.seerrUserName)
+                else context.getString(R.string.settings_seerr_not_set)
+            }
+            SettingRow("Seerr", value, onSeerr, Modifier.focusRequester(seerrRow))
         }
 
         item { Heading(stringResource(R.string.language_title)) }
@@ -431,7 +447,7 @@ private fun MainList(
 
 /** Name of a profile's rows in Settings: the linked account's name for "" (or "Your account"), else the member's. */
 @Composable
-private fun profileTitle(key: String): String =
+internal fun profileTitle(key: String): String =
     if (key.isEmpty()) Graph.settings.plexAccountName.ifBlank { stringResource(R.string.settings_rows_main_account) }
     else Graph.settings.profiles.firstOrNull { it.id == key }?.name ?: key
 
@@ -459,13 +475,13 @@ private fun HomeRowsPage(name: String, options: List<HomeRowOption>, onToggle: (
 }
 
 @Composable
-private fun Heading(text: String) {
+internal fun Heading(text: String) {
     Text(text, color = TextMain, fontSize = 19.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 22.dp, bottom = 4.dp))
 }
 
 /** A setting with its current value; OK opens where it is changed. */
 @Composable
-private fun SettingRow(label: String, value: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun SettingRow(label: String, value: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     ListSurface(onClick, modifier) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(label, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
@@ -506,7 +522,7 @@ private fun ListSurface(onClick: () -> Unit, modifier: Modifier, content: @Compo
 
 /** Pick one of [choices] (value to label); OK picks, Back leaves it unchanged. */
 @Composable
-private fun ChoiceList(title: String, note: String, choices: List<Pair<String, String>>, selected: Int, onPick: (String) -> Unit) {
+internal fun ChoiceList(title: String, note: String, choices: List<Pair<String, String>>, selected: Int, onPick: (String) -> Unit) {
     val target = selected.coerceAtLeast(0)
     val first = remember { FocusRequester() }
     val list = rememberLazyListState(initialFirstVisibleItemIndex = (target - 2).coerceAtLeast(0))

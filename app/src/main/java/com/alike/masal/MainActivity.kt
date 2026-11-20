@@ -1,5 +1,9 @@
 package com.alike.masal
 
+import com.alike.masal.data.CastMember
+import com.alike.masal.ui.PeopleActions
+import com.alike.masal.ui.PersonScreen
+import com.alike.masal.ui.SeerrTitleScreen
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -118,6 +122,8 @@ data class Detail(
     val section: String = "",
     /** The profile the title was opened from (profiles.md); null for the main account. */
     val profile: String? = null,
+    /** A person page's photo (kind "person"). */
+    val image: String? = null,
 ) {
     // Section and season are part of the key: genre ids repeat across libraries, and a show opened
     // from another season must not restore the old page state. The profile too: its watch state differs.
@@ -133,6 +139,8 @@ class MainActivity : ComponentActivity() {
     private var homePresses by mutableIntStateOf(0)
     /** Back in the side menu on Home while Masal is the home screen: Home goes back to its top. */
     private var homeTop by mutableIntStateOf(0)
+    /** A title (ratingKey, profile) picked on a person page in the player, opened after it closes. */
+    private var openAfter by mutableStateOf<Pair<String, String?>?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -179,6 +187,22 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+
+                // Cast, person and Seerr pages (people.md, seerr.md): what they open stays with the page's profile.
+                fun peopleActions(profile: String?) = PeopleActions(
+                    onPerson = { p ->
+                        open(Detail(p.tmdbId?.toString().orEmpty(), kind = "person", title = p.name, section = p.plexFilter.orEmpty(),
+                            profile = profile, image = p.photo))
+                    },
+                    onSeerrTitle = { t -> open(Detail(t.tmdbId.toString(), kind = "seerr", title = t.title, section = t.mediaType, profile = profile)) },
+                    onPlexTitle = { rk, _ -> open(Detail(rk, null, profile = profile)) },
+                )
+                // A title chosen on a person page inside the player opens here once the player has closed.
+                LaunchedEffect(openAfter) {
+                    val (rk, profile) = openAfter ?: return@LaunchedEffect
+                    openAfter = null
+                    open(Detail(rk, null, profile = profile))
+                }
 
                 val openItem: (PlexItem) -> Unit = { item ->
                     when (item.type) {
@@ -246,7 +270,13 @@ class MainActivity : ComponentActivity() {
                                         { Graph.plexFor(detail.profile).collectionItems(detail.ratingKey) }, openItem)
                                     detail != null && detail.kind == "genre" -> ListPage(detail.title, stringResource(R.string.common_category), autoFocus,
                                         { Graph.plex.genreItems(detail.section, detail.ratingKey) }, openItem)
-                                    detail != null -> DetailScreen(detail.ratingKey, detail.season, autoFocus, detail.profile) { item, fromStart ->
+                                    detail != null && detail.kind == "person" -> PersonScreen(
+                                        CastMember(detail.title, null, null, detail.image, detail.ratingKey.toIntOrNull(), detail.section.ifBlank { null }),
+                                        autoFocus, detail.profile, peopleActions(detail.profile))
+                                    detail != null && detail.kind == "seerr" -> SeerrTitleScreen(detail.section, detail.ratingKey.toInt(), autoFocus,
+                                        detail.profile, peopleActions(detail.profile))
+                                    detail != null -> DetailScreen(detail.ratingKey, detail.season, autoFocus, detail.profile,
+                                        onPerson = peopleActions(detail.profile).onPerson) { item, fromStart ->
                                         playPlex(item, fromStart)
                                     }
                                     t == NavTab.Home -> HomeScreen(
@@ -260,7 +290,7 @@ class MainActivity : ComponentActivity() {
                                         onEditApps = { editApps = true; selectTab(NavTab.Apps, true) },
                                         topRequests = homeTop,
                                     )
-                                    t == NavTab.Search -> SearchScreen(vm, autoFocus, openItem, ::playChannels)
+                                    t == NavTab.Search -> SearchScreen(vm, autoFocus, openItem, ::playChannels, peopleActions(null))
                                     t == NavTab.Apps -> AppsScreen(vm, autoFocus, editApps) { Apps.launch(this@MainActivity, it.pkg) }
                                     // The TV tab's picture sits in the same frame as Home's: it zooms in and back out the same way.
                                     t == NavTab.Tv -> TvScreen(vm, autoFocus) { name, list, i -> playChannels(name, list, i, fromHome = true) }
@@ -323,6 +353,7 @@ class MainActivity : ComponentActivity() {
         isHome = packageManager.resolveActivity(
             Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), PackageManager.MATCH_DEFAULT_ONLY,
         )?.activityInfo?.packageName == packageName
+        Playback.openAfter?.let { openAfter = it; Playback.openAfter = null }
         // Back from the player or another app: refresh progress, history and app list.
         if (resumedOnce) vm.onResumeRefresh()
         resumedOnce = true

@@ -29,6 +29,7 @@ object Graph {
     lateinit var http: OkHttpClient
     lateinit var plex: PlexClient
     lateinit var iptv: IptvRepository
+    lateinit var seerr: com.alike.masal.data.SeerrClient
     private val profileClients = java.util.concurrent.ConcurrentHashMap<String, PlexClient>()
 
     /**
@@ -53,6 +54,7 @@ object Graph {
         plex = PlexClient(http, settings)
         profileClients.clear()
         iptv = IptvRepository(http, settings, app.cacheDir)
+        seerr = com.alike.masal.data.SeerrClient(http, settings, com.alike.masal.data.SeerrCache(java.io.File(app.cacheDir, "seerr")))
     }
 }
 
@@ -65,6 +67,8 @@ object Playback {
     var index: Int = 0
     var epg: Map<String, List<Programme>> = emptyMap()
     var plexItem: PlexItem? = null
+    /** A title (ratingKey, profile) to open on Masal's pages after leaving the player from a person page (people.md). */
+    var openAfter: Pair<String, String?>? = null
     /** Registered by every preview player; all are stopped before full-screen playback starts. */
     val previews = mutableSetOf<() -> Unit>()
     fun stopPreviews() = previews.toList().forEach { it() }

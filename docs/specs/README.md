@@ -15,6 +15,8 @@ go straight into the code; update the spec afterwards if the behaviour changed.
 | [player.md](player.md) | Plex player: controls, time, subtitles, audio |
 | [apps.md](apps.md) | Apps page and the Home apps row |
 | [setup.md](setup.md) | QR setup page for Plex and IPTV |
+| [people.md](people.md) | Cast while paused, cast row, person pages with filmography and status |
+| [seerr.md](seerr.md) | Seerr: setup, search outside the library, requests per profile |
 | [profiles.md](profiles.md) | Plex Home members as profiles: their rows on Home, watched as them |
 | [language.md](language.md) | App language: English, German, Turkish |
 

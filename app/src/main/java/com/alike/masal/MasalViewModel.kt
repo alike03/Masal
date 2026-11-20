@@ -55,6 +55,8 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
     val favorites = MutableStateFlow(Graph.settings.favorites)
     /** Last Plex search (query and result), so Back from a title shows the results at once. */
     internal var lastSearch: Pair<String, Result<List<PlexHub>>>? = null
+    /** The last Seerr search (seerr.md), kept like [lastSearch]. */
+    internal var lastSeerrSearch: Pair<String, com.alike.masal.data.SeerrSearch>? = null
     val iptvErrors = MutableStateFlow<List<String>>(emptyList())
     val plexError = MutableStateFlow<String?>(null)
     val loadingChannels = MutableStateFlow(false)

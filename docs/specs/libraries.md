@@ -14,7 +14,8 @@ One page per Plex library, with Plex's four tabs.
   right jumps through the grid.
 - **Collections**: Plex collections with the number of titles; OK opens the collection page.
 - **Categories**: genre tiles; OK opens a page with that genre's titles.
-- Detail page: logo art, facts line, summary, play/resume, seasons and episodes for shows.
+- Detail page: logo art, facts line, summary, play/resume, seasons and episodes for shows, then
+  the "Cast & Crew" row; OK on a person opens their page (people.md).
 
 ## Remote keys
 - Down from the tab bar goes to the visible row or the grid.

@@ -13,6 +13,9 @@ Find a film, show or channel quickly with the remote.
   programme.
 - The last Plex result is kept, so Back from a title shows it at once and focus returns to
   the card.
+- With Seerr set up (seerr.md): two more rows after the channels, "Not in your library" (titles
+  Seerr does not have as available; OK opens the Seerr title page with "Request") and "People"
+  (OK opens the person page, people.md). Seerr unreachable: no rows, no error.
 - Resting on a result sets the background (trailer for titles, live preview for channels).
 
 ## Remote keys
@@ -26,5 +29,5 @@ Find a film, show or channel quickly with the remote.
 - Open a film from the results, Back: focus on the same card.
 
 ## Open points
-- Actor results are not shown (Plex returns them as separate actor hubs).
+- Without Seerr, people are not found by search (Plex returns them as separate actor hubs).
 - Not yet verified on the TV: keyboard opening with OK, Plex search results.

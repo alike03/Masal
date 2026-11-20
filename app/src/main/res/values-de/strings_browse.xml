@@ -100,4 +100,6 @@
     <string name="plex_search_shows">Serien</string>
     <string name="plex_search_episodes">Folgen</string>
     <string name="tv_other">Andere</string>
+    <string name="search_not_in_library">Nicht in deiner Mediathek</string>
+    <string name="search_people">Personen</string>
 </resources>

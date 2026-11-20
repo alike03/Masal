@@ -27,12 +27,19 @@ Enter Plex and IPTV logins with the phone instead of the remote.
   Same choice as on the TV. The Plex card names the added profiles; they are added on the TV.
 - Plex: status chip (Connected / Not connected) with the server host; the hint to use the code on
   the TV at plex.tv/link; manual server URL and token folded away below.
+- Seerr (optional, seerr.md): status chip, then address and API key. "Save Seerr" checks both
+  with Seerr first and stores them only when Seerr accepts the key ("Connected as <user>");
+  a refused key or an unreachable Seerr says so. The key field never shows the stored key.
+  "Remove Seerr" forgets address, key, user choices and the cache.
 - Changes apply on the TV at once. The page shows the Masal favicon.
 ## Settings screen on the TV
 - Left: the QR code and address of the phone page, for logins, sources and the Plex server.
 - Right, a list moved with the remote:
   - Plex: status and link code, "Link Plex again", "Android settings" (the device's own settings).
     "Profiles" (once Plex is linked) adds and removes members of the Plex Home (profiles.md).
+    "Seerr" shows "Connected as <user>" or "Not set up" and opens the Seerr page: per profile the
+    Seerr user its requests go out as ("Automatic: <name>" when a Seerr user has the profile's
+    Plex name), and "Clear cache" (seerr.md).
   - Language (after Plex): "Language" shows the current choice and opens a list (Device language,
     English, Deutsch, Türkçe); OK picks and redraws the app in it, Back returns without change.
   - Live TV row on Home: "Channel category" opens a list: "None", "Favourites", then the loaded categories;

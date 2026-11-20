@@ -48,6 +48,10 @@ data class PlexItem(
     val blur: List<Int> = emptyList(),
     /** Id of the profile the item was loaded as (see profiles.md); null for the main account. */
     val profile: String? = null,
+    /** Cast, then directors, writers and producers, as Plex lists them (people.md). */
+    val people: List<CastMember> = emptyList(),
+    /** The title's TMDB id from Plex's metadata (for an episode the episode's own). */
+    val tmdbId: Int? = null,
 ) {
     val playable get() = type == "movie" || type == "episode" || type == "clip"
     val progress get() = if (duration > 0 && viewOffset > 0) viewOffset.toFloat() / duration else 0f
@@ -155,6 +159,12 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings,
         val part = o.optJSONArray("Media")?.optJSONObject(0)?.optJSONArray("Part")?.optJSONObject(0)
         val images = o.optJSONArray("Image")?.let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.orEmpty()
         fun tags(k: String) = o.optJSONArray(k)?.let { a -> (0 until a.length()).map { a.getJSONObject(it).optString("tag") } }.orEmpty()
+        fun people(k: String, job: String?) = o.optJSONArray(k)?.let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.orEmpty()
+            .map { CastMember(it.optString("tag"), it.optString("role").ifBlank { null }, job,
+                it.optString("thumb").takeIf { t -> t.startsWith("http") }, plexFilter = it.optString("filter").ifBlank { null }) }
+        val crew = listOf("Director" to "Director", "Writer" to "Writer", "Producer" to "Producer").flatMap { (k, job) -> people(k, job) }
+        val tmdb = o.optJSONArray("Guid")?.let { a -> (0 until a.length()).map { a.getJSONObject(it).optString("id") } }
+            ?.firstOrNull { it.startsWith("tmdb://") }?.removePrefix("tmdb://")?.toIntOrNull()
         val streams = part?.optJSONArray("Stream")?.let { a ->
             (0 until a.length()).map { a.getJSONObject(it) }.map { st ->
                 PlexStream(
@@ -212,6 +222,8 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings,
                 }.takeIf { it.size == 4 }
             }.orEmpty(),
             profile = profile?.id,
+            people = people("Role", null) + SeerrClient.mergeJobs(crew),
+            tmdbId = tmdb,
         )
     }
 
@@ -252,6 +264,11 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings,
         return (0 until arr.length()).map { arr.getJSONObject(it) }.map { it.optString("key") to it.optString("title") }
     }
     fun genreItems(sectionKey: String, genreId: String) = items(get("/library/sections/$sectionKey/all?genre=$genreId"))
+
+    /** A person's titles in the film and series libraries, by Plex's filter ("actor=123"), newest first. */
+    fun personTitles(filter: String): List<PlexItem> = sections().flatMap { s ->
+        runCatching { items(get("/library/sections/${s.key}/all?$filter")) }.getOrDefault(emptyList())
+    }.sortedByDescending { it.released ?: it.year?.toString() ?: "" }
 
     // ---- subtitles ----
 

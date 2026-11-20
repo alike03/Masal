@@ -126,4 +126,29 @@
     <string name="setup_plex_profiles">Profiles: %1$s. Add or remove them in Settings on the TV.</string>
     <string name="settings_home_rows_count">%1$d of %2$d on</string>
     <string name="settings_rows_main_account">Your account</string>
+    <!-- Seerr (seerr.md) -->
+    <string name="settings_seerr_connected">Connected as %1$s</string>
+    <string name="settings_seerr_not_set">Not set up</string>
+    <string name="settings_seerr_setup_note">Not set up. Enter Seerr\'s address and API key on the phone page (QR code on the left).</string>
+    <string name="settings_seerr_note">Requests from Masal go out as the Seerr user chosen per profile. Address and key are changed on the phone page.</string>
+    <string name="settings_seerr_request_as">Requests as</string>
+    <string name="settings_seerr_auto">Automatic (the key\'s user)</string>
+    <string name="settings_seerr_auto_user">Automatic: %1$s</string>
+    <string name="settings_seerr_pick_note">The Seerr user this profile\'s requests are filed under.</string>
+    <string name="settings_seerr_users_loading">Loading Seerr users…</string>
+    <string name="settings_seerr_users_failed">Seerr users could not be loaded.</string>
+    <string name="settings_seerr_clear_cache">Clear cache</string>
+    <string name="settings_seerr_cache_cleared">Cache cleared</string>
+    <string name="setup_seerr_lead">Optional: find and request films and series that are not in your library.</string>
+    <string name="setup_seerr_connected">Connected as %1$s (%2$s)</string>
+    <string name="setup_seerr_url">Seerr address</string>
+    <string name="setup_seerr_key">API key</string>
+    <string name="setup_seerr_key_hint">In Seerr under Settings, General, \"API Key\".</string>
+    <string name="setup_seerr_save">Save Seerr</string>
+    <string name="setup_seerr_remove">Remove Seerr</string>
+    <string name="setup_seerr_saved">Seerr connected as %1$s</string>
+    <string name="setup_seerr_refused">Seerr refused the API key.</string>
+    <string name="setup_seerr_failed">Seerr not reachable: %1$s</string>
+    <string name="setup_seerr_missing">Enter the address and the API key.</string>
+    <string name="setup_seerr_removed">Seerr removed</string>
 </resources>

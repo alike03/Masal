@@ -126,4 +126,29 @@
     <string name="setup_plex_profiles">Profiller: %1$s. TV\'deki Ayarlar\'dan eklenir veya kaldırılır.</string>
     <string name="settings_home_rows_count">%2$d satırdan %1$d açık</string>
     <string name="settings_rows_main_account">Hesabın</string>
+    <!-- Seerr (seerr.md) -->
+    <string name="settings_seerr_connected">%1$s olarak bağlı</string>
+    <string name="settings_seerr_not_set">Kurulmadı</string>
+    <string name="settings_seerr_setup_note">Kurulmadı. Seerr adresini ve API anahtarını telefon sayfasında gir (soldaki QR kodu).</string>
+    <string name="settings_seerr_note">Masal\'dan gelen istekler, her profil için seçilen Seerr kullanıcısı adına gönderilir. Adres ve anahtar telefon sayfasında değiştirilir.</string>
+    <string name="settings_seerr_request_as">İstekler şu adına</string>
+    <string name="settings_seerr_auto">Otomatik (anahtarın kullanıcısı)</string>
+    <string name="settings_seerr_auto_user">Otomatik: %1$s</string>
+    <string name="settings_seerr_pick_note">Bu profilin isteklerinin görüneceği Seerr kullanıcısı.</string>
+    <string name="settings_seerr_users_loading">Seerr kullanıcıları yükleniyor…</string>
+    <string name="settings_seerr_users_failed">Seerr kullanıcıları yüklenemedi.</string>
+    <string name="settings_seerr_clear_cache">Önbelleği temizle</string>
+    <string name="settings_seerr_cache_cleared">Önbellek temizlendi</string>
+    <string name="setup_seerr_lead">İsteğe bağlı: kütüphanende olmayan film ve dizileri bul ve iste.</string>
+    <string name="setup_seerr_connected">%1$s olarak bağlı (%2$s)</string>
+    <string name="setup_seerr_url">Seerr adresi</string>
+    <string name="setup_seerr_key">API anahtarı</string>
+    <string name="setup_seerr_key_hint">Seerr\'de Ayarlar, Genel, \"API Key\" altında.</string>
+    <string name="setup_seerr_save">Seerr\'i kaydet</string>
+    <string name="setup_seerr_remove">Seerr\'i kaldır</string>
+    <string name="setup_seerr_saved">Seerr %1$s olarak bağlandı</string>
+    <string name="setup_seerr_refused">Seerr API anahtarını reddetti.</string>
+    <string name="setup_seerr_failed">Seerr\'e ulaşılamıyor: %1$s</string>
+    <string name="setup_seerr_missing">Adresi ve API anahtarını gir.</string>
+    <string name="setup_seerr_removed">Seerr kaldırıldı</string>
 </resources>

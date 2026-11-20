@@ -77,6 +77,7 @@ fun SearchScreen(
     autoFocus: Boolean,
     onOpenItem: (PlexItem) -> Unit,
     onPlayChannel: (String, List<Channel>, Int) -> Unit,
+    people: PeopleActions? = null,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     val q = query.trim()
@@ -99,6 +100,21 @@ fun SearchScreen(
         if (result.isSuccess) vm.lastSearch = q to result
     }
 
+    // Seerr (seerr.md): titles outside the library and people, after the Plex rows. Kept like Plex's results.
+    var seerr by remember { mutableStateOf(vm.lastSeerrSearch?.takeIf { it.first == q }?.second) }
+    LaunchedEffect(q, submitted) {
+        if (q.length < 2 || !Graph.seerr.configured) { seerr = null; return@LaunchedEffect }
+        if (vm.lastSeerrSearch?.first == q && seerr != null) return@LaunchedEffect
+        if (!focusResults) delay(400)
+        // Not reachable: the Plex results stand alone, no error.
+        val r = withContext(Dispatchers.IO) { runCatching { Graph.seerr.search(q) }.getOrNull() }
+        seerr = r
+        if (r != null) vm.lastSeerrSearch = q to r
+    }
+    // Titles Seerr has as available are in Plex: Plex's own rows show them.
+    val missing = seerr?.titles.orEmpty().filter { it.status != com.alike.masal.data.SeerrStatus.Available }
+    val persons = seerr?.people.orEmpty()
+
     // Channel names are folded once per channel list, off the main thread (lists can hold 30 000 entries).
     val index by produceState(emptyList<Pair<Channel, String>>(), channels) {
         value = withContext(Dispatchers.Default) { channels.distinctBy { it.key }.map { it to foldText(it.name) } }
@@ -118,14 +134,15 @@ fun SearchScreen(
         when (val f = focused) {
             is PlexItem -> plexAmbient(f)
             is Channel -> liveAmbient(f)
+            is com.alike.masal.data.SeerrTitle -> Ambient("seerr:${f.mediaType}:${f.tmdbId}", f.backdrop)
             else -> null
         }
     )
     // After the Search key: move to the first result as soon as there is one.
-    LaunchedEffect(focusResults, hubs, channelHits, plexDone) {
+    LaunchedEffect(focusResults, hubs, channelHits, plexDone, seerr) {
         if (focusResults && plexDone) {
             focusResults = false
-            if (hubs.isNotEmpty() || channelHits.isNotEmpty()) {
+            if (hubs.isNotEmpty() || channelHits.isNotEmpty() || missing.isNotEmpty() || persons.isNotEmpty()) {
                 delay(80)
                 runCatching { firstResult.requestFocus() }
             }
@@ -154,7 +171,7 @@ fun SearchScreen(
             !plexDone && hubs.isEmpty() && channelHits.isEmpty() -> stringResource(R.string.search_searching)
             plex?.isFailure == true && plexQuery == q && channelHits.isEmpty() ->
                 stringResource(R.string.search_failed, plex?.exceptionOrNull()?.message.orEmpty())
-            plexDone && hubs.isEmpty() && channelHits.isEmpty() -> stringResource(R.string.search_nothing_found, q)
+            plexDone && hubs.isEmpty() && channelHits.isEmpty() && missing.isEmpty() && persons.isEmpty() -> stringResource(R.string.search_nothing_found, q)
             else -> null
         }
         if (status != null) {
@@ -197,6 +214,25 @@ fun SearchScreen(
                             cardModifier = focus.modifier("ch:${ch.key}")
                                 .then(if (hubs.isEmpty() && i == 0) Modifier.focusRequester(firstResult) else Modifier),
                         )
+                    }
+                }
+            }
+            if (q.length >= 2 && people != null && missing.isNotEmpty()) item(key = "seerr") {
+                PosterRow(stringResource(R.string.search_not_in_library)) {
+                    itemsIndexed(missing, key = { _, t -> "seerr:${t.mediaType}:${t.tmdbId}" }) { i, t ->
+                        SeerrPosterCard(t, t.year?.toString(), onClick = { people.onSeerrTitle(t) },
+                            modifier = focus.modifier("seerr:${t.mediaType}:${t.tmdbId}")
+                                .then(if (hubs.isEmpty() && channelHits.isEmpty() && i == 0) Modifier.focusRequester(firstResult) else Modifier),
+                            width = RowPosterWidth, onFocus = { focused = t })
+                    }
+                }
+            }
+            if (q.length >= 2 && people != null && persons.isNotEmpty()) item(key = "people") {
+                PosterRow(stringResource(R.string.search_people)) {
+                    itemsIndexed(persons, key = { _, p -> "person:${p.tmdbId}" }) { i, p ->
+                        PersonCard(p, { people.onPerson(p) }, focus.modifier("person:${p.tmdbId}")
+                            .then(if (hubs.isEmpty() && channelHits.isEmpty() && missing.isEmpty() && i == 0) Modifier.focusRequester(firstResult) else Modifier),
+                            onFocus = { focused = p })
                     }
                 }
             }

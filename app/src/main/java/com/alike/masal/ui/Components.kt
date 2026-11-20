@@ -182,7 +182,7 @@ fun Shelf(title: String, content: LazyListScope.() -> Unit) {
 }
 
 @Composable
-private fun FocusCard(
+internal fun FocusCard(
     onClick: () -> Unit,
     onFocus: () -> Unit,
     modifier: Modifier,
