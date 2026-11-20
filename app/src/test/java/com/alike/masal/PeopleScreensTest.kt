@@ -11,6 +11,7 @@ import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.semantics.SemanticsActions
@@ -154,9 +155,10 @@ class PeopleScreensTest {
         val people = mutableListOf<String>()
         show { PlexOverlay(state, PlexActions({}, {}, {}, {}, {}, openPerson = { people += it.name })) }
         rule.waitForIdle()
-        // Paused: only the hint, the cast row stays closed.
+        // Paused: only the chevron, the cast row stays closed.
         rule.onRoot().captureRoboImage("$shots/07-player-cast-hint.png")
-        rule.onNodeWithText("Cast & Crew").assertExists()
+        rule.onNodeWithContentDescription("Cast & Crew").assertExists()
+        rule.onNodeWithText("Cast & Crew").assertDoesNotExist()
         rule.onNodeWithText("as Rick").assertDoesNotExist()
         // Down from the buttons opens the row on its first person, whatever the button.
         rule.onRoot().performKeyInput { pressKey(Key.DirectionRight); pressKey(Key.DirectionRight); pressKey(Key.DirectionDown) }
@@ -180,10 +182,11 @@ class PeopleScreensTest {
         assertEquals(0, state.castIndex)
         rule.onAllNodes(hasClickAction() and hasAnyDescendant(hasText("TT")), useUnmergedTree = true)[0].performSemanticsAction(SemanticsActions.OnClick)
         assertEquals(listOf("Tess Tester"), people)
-        // Playing: no hint and no row.
+        // Playing: no chevron and no row.
         state.playing = true
         rule.waitForIdle()
         rule.onNodeWithText("Cast & Crew").assertDoesNotExist()
+        rule.onNodeWithContentDescription("Cast & Crew").assertDoesNotExist()
         assertFalse(state.castOpen)
     }
 

@@ -7,7 +7,7 @@ and series: the ones in the library to play, the others to request through Seerr
 
 ## Behaviour
 ### Cast while paused (player)
-- Pausing does not open the cast by itself. While paused, a small hint "⌄ Cast & Crew" sits
+- Pausing does not open the cast by itself. While paused, a small chevron (⌄, no text) sits
   below the control buttons (in the bar's bottom margin, so nothing moves). Down from any
   button opens a row below the buttons and pushes the bar up: the title's main cast with round
   photo, name and role ("as …"), at most 12 in Plex's billing order, then the directors.
@@ -63,8 +63,8 @@ and series: the ones in the library to play, the others to request through Seerr
   biography, Back closes it; Back leaves the page.
 
 ## Checks
-- Pause a film: only the hint shows; Down opens the row on the first person; Up closes it;
-  play: the hint and the row hide.
+- Pause a film: only the chevron shows; Down opens the row on the first person; Up closes it;
+  play: the chevron and the row hide.
 - Person page of an actor with titles in the library and outside it: badges right, OK on an
   "In Plex" title opens its detail page, OK on another opens the Seerr page.
 - Request a title from the person page: badge becomes "Requested" without reopening.

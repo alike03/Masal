@@ -216,7 +216,7 @@ private fun Controls(state: PlexUiState, actions: PlexActions) {
         TickingText({ clock.format(Date(it)) }, Modifier.align(Alignment.TopEnd).padding(top = 30.dp, end = 48.dp),
             color = TextMain, fontSize = 18, bold = true)
 
-        // Bottom: timeline and buttons. Paused, a hint under the buttons offers the cast; Down opens
+        // Bottom: timeline and buttons. Paused, a chevron under the buttons offers the cast; Down opens
         // it below them and pushes the bar up, so the dark band reaches higher (people.md).
         val castAvailable = !state.playing && state.cast.isNotEmpty()
         LaunchedEffect(castAvailable) { if (!castAvailable) state.castOpen = false }
@@ -227,11 +227,8 @@ private fun Controls(state: PlexUiState, actions: PlexActions) {
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(if (castShown) 420.dp else 230.dp)
             .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)))))
         if (castAvailable && !castShown) {
-            Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.KeyboardArrowDown, null, tint = TextDim, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.people_cast_crew), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-            }
+            Icon(Icons.Filled.KeyboardArrowDown, stringResource(R.string.people_cast_crew), tint = TextDim,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp).size(24.dp))
         }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 48.dp, vertical = 28.dp)) {
             val pos = state.seekTarget ?: state.position
