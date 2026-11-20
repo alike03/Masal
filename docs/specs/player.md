@@ -35,6 +35,9 @@ Play Plex films and episodes with Plex-style controls, subtitles and audio choic
   a short message says so and the player stays, paused.
 - Requests audio focus: other apps (e.g. YouTube) pause; Masal pauses when another app takes it.
 - The screen stays on only while playing or buffering; paused or failed, the TV may dim and sleep.
+- Buffers at most 100 MB ahead (Media3 allows about 144 MB by default, which a high-bitrate film
+  fills and which leaves Masal almost no memory); on a fast home network that is still several
+  seconds even for a 4K remux.
 
 ## Remote keys
 - Controls hidden: OK, Up or Down show them; Left/Right skip back / forward (settings) and show the seek bar.

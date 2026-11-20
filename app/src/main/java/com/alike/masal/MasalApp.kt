@@ -69,6 +69,19 @@ object Playback {
     var plexItem: PlexItem? = null
     /** A title (ratingKey, profile) to open on Masal's pages after leaving the player from a person page (people.md). */
     var openAfter: Pair<String, String?>? = null
+    /** Counts hand-overs: bumped whenever the player's data is set, so a closing player clears only its own. */
+    var handOverToken = 0
+        private set
+
+    /** Marks new player data as handed over; call after setting the fields. */
+    fun handedOverNow() { handOverToken++ }
+
+    /** Drops the data of hand-over [token], unless a newer player was handed its own since. */
+    fun clear(token: Int) {
+        if (token != handOverToken) return
+        channels = emptyList(); groups = emptyList(); epg = emptyMap(); plexItem = null; listName = ""; index = 0
+    }
+
     /** Registered by every preview player; all are stopped before full-screen playback starts. */
     val previews = mutableSetOf<() -> Unit>()
     fun stopPreviews() = previews.toList().forEach { it() }

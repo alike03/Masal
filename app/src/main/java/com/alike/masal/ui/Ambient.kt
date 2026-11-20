@@ -123,7 +123,7 @@ fun liveAmbient(ch: Channel) = Ambient("live:" + ch.key, null, liveVideo(ch), ch
  * Only the trailer plays, never the title itself, so nothing changes in Continue Watching.
  */
 fun plexAmbient(item: PlexItem): Ambient {
-    val image = Graph.plex.image(item.art ?: item.poster, 1920, 1080)
+    val image = Graph.plex.image(item.art ?: item.poster, BackdropWidth, BackdropHeight)
     val key = when (item.type) {
         "episode" -> item.grandparentRatingKey
         "season" -> item.parentRatingKey
@@ -186,7 +186,7 @@ fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier, screen: 
             val a = shown.ambient
             val alpha = shownAlpha(a, cornersByKey)
             val current = a != null && a.key == ambient?.key
-            Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = alpha }) {
+            Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = alpha.value }) {
                 when {
                     a?.image != null -> ArtFrame(Modifier.graphicsLayer { clip = true }) { KenBurns(a.image) }
                     // Live channel: no logo placeholder, just a calm gradient in the frame until the picture fades in.
@@ -213,10 +213,10 @@ fun AmbientBackground(ambient: Ambient?, modifier: Modifier = Modifier, screen: 
 
 /** 0 while a picture's colours are unknown, then fading to 1 over 300 ms (same for picture and fill). */
 @Composable
-private fun shownAlpha(a: Ambient?, cornersByKey: Map<String, List<Int>>): Float {
+private fun shownAlpha(a: Ambient?, cornersByKey: Map<String, List<Int>>): androidx.compose.runtime.State<Float> {
     val ready = a == null || cornersByKey[a.key] != null
-    val alpha by animateFloatAsState(if (ready) 1f else 0f, if (ready) tween(300) else snap(), label = "ready")
-    return alpha
+    // Returned as State and read in graphicsLayer: the fade redraws, it does not recompose the background.
+    return animateFloatAsState(if (ready) 1f else 0f, if (ready) tween(300) else snap(), label = "ready")
 }
 
 /** What the background shows and whether it replaces the previous picture without a crossfade. */
@@ -232,6 +232,13 @@ private val NeutralCorners = List(4) { 0xFF1E1C1A.toInt() }
 
 /** Fill colour around a live channel's frame until its picture runs. */
 private val LiveTint = List(4) { 0xFF221E1B.toInt() }
+
+/**
+ * Size Plex backgrounds are requested in. The frame they fill is about 62 % of a 1920 px screen
+ * (about 1190 x 670 px), so full HD would only cost transcoding, download and decoding time.
+ */
+const val BackdropWidth = 1280
+const val BackdropHeight = 720
 
 /** Width of the picture frame; Plex shows its art on roughly the right 60 % of the screen. */
 private const val ArtWidth = 0.62f
@@ -262,14 +269,15 @@ private fun TextScrims() {
  */
 @Composable
 private fun TintAroundArt(corners: List<Int>) {
+    // Kept as State and read while drawing: the colour glide redraws, it does not recompose.
     val c = List(4) { i ->
-        androidx.compose.animation.animateColorAsState(Color(corners[i]), tween(450), label = "tint$i").value
+        androidx.compose.animation.animateColorAsState(Color(corners[i]), tween(450), label = "tint$i")
     }
-    val (tl, tr, br, bl) = c
     Box(
         Modifier.fillMaxSize()
             .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
             .drawBehind {
+                val tl = c[0].value; val tr = c[1].value; val br = c[2].value; val bl = c[3].value
                 val all = androidx.compose.ui.geometry.Rect(androidx.compose.ui.geometry.Offset.Zero, size)
                 drawRect(Brush.horizontalGradient(listOf(tl, tr)))
                 drawIntoCanvas { canvas ->
@@ -371,20 +379,34 @@ private fun KenBurns(url: String) {
 /**
  * The preview's player and its picture surface. The player can be handed to the full-screen
  * player (and taken back), so a running live stream continues without reconnecting.
+ *
+ * The player is built only when something is about to play ([obtain]): every background with a
+ * video composes a preview, and building an ExoPlayer on the main thread while the focus moves
+ * and the background crossfades costs frames.
  */
 private class PreviewPlayer(private val context: android.content.Context, private val listener: Player.Listener) {
-    // Declared before the player, which adds it while it is created.
     private val cropper = object : Player.Listener {
         override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) = fit()
     }
-    var player: ExoPlayer = buildPlayer(context).also { it.addListener(listener); it.addListener(cropper) }
+    /** The current player; null until something plays here, and after a handover. */
+    var player: ExoPlayer? = null
         private set
     private var texture: TextureView? = null
     /** False after a handover: the surface still shows the handed-off player's last picture. */
     private var attached = false
 
+    /** The player, built on first use and attached to the surface. */
+    fun obtain(): ExoPlayer = player ?: buildPlayer(context).also {
+        it.addListener(listener); it.addListener(cropper)
+        player = it
+        attached = false
+    }
+
+    fun stop(clear: Boolean = true) { player?.let { it.stop(); if (clear) it.clearMediaItems() } }
+
     fun attach(view: TextureView) {
-        texture = view; player.setVideoTextureView(view); attached = true
+        texture = view
+        player?.let { it.setVideoTextureView(view); attached = true }
         view.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fit() }
     }
 
@@ -394,7 +416,7 @@ private class PreviewPlayer(private val context: android.content.Context, privat
      */
     private fun fit() {
         val t = texture ?: return
-        val v = player.videoSize
+        val v = player?.videoSize ?: return
         if (v.width == 0 || v.height == 0 || t.width == 0 || t.height == 0) return
         val video = v.width * v.pixelWidthHeightRatio / v.height
         val view = t.width.toFloat() / t.height
@@ -406,25 +428,24 @@ private class PreviewPlayer(private val context: android.content.Context, privat
 
 
     /** Before loading something new: the surface back to this preview's own player. */
-    fun ensureAttached() { if (!attached) texture?.let { player.setVideoTextureView(it); attached = true } }
+    fun ensureAttached() { if (!attached) player?.let { p -> texture?.let { p.setVideoTextureView(it); attached = true } } }
 
     /**
-     * Gives the running player away and continues with a fresh one. The surface is left to the
-     * running player until the full-screen player takes it over, so the frame keeps its picture
-     * (two players on one surface would clash).
+     * Gives the running player away; the next preview builds a fresh one. The surface is left to
+     * the running player until the full-screen player takes it over, so the frame keeps its
+     * picture (two players on one surface would clash).
      */
-    fun handOff(): ExoPlayer {
-        val p = player
+    fun handOff(): ExoPlayer? {
+        val p = player ?: return null
         p.removeListener(listener); p.removeListener(cropper)
-        player = buildPlayer(context).also { it.addListener(listener); it.addListener(cropper) }
+        player = null
         attached = false
         return p
     }
 
     /** Continues with a player given back by the full-screen player: its picture moves into this frame. */
     fun adopt(p: ExoPlayer) {
-        player.removeListener(listener); player.removeListener(cropper)
-        player.release()
+        player?.let { it.removeListener(listener); it.removeListener(cropper); it.release() }
         player = p.also { it.addListener(listener); it.addListener(cropper) }
         texture?.let { p.setVideoTextureView(it) }
         attached = texture != null
@@ -434,7 +455,7 @@ private class PreviewPlayer(private val context: android.content.Context, privat
     /** Average colours of the current picture's quarters, for the colour fill (null before a picture). */
     fun frameColors(): List<Int>? = texture?.takeIf { it.isAvailable }?.getBitmap(32, 18)?.let { imageCorners(it) }
 
-    fun release() { player.removeListener(listener); player.removeListener(cropper); player.release() }
+    fun release() { player?.let { it.removeListener(listener); it.removeListener(cropper); it.release() }; player = null }
 }
 
 /**
@@ -476,17 +497,17 @@ fun PreviewVideo(
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, e ->
             when (e) {
-                Lifecycle.Event.ON_STOP -> { active = false; held = currentSource?.key; pp.player.stop() }
+                Lifecycle.Event.ON_STOP -> { active = false; held = currentSource?.key; pp.stop(clear = false) }
                 Lifecycle.Event.ON_START -> active = true
                 else -> Unit
             }
         }
         lifecycle.addObserver(observer)
-        val stop = { active = false; held = currentSource?.key; pp.player.stop(); pp.player.clearMediaItems() }
+        val stop = { active = false; held = currentSource?.key; pp.stop() }
         // Opening the channel that plays here: the full-screen player continues this stream.
         val handover = { key: String ->
             val p = pp.player
-            if (currentSource?.key == key && p.currentMediaItem != null && p.playerError == null) {
+            if (p != null && currentSource?.key == key && p.currentMediaItem != null && p.playerError == null) {
                 active = false; held = key; state = "idle"
                 pp.handOff()
             } else null
@@ -512,17 +533,17 @@ fun PreviewVideo(
     LaunchedEffect(source?.key, active) {
         if (adopted != null && adopted == source?.key && active) return@LaunchedEffect // given back, already playing
         adopted = null
-        val player = pp.player
-        player.stop()
-        player.clearMediaItems()
+        pp.stop()
         state = "idle"
         if (source?.key != held) held = null
         if (source == null || !active || source.key == held) return@LaunchedEffect
-        pp.ensureAttached()
         delay(source.delayMs)
         state = "loading"
         val (item, start) = runCatching { source.load() }.getOrNull() ?: run { state = "none"; return@LaunchedEffect }
         withContext(Dispatchers.Main.immediate) { // ExoPlayer must only be used on the main thread
+            // Built only now: a background the focus merely passed over never creates a player.
+            val player = pp.obtain()
+            pp.ensureAttached()
             player.volume = source.volume
             player.setMediaItem(item, start)
             player.prepare()

@@ -74,6 +74,8 @@ class PlayerActivity : ComponentActivity() {
     private var openedKey: String? = null
     /** The player now belongs to Home's preview again: do not stop or release it here. */
     private var handedBack = false
+    /** Which hand-over this player took (see [Playback.clear]). */
+    private var handedOver = 0
     private lateinit var listener: Player.Listener
 
     /** Channel that was playing before the current one ("last channel" key). */
@@ -120,6 +122,7 @@ class PlayerActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         live = intent.getStringExtra("mode") != "plex"
         fromHome = live && intent.getBooleanExtra("fromHome", false)
+        handedOver = Playback.handOverToken
         val opened = Playback.channels.getOrNull(Playback.index)
         openedKey = opened?.key
         // The preview's running stream for this channel, when it was handed over: continue it.
@@ -991,6 +994,10 @@ class PlayerActivity : ComponentActivity() {
         handler.removeCallbacksAndMessages(null)
         releasePending()
         if (!handedBack) player.release()
+        // Let go of the channel lists, guide and title handed over to this player, so a reload in
+        // the meantime does not keep an old copy alive until the next playback. Only if no newer
+        // player has been handed its own data already.
+        if (isFinishing) Playback.clear(handedOver)
     }
 
     private companion object {

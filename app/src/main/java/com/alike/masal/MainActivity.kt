@@ -372,20 +372,20 @@ class MainActivity : ComponentActivity() {
         Playback.handedOver?.release()
         Playback.handedOver = ch?.let { Playback.takePreview("live:" + it.key) }
         Playback.stopPreviews()
-        val all = vm.channels.value
-        val byKey = all.associateBy { it.key }
-        val recent = vm.recentChannels.value.mapNotNull { byKey[it] }
-        val favs = all.filter { it.key in vm.favorites.value }
+        // Grouped ahead of time in the view model (tens of thousands of channels).
+        val recent = vm.recentList.value
+        val favs = vm.favouriteList.value
         Playback.groups = buildList {
             add(name to list)
             if (recent.isNotEmpty()) add(getString(R.string.common_last_watched) to recent)
             if (favs.isNotEmpty()) add(getString(R.string.common_favourites) to favs)
-            addAll(com.alike.masal.data.CategoryOrder.groups(all.groupBy { it.group }.toList(), vm.categoryOrder.value))
+            addAll(vm.channelCategories.value)
         }.distinctBy { it.first }
         Playback.listName = name
         Playback.channels = list
         Playback.index = index
         Playback.epg = vm.epg.value
+        Playback.handedOverNow()
         val intent = Intent(this, PlayerActivity::class.java).putExtra("mode", "live").putExtra("fromHome", fromHome)
         // From Home the picture zooms from its frame to full screen (and back on exit, see PlayerActivity).
         val options = if (fromHome) android.app.ActivityOptions.makeCustomAnimation(
@@ -404,6 +404,7 @@ class MainActivity : ComponentActivity() {
             }
             val offset = if (fromStart) 0L else item.viewOffset.takeIf { it > 0 } ?: full.viewOffset
             Playback.plexItem = full.copy(viewOffset = offset)
+            Playback.handedOverNow()
             // Only now: if nothing can be played, trailers and live previews must keep working.
             Playback.stopPreviews()
             startActivity(Intent(this@MainActivity, PlayerActivity::class.java).putExtra("mode", "plex"))

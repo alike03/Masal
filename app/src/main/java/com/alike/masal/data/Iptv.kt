@@ -5,7 +5,8 @@ import com.alike.masal.R
 import android.util.Xml
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.json.JSONArray
+import android.util.JsonReader
+import android.util.JsonToken
 import org.xmlpull.v1.XmlPullParser
 import java.io.BufferedInputStream
 import java.io.File
@@ -79,30 +80,78 @@ object Xtream {
     fun epgUrl(s: IptvSource) =
         "${base(s)}/xmltv.php?username=${Uri.encode(s.user)}&password=${Uri.encode(s.pass)}"
 
+    /**
+     * The live channels. Read as a stream: a provider can list 30 000 streams, and holding the whole
+     * response as one String plus a JSON tree costs tens of MB at every (re)load.
+     */
     fun channels(http: OkHttpClient, s: IptvSource): List<Channel> {
-        val cats = JSONArray(http.getString(api(s, "get_live_categories")))
         val catNames = HashMap<String, String>()
-        for (i in 0 until cats.length()) {
-            val c = cats.getJSONObject(i)
-            catNames[c.optString("category_id")] = c.optString("category_name")
+        http.readJson(api(s, "get_live_categories")) { r ->
+            r.readArray {
+                var id: String? = null; var name: String? = null
+                r.readObject { k -> when (k) { "category_id" -> id = r.str(); "category_name" -> name = r.str(); else -> r.skipValue() } }
+                id?.let { catNames[it] = name.orEmpty() }
+            }
         }
-        val streams = JSONArray(http.getString(api(s, "get_live_streams")))
-        val out = ArrayList<Channel>(streams.length())
-        for (i in 0 until streams.length()) {
-            val o = streams.getJSONObject(i)
-            val id = o.optString("stream_id")
-            val name = o.optString("name").trim()
-            out += Channel(
-                key = "${s.id}|$name",
-                name = name,
-                logo = o.optString("stream_icon").takeIf { it.startsWith("http") },
-                group = catNames[o.optString("category_id")] ?: Language.text(R.string.tv_other),
-                url = "${base(s)}/live/${Uri.encode(s.user)}/${Uri.encode(s.pass)}/$id.ts",
-                epgId = o.optString("epg_channel_id").takeIf { it.isNotBlank() && it != "null" },
-            )
+        val other = Language.text(R.string.tv_other)
+        val base = base(s)
+        val user = Uri.encode(s.user)
+        val pass = Uri.encode(s.pass)
+        val out = ArrayList<Channel>()
+        http.readJson(api(s, "get_live_streams")) { r ->
+            r.readArray {
+                var id = ""; var name = ""; var icon: String? = null; var cat: String? = null; var epg: String? = null
+                r.readObject { k ->
+                    when (k) {
+                        "stream_id" -> id = r.str().orEmpty()
+                        "name" -> name = r.str().orEmpty().trim()
+                        "stream_icon" -> icon = r.str()
+                        "category_id" -> cat = r.str()
+                        "epg_channel_id" -> epg = r.str()
+                        else -> r.skipValue()
+                    }
+                }
+                out += Channel(
+                    key = "${s.id}|$name",
+                    name = name,
+                    logo = icon?.takeIf { it.startsWith("http") },
+                    group = cat?.let { catNames[it] } ?: other,
+                    url = "$base/live/$user/$pass/$id.ts",
+                    epgId = epg?.takeIf { it.isNotBlank() && it != "null" },
+                )
+            }
         }
+        out.trimToSize()
         return out
     }
+}
+
+/** Reads a JSON response as a stream. */
+internal fun <T> OkHttpClient.readJson(url: String, read: (JsonReader) -> T): T =
+    newCall(Request.Builder().url(url).header("User-Agent", USER_AGENT).build()).execute().use { resp ->
+        if (!resp.isSuccessful) error("HTTP ${resp.code}")
+        JsonReader(resp.body!!.charStream()).use { it.isLenient = true; read(it) }
+    }
+
+/** A value as text (numbers too, as providers send ids either way); null for JSON null, objects and arrays. */
+internal fun JsonReader.str(): String? = when (peek()) {
+    JsonToken.NULL -> { nextNull(); null }
+    JsonToken.STRING, JsonToken.NUMBER -> nextString()
+    JsonToken.BOOLEAN -> nextBoolean().toString()
+    else -> { skipValue(); null }
+}
+
+internal inline fun JsonReader.readArray(item: () -> Unit) {
+    beginArray()
+    while (hasNext()) item()
+    endArray()
+}
+
+internal inline fun JsonReader.readObject(field: (String) -> Unit) {
+    if (peek() != JsonToken.BEGIN_OBJECT) { skipValue(); return }
+    beginObject()
+    while (hasNext()) field(nextName())
+    endObject()
 }
 
 object Epg {

@@ -3,6 +3,7 @@ package com.alike.masal.ui
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.layout
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
@@ -102,13 +103,19 @@ fun FoldingRows(
     val motion = spring<Dp>(dampingRatio = 1f, stiffness = 320f)
     var acc = 0.dp
     val starts = rows.map { r -> acc.also { acc += r.height } } // row tops with every header closed
-    val scroll by animateDpAsState(starts.getOrElse(f) { 0.dp }, motion, label = "rows")
+    // The animated values are kept as State and read only in the layout phase (offset and
+    // measure blocks below): while rows move, only the layout runs again each frame, not this
+    // function with every row's modifiers.
+    val scroll = animateDpAsState(starts.getOrElse(f) { 0.dp }, motion, label = "rows")
     val open = rows.mapIndexed { i, r ->
-        key(r.key) { animateDpAsState(if (i == f) headerHeight else 0.dp, motion, label = "open").value }
+        key(r.key) { animateDpAsState(if (i == f) headerHeight else 0.dp, motion, label = "open") }
     }
-    // Top of each row's block (header slot + row), relative to the top of the screen.
-    var openAbove = 0.dp
-    val blockTops = rows.indices.map { i -> (starts[i] + openAbove - scroll).also { openAbove += open[i] } }
+    // Top of row i's block (header slot + row), relative to the top of the screen.
+    fun blockTop(i: Int): Dp {
+        var openAbove = 0.dp
+        for (j in 0 until i) openAbove += open[j].value
+        return starts[i] + openAbove - scroll.value
+    }
 
     Box(modifier.fillMaxSize()) {
         // No rows yet (loading, empty library): the header alone, e.g. a status line.
@@ -119,8 +126,13 @@ fun FoldingRows(
                 content = header,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset { IntOffset(0, blockTops[f].roundToPx()) }
-                    .height(open[f])
+                    .offset { IntOffset(0, blockTop(f).roundToPx()) }
+                    .layout { measurable, constraints ->
+                        // The slot's height follows the opening header (read here, in the layout phase).
+                        val h = open[f].value.roundToPx().coerceAtLeast(0)
+                        val placeable = measurable.measure(constraints.copy(minHeight = h, maxHeight = h))
+                        layout(placeable.width, h) { placeable.place(0, 0) }
+                    }
                     .clipToBounds(),
             ) { measurables, constraints ->
                 val h = headerHeight.roundToPx()
@@ -138,7 +150,7 @@ fun FoldingRows(
                     Modifier
                         .fillMaxWidth()
                         .height(row.height)
-                        .offset { IntOffset(0, (blockTops[i] + open[i]).roundToPx()) }
+                        .offset { IntOffset(0, (blockTop(i) + open[i].value).roundToPx()) }
                         .onFocusChanged { if (it.hasFocus) state.focusedKey = row.key }
                         .focusRequester(requester)
                         .focusGroup(),

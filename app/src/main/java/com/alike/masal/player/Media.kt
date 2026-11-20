@@ -25,6 +25,9 @@ val mediaAudio: AudioAttributes =
  * [audioFocus] false: for a player that plays muted next to the audible one (the live player's
  * next channel), which must not take the audio focus from it (that would pause it).
  */
+/** Most a player may buffer ahead, in bytes (Java heap). */
+const val MAX_BUFFER_BYTES = 100 * 1024 * 1024
+
 @OptIn(UnstableApi::class)
 fun buildPlayer(context: Context, live: Boolean = false, audioFocus: Boolean = true): ExoPlayer {
     val http = DefaultHttpDataSource.Factory()
@@ -37,16 +40,18 @@ fun buildPlayer(context: Context, live: Boolean = false, audioFocus: Boolean = t
         // Ask Android for audio focus while playing, so another app (e.g. YouTube left playing
         // in the background) pauses, and Masal pauses in turn when another app takes over.
         .setAudioAttributes(mediaAudio, /* handleAudioFocus = */ audioFocus)
+    // The buffer lives on the Java heap. Media3's default allows about 144 MB, which a high-bitrate
+    // film fills, leaving Masal almost no room under its 192 MB limit: capped at 100 MB.
+    val load = DefaultLoadControl.Builder().setTargetBufferBytes(MAX_BUFFER_BYTES)
     if (live) {
-        builder.setLoadControl(
-            DefaultLoadControl.Builder().setBufferDurationsMs(
-                DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
-                DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
-                /* bufferForPlaybackMs = */ 1_000,
-                DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS,
-            ).build(),
+        load.setBufferDurationsMs(
+            DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
+            DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
+            /* bufferForPlaybackMs = */ 1_000,
+            DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS,
         )
     }
+    builder.setLoadControl(load.build())
     return builder.build()
 }
 

@@ -233,7 +233,7 @@ private fun creditCaption(t: SeerrTitle): String {
 /** A title from Plex shown on a person page without Seerr: always "In Plex". */
 private fun plexAsTitle(item: PlexItem) = SeerrTitle(
     tmdbId = item.tmdbId ?: 0, mediaType = if (item.type == "show") "tv" else "movie", title = item.title, year = item.year,
-    poster = Graph.plex.image(item.poster, 240, 360), backdrop = Graph.plex.image(item.art, 1920, 1080),
+    poster = Graph.plex.image(item.poster, 240, 360), backdrop = Graph.plex.image(item.art, BackdropWidth, BackdropHeight),
     overview = item.summary, status = SeerrStatus.Available, ratingKey = item.ratingKey, date = item.released.orEmpty(),
 )
 

@@ -19,6 +19,12 @@ import com.alike.masal.data.TvApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
@@ -290,6 +296,24 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
     val categoryOrder = MutableStateFlow(Graph.settings.categoryOrder)
 
     /** Category names of the loaded channels, in the user's order. */
+    // The TV tab's and the live player's lists, built off the main thread: a provider can list tens of
+    // thousands of channels, and grouping them on every visit and channel start costs frames.
+    private val channelsByKey = channels.map { all -> all.associateBy { it.key } }.flowOn(Dispatchers.Default)
+
+    /** Channel categories in the user's order (each with its channels in the provider's order). */
+    val channelCategories: StateFlow<List<Pair<String, List<Channel>>>> = combine(channels, categoryOrder) { all, order ->
+        com.alike.masal.data.CategoryOrder.groups(all.groupBy { it.group }.toList(), order)
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Last watched channels, newest first. */
+    val recentList: StateFlow<List<Channel>> = combine(channelsByKey, recentChannels) { byKey, keys -> keys.mapNotNull { byKey[it] } }
+        .flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Favourite channels in the provider's order. */
+    val favouriteList: StateFlow<List<Channel>> = combine(channels, favorites) { all, favs ->
+        if (favs.isEmpty()) emptyList() else all.filter { it.key in favs }
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     fun categoryNames(): List<String> =
         com.alike.masal.data.CategoryOrder.apply(channels.value.map { it.group }.filter { it.isNotBlank() }.distinct(), categoryOrder.value)
 

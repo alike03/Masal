@@ -73,12 +73,9 @@ private const val FAVOURITES = "Favourites"
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun TvScreen(vm: MasalViewModel, autoFocus: Boolean, onPlay: (String, List<Channel>, Int) -> Unit) {
-    val channels by vm.channels.collectAsState()
     val favorites by vm.favorites.collectAsState()
-    val recentKeys by vm.recentChannels.collectAsState()
     val epg by vm.epg.collectAsState()
     val loading by vm.loadingChannels.collectAsState()
-    val categoryOrder by vm.categoryOrder.collectAsState()
     val recentLabel = stringResource(R.string.tv_last_watched)
     val favouritesLabel = stringResource(R.string.tv_favourites)
     val label = { name: String? ->
@@ -89,14 +86,15 @@ fun TvScreen(vm: MasalViewModel, autoFocus: Boolean, onPlay: (String, List<Chann
         }
     }
 
-    val groups = remember(channels, favorites, recentKeys, categoryOrder) {
-        val byKey = channels.associateBy { it.key }
-        val recent = recentKeys.mapNotNull { byKey[it] }
-        val favs = channels.filter { it.key in favorites }
+    // Grouped in the view model off the main thread; here only put together.
+    val recent by vm.recentList.collectAsState()
+    val favs by vm.favouriteList.collectAsState()
+    val categories by vm.channelCategories.collectAsState()
+    val groups = remember(recent, favs, categories) {
         buildList {
             if (recent.isNotEmpty()) add(RECENT to recent)
             if (favs.isNotEmpty()) add(FAVOURITES to favs)
-            addAll(com.alike.masal.data.CategoryOrder.groups(channels.groupBy { it.group }.toList(), categoryOrder))
+            addAll(categories)
         }
     }
     var selected by rememberSaveable { mutableStateOf<String?>(null) }

@@ -434,7 +434,7 @@ fun ItemsGrid(
     focus.defaultKey = items.firstOrNull()?.ratingKey
     // Pages (a collection, a category) get the first title's artwork behind the header.
     val backdrop = if (header != null) items.firstOrNull { it.art != null } else null
-    ReportAmbient(Ambient(ambientKey, backdrop?.let { Graph.plex.image(it.art, 1920, 1080) }, colors = backdrop?.blur.orEmpty()))
+    ReportAmbient(Ambient(ambientKey, backdrop?.let { Graph.plex.image(it.art, BackdropWidth, BackdropHeight) }, colors = backdrop?.blur.orEmpty()))
     Box(Modifier.fillMaxSize()) {
         if (items.isEmpty()) {
             Text(
