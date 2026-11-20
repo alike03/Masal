@@ -83,6 +83,12 @@ class SeerrTest {
     }
 
     @Test
+    fun trailerBeforeTeaser() {
+        assertEquals("trailer01", seerr.details("movie", 101).trailer)
+        assertNull(seerr.details("movie", 102).trailer)
+    }
+
+    @Test
     fun requestMarksTheTitle() {
         seerr.request("movie", 102, emptyList(), null)
         assertTrue("movie:102" in seerr.requested.value)
@@ -272,6 +278,7 @@ object MockSeerr {
                         "crew":[{"id":503,"name":"Dana Director","job":"Producer"},{"id":503,"name":"Dana Director","job":"Director"},{"id":504,"name":"Sam Sound","job":"Sound"}]}}""")
                 path == "/api/v1/movie/101" -> json("""{"id":101,"title":"Testfilm","releaseDate":"2019-05-01","runtime":125,"posterPath":"/p101.jpg",
                     "overview":"A fictitious film.","genres":[{"name":"Comedy"}],"mediaInfo":{"status":5,"ratingKey":"7"},
+                    "relatedVideos":[{"site":"YouTube","key":"teaser01","type":"Teaser"},{"site":"YouTube","key":"trailer01","type":"Trailer"}],
                     "credits":{"cast":[{"id":501,"name":"Tess Tester","character":"Rick","order":0}],"crew":[{"id":501,"name":"Tess Tester","job":"Director"}]}}""")
                 path == "/api/v1/movie/102" -> json("""{"id":102,"title":"Zweiter Testfilm","releaseDate":"2024-01-01","runtime":95,"posterPath":"/p102.jpg",
                     "overview":"Another fictitious film.","genres":[],"credits":{"cast":[],"crew":[]}}""")

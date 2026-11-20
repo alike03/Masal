@@ -153,7 +153,7 @@ fun HomeScreen(
             // Apps get a landscape photo, never movie artwork; without photos the background stays plain.
             is Hero.App -> backdropFor(shown.app.pkg, backdrops)?.let { Ambient("app:" + it.url, it.url) }
             Hero.EditApps -> backdrops.firstOrNull()?.let { Ambient("app:" + it.url, it.url) }
-            is Hero.Seerr -> Ambient("seerr:${shown.title.mediaType}:${shown.title.tmdbId}", shown.title.backdrop)
+            is Hero.Seerr -> seerrAmbient(shown.title)
             null -> null
         },
         group = rowsState.focusedKey,

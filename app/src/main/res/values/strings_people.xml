@@ -50,4 +50,6 @@
         <item quantity="one">Request %1$d season</item>
         <item quantity="other">Request %1$d seasons</item>
     </plurals>
+    <string name="seerr_trailer">Trailer</string>
+    <string name="seerr_no_youtube_app">No app for YouTube trailers is installed</string>
 </resources>

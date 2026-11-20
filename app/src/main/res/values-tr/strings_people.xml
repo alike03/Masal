@@ -50,4 +50,6 @@
         <item quantity="one">%1$d sezon iste</item>
         <item quantity="other">%1$d sezon iste</item>
     </plurals>
+    <string name="seerr_trailer">Fragman</string>
+    <string name="seerr_no_youtube_app">YouTube fragmanları için uygulama yüklü değil</string>
 </resources>

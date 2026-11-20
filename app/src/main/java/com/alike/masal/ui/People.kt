@@ -96,6 +96,8 @@ class PeopleActions(
     val onPlexTitle: (String, String) -> Unit,
     /** Plays a film in Plex by its ratingKey and title; null where playing is not offered. */
     val onPlayPlex: ((String, String) -> Unit)? = null,
+    /** Opens a YouTube trailer (video id) in a YouTube app; null where it is not offered (inside the player). */
+    val onTrailer: ((String) -> Unit)? = null,
 )
 
 /** Actors (at most [actors]) and directors: what the player's paused strip shows. */
@@ -494,7 +496,8 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
                                 onConfirm = { send(emptyList()) },
                                 onCancel = { confirming = false },
                                 onOpen = { d.title.ratingKey?.let { actions.onPlexTitle(it, d.title.title) } },
-                                onPlay = actions.onPlayPlex?.takeIf { mediaType == "movie" }?.let { play -> { d.title.ratingKey?.let { play(it, d.title.title) } } })
+                                onPlay = actions.onPlayPlex?.takeIf { mediaType == "movie" }?.let { play -> { d.title.ratingKey?.let { play(it, d.title.title) } } },
+                                onTrailer = d.trailer?.let { key -> actions.onTrailer?.let { open -> { open(key) } } })
                             message?.let { Text(it, color = Accent, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp)) }
                         }
                     }
@@ -518,6 +521,8 @@ private fun RequestActions(
     onRequest: () -> Unit, onConfirm: () -> Unit, onCancel: () -> Unit, onOpen: () -> Unit,
     /** Plays a film in Plex; null where playing is not offered (series, inside the player). */
     onPlay: (() -> Unit)? = null,
+    /** Opens the trailer in a YouTube app; null without a trailer. */
+    onTrailer: (() -> Unit)? = null,
 ) {
     val canRequest = requestable(d, mediaType)
     val canOpen = d.title.status == SeerrStatus.Available && d.title.ratingKey != null
@@ -542,8 +547,9 @@ private fun RequestActions(
         if (canOpen && onPlay != null) MasalButton(stringResource(R.string.browse_play), onPlay, mod())
         if (canOpen) MasalButton(stringResource(R.string.seerr_open), onOpen, mod(), primary = onPlay == null)
         if (canRequest) MasalButton(stringResource(R.string.seerr_request), onRequest, mod(), primary = !canOpen)
+        if (onTrailer != null) MasalButton(stringResource(R.string.seerr_trailer), onTrailer, mod(), primary = false)
         // Nothing to press: an empty focus target keeps the page reachable for the cast row.
-        if (!canOpen && !canRequest) Box(mod().size(1.dp).focusable())
+        if (!canOpen && !canRequest && onTrailer == null) Box(mod().size(1.dp).focusable())
     }
 }
 

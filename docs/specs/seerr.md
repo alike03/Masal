@@ -44,6 +44,9 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
 - Series: "Request" opens a list of seasons with their state; seasons already in Plex or
   requested are marked and cannot be picked. "All missing seasons" is preselected; OK toggles
   a season, "Request" sends them (`mediaType tv`, `seasons`).
+- "Trailer" (when TMDB has one; a trailer, else a teaser) opens the YouTube video in the first
+  installed of TizenTube, SmartTube, YouTube for Android TV, else in whatever opens YouTube
+  links; without any such app a short message says so. Not offered inside the player.
 - Seerr's defaults decide server, quality profile and folder; 4K is not offered.
 - After sending: a short message "Requested" (or Seerr's error text, e.g. quota reached) and
   the badge changes at once.
@@ -70,7 +73,9 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
 - Sliders switched off in Seerr itself are still offered; Masal's choice is its own.
 - On Home a Seerr row looks like a Plex row: posters with the status badge from `people.md`
   ("In Plex", "Requested" / "Processing", none). The info block shows title, year and the
-  two-line summary; the background is the title's backdrop. No trailer preview.
+  two-line summary; the background is the title's backdrop. A title in Plex plays its Plex
+  trailer after the focus rests 2.5 s, like the Plex rows; other titles have no preview (Seerr's
+  trailers are YouTube links, which Masal cannot play itself).
 - OK: a film in Plex starts playing (resuming where it was left), a series in Plex opens
   Masal's detail page, any other title the Seerr title page ("Request"). Requests go out as the
   main account's Seerr user.
@@ -104,7 +109,7 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
 `/api/v1` with header `X-Api-Key`; `X-API-User` on requests. `auth/me`, `user` (users with
 their Plex ids), `search?query=&language=`, `movie/<tmdbId>`, `tv/<tmdbId>` (seasons with
 state), `person/<id>`, `person/<id>/combined_credits` (each title with `mediaInfo.status` and
-`ratingKey`), `request` (POST), `settings/discover` (sliders: `id`, `type`, `title`, `data`,
+`ratingKey`), `relatedVideos` in `movie/<id>` and `tv/<id>` (YouTube trailers), `request` (POST), `settings/discover` (sliders: `id`, `type`, `title`, `data`,
 `enabled`), the `discover/...` lists above (`results` with the same title fields as search). Status values: 1 unknown, 2 pending, 3 processing,
 4 partly available, 5 available, 6 deleted. Checked against Seerr 3.5.2's API description.
 

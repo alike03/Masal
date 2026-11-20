@@ -129,11 +129,19 @@ fun plexAmbient(item: PlexItem): Ambient {
         "season" -> item.parentRatingKey
         else -> item.ratingKey
     } ?: item.ratingKey
-    val video = VideoSource("trailer:$key", 2_500, volume = 0.7f) {
-        withContext(Dispatchers.IO) { Graph.plex.trailer(key) }?.partKey
-            ?.let { MediaItem.fromUri(Graph.plex.streamUrl(it)) to 0L }
-    }
-    return Ambient("plex:" + item.ratingKey, image, video, colors = item.blur)
+    return Ambient("plex:" + item.ratingKey, image, plexTrailer(key), colors = item.blur)
+}
+
+/** The Plex trailer of a film or show (its ratingKey), played after the focus rests 2.5 s. */
+fun plexTrailer(key: String) = VideoSource("trailer:$key", 2_500, volume = 0.7f) {
+    withContext(Dispatchers.IO) { Graph.plex.trailer(key) }?.partKey
+        ?.let { MediaItem.fromUri(Graph.plex.streamUrl(it)) to 0L }
+}
+
+/** Background of a Seerr title (seerr.md): its backdrop, and the Plex trailer when the title is in Plex. */
+fun seerrAmbient(t: com.alike.masal.data.SeerrTitle): Ambient {
+    val inPlex = t.ratingKey?.takeIf { t.status == com.alike.masal.data.SeerrStatus.Available }
+    return Ambient("seerr:${t.mediaType}:${t.tmdbId}", t.backdrop, inPlex?.let { plexTrailer(it) })
 }
 
 /**

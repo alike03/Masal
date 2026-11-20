@@ -145,13 +145,15 @@ class PeopleScreensTest {
     @Test
     fun filmInPlexCanBePlayedFromItsSeerrPage() {
         val played = mutableListOf<String>()
-        val withPlay = PeopleActions(actions.onPerson, actions.onSeerrTitle, actions.onPlexTitle, onPlayPlex = { rk, _ -> played += rk })
+        val withPlay = PeopleActions(actions.onPerson, actions.onSeerrTitle, actions.onPlexTitle, onPlayPlex = { rk, _ -> played += rk },
+            onTrailer = { played += "yt:$it" })
         show { SeerrTitleScreen("movie", 101, false, null, withPlay) }
         waitFor("A fictitious film.")
         rule.onRoot().captureRoboImage("$shots/09-film-in-plex.png")
         rule.onNodeWithText("Open").assertExists()
         press("Play")
-        assertEquals(listOf("7"), played)
+        press("Trailer")
+        assertEquals(listOf("7", "yt:trailer01"), played)
     }
 
     @OptIn(ExperimentalTestApi::class)

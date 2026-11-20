@@ -61,6 +61,8 @@ data class SeerrDetails(
     val cast: List<CastMember>,
     val seasons: List<SeerrSeason>,
     val requestedAt: String?,
+    /** YouTube video id of the trailer (else a teaser), from TMDB through Seerr; null without one. */
+    val trailer: String? = null,
 )
 
 data class SeerrPerson(
@@ -313,7 +315,16 @@ class SeerrClient(private val http: OkHttpClient, private val settings: Settings
         val genres = o.optJSONArray("genres")?.let { a -> (0 until a.length()).map { a.getJSONObject(it).optString("name") } }.orEmpty()
         val runtime = (if (mediaType == "tv") o.optJSONArray("episodeRunTime")?.optInt(0) else o.optInt("runtime"))?.takeIf { it > 0 }
         val requestedAt = info?.optJSONArray("requests")?.optJSONObject(0)?.optString("createdAt")?.take(10)?.ifBlank { null }
-        return SeerrDetails(t, runtime, genres, castOf(o), seasons, requestedAt)
+        return SeerrDetails(t, runtime, genres, castOf(o), seasons, requestedAt, trailerOf(o))
+    }
+
+    /** The first YouTube trailer, else the first teaser, of `relatedVideos`. */
+    private fun trailerOf(o: JSONObject): String? {
+        val videos = o.optJSONArray("relatedVideos") ?: return null
+        val list = (0 until videos.length()).map { videos.getJSONObject(it) }
+            .filter { it.optString("site").equals("YouTube", true) && it.optString("key").isNotBlank() }
+        return (list.firstOrNull { it.optString("type") == "Trailer" } ?: list.firstOrNull { it.optString("type") == "Teaser" })
+            ?.optString("key")
     }
 
     // ---- people ----

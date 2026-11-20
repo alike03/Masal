@@ -130,6 +130,9 @@ data class Detail(
     val key get() = "page:$kind:$section:$ratingKey:${season.orEmpty()}:${profile.orEmpty()}"
 }
 
+/** YouTube apps for trailers, in order of preference: TizenTube, SmartTube, YouTube for Android TV. */
+private val TrailerApps = listOf("io.gh.reisxd.tizentube.cobalt", "org.smarttube.stable", "com.google.android.youtube.tv")
+
 class MainActivity : ComponentActivity() {
     private val vm: MasalViewModel by viewModels()
     private var resumedOnce = false
@@ -203,6 +206,7 @@ class MainActivity : ComponentActivity() {
                     onPlayPlex = { rk, title ->
                         playPlex(PlexItem(rk, "movie", title, "", null, null, null, 0, 0, null, null, profile = profile), fromStart = false)
                     },
+                    onTrailer = ::openTrailer,
                 )
                 // A title chosen on a person page inside the player opens here once the player has closed.
                 LaunchedEffect(openAfter) {
@@ -399,6 +403,19 @@ class MainActivity : ComponentActivity() {
         val options = if (fromHome) android.app.ActivityOptions.makeCustomAnimation(
             this, R.anim.masal_zoom_in_from_frame, R.anim.masal_hold).toBundle() else null
         startActivity(intent, options)
+    }
+
+    /**
+     * A Seerr title's YouTube trailer (seerr.md): handed to the first installed YouTube app of
+     * [TrailerApps], else to whatever handles YouTube links.
+     */
+    private fun openTrailer(videoId: String) {
+        val uri = android.net.Uri.parse("https://www.youtube.com/watch?v=" + android.net.Uri.encode(videoId))
+        val app = TrailerApps.firstOrNull { runCatching { packageManager.getPackageInfo(it, 0) }.isSuccess }
+        val intent = Intent(Intent.ACTION_VIEW, uri).apply { app?.let { setPackage(it) } }
+        Playback.stopPreviews()
+        runCatching { startActivity(intent) }
+            .onFailure { Toast.makeText(this, getString(R.string.seerr_no_youtube_app), Toast.LENGTH_LONG).show() }
     }
 
     private fun playPlex(item: PlexItem, fromStart: Boolean) {
