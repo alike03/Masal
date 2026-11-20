@@ -6,7 +6,9 @@ import com.alike.masal.data.SeerrTitle
 import com.alike.masal.ui.PersonCard
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
@@ -36,6 +38,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.Composable
@@ -127,8 +130,12 @@ class PlexUiState {
     /** Skip lengths in seconds, from the settings. */
     var skipBack by mutableIntStateOf(10)
     var skipForward by mutableIntStateOf(30)
-    /** The title's main cast and directors, shown while paused (people.md). */
+    /** The title's main cast and directors, offered while paused (people.md). */
     var cast by mutableStateOf<List<CastMember>>(emptyList())
+    /** The cast row below the buttons is open (Down from the buttons while paused). */
+    var castOpen by mutableStateOf(false)
+    /** The person last focused in the cast row, focused again when a person page closes. */
+    var castIndex by mutableIntStateOf(0)
     /** Person and Seerr pages opened over the paused player; the last one is shown. */
     val pages = mutableStateListOf<PlayerPage>()
     /** A title in Plex picked on such a page (ratingKey, title): asks before leaving the player. */
@@ -181,9 +188,16 @@ private fun Controls(state: PlexUiState, actions: PlexActions) {
     val item = state.item
     val play = remember { FocusRequester() }
     val seek = remember { FocusRequester() }
+    val castFocus = remember { mutableMapOf<Int, FocusRequester>() }
     LaunchedEffect(state.focusTick) {
         delay(30)
-        runCatching { if (state.focusTarget == "seek") seek.requestFocus() else play.requestFocus() }
+        runCatching {
+            when {
+                state.focusTarget == "seek" -> seek.requestFocus()
+                state.focusTarget == "cast" && state.castOpen -> castFocus.getOrPut(state.castIndex) { FocusRequester() }.requestFocus()
+                else -> play.requestFocus()
+            }
+        }.onFailure { runCatching { play.requestFocus() } }
     }
     val clock = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val context = LocalContext.current
@@ -202,13 +216,24 @@ private fun Controls(state: PlexUiState, actions: PlexActions) {
         TickingText({ clock.format(Date(it)) }, Modifier.align(Alignment.TopEnd).padding(top = 30.dp, end = 48.dp),
             color = TextMain, fontSize = 18, bold = true)
 
-        // Bottom: timeline and buttons.
-        // Paused: the cast above the seek bar, so the dark band reaches higher.
-        val showCast = !state.playing && state.cast.isNotEmpty()
-        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(if (showCast) 400.dp else 230.dp)
+        // Bottom: timeline and buttons. Paused, a hint under the buttons offers the cast; Down opens
+        // it below them and pushes the bar up, so the dark band reaches higher (people.md).
+        val castAvailable = !state.playing && state.cast.isNotEmpty()
+        LaunchedEffect(castAvailable) { if (!castAvailable) state.castOpen = false }
+        val castShown = castAvailable && state.castOpen
+        LaunchedEffect(castShown) {
+            if (castShown) { delay(30); state.castIndex = 0; runCatching { castFocus.getOrPut(0) { FocusRequester() }.requestFocus() } }
+        }
+        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(if (castShown) 420.dp else 230.dp)
             .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)))))
+        if (castAvailable && !castShown) {
+            Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.KeyboardArrowDown, null, tint = TextDim, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.people_cast_crew), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            }
+        }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 48.dp, vertical = 28.dp)) {
-            if (showCast) CastStrip(state.cast, actions)
             val pos = state.seekTarget ?: state.position
             val dur = state.duration.coerceAtLeast(1)
             SeekBar(pos, state.buffered, dur, seek, actions)
@@ -220,7 +245,14 @@ private fun Controls(state: PlexUiState, actions: PlexActions) {
                 Spacer(Modifier.width(16.dp))
                 Text("-" + formatClock(left), color = TextMain, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             }
-            Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(top = 14.dp)
+                .onPreviewKeyEvent { e ->
+                    // Down from any button opens the cast row while paused.
+                    if (e.key != Key.DirectionDown || !castAvailable || castShown) return@onPreviewKeyEvent false
+                    if (e.type == KeyEventType.KeyDown) { actions.touch(); state.castOpen = true }
+                    true
+                },
+                verticalAlignment = Alignment.CenterVertically) {
                 val off = stringResource(R.string.player_off)
                 val audio = stringResource(R.string.player_audio)
                 SkipButton(forward = false, state.skipBack, actions.touch) { actions.seekBy(-state.skipBack * 1000L) }
@@ -240,21 +272,35 @@ private fun Controls(state: PlexUiState, actions: PlexActions) {
                 RoundButton(PlayerIcons.Settings, null, actions.touch, description = stringResource(R.string.player_settings),
                     onClick = actions.settings)
             }
+            AnimatedVisibility(castShown, enter = expandVertically(tween(260)) + fadeIn(tween(200)),
+                exit = shrinkVertically(tween(200)) + fadeOut(tween(160))) {
+                CastRow(state, castFocus, actions) { state.castOpen = false; runCatching { play.requestFocus() } }
+            }
         }
     }
 }
 
-/** The paused title's cast: Up from the seek bar, OK opens the person. */
+/**
+ * The paused title's cast below the buttons: opens on the first person, Up closes it and returns to
+ * the buttons, OK opens the person.
+ */
 @Composable
-private fun CastStrip(cast: List<CastMember>, actions: PlexActions) {
-    Text(stringResource(R.string.people_cast_crew), color = TextMain, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-    androidx.compose.foundation.lazy.LazyRow(
-        contentPadding = PaddingValues(vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = Modifier.padding(bottom = 10.dp),
-    ) {
-        itemsIndexed(cast, key = { i, p -> "$i:${p.name}" }) { _, p ->
-            PersonCard(p, { actions.touch(); actions.openPerson(p) }, size = 64.dp, onFocus = actions.touch)
+private fun CastRow(state: PlexUiState, focus: MutableMap<Int, FocusRequester>, actions: PlexActions, close: () -> Unit) {
+    Column(Modifier.padding(top = 22.dp)
+        .onPreviewKeyEvent { e ->
+            if (e.key != Key.DirectionUp) return@onPreviewKeyEvent false
+            if (e.type == KeyEventType.KeyDown) { actions.touch(); close() }
+            true
+        }) {
+        Text(stringResource(R.string.people_cast_crew), color = TextMain, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        androidx.compose.foundation.lazy.LazyRow(
+            contentPadding = PaddingValues(vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            itemsIndexed(state.cast, key = { i, p -> "$i:${p.name}" }) { i, p ->
+                PersonCard(p, { actions.touch(); state.castIndex = i; actions.openPerson(p) }, size = 64.dp,
+                    modifier = Modifier.focusRequester(focus.getOrPut(i) { FocusRequester() }), onFocus = { state.castIndex = i; actions.touch() })
+            }
         }
     }
 }

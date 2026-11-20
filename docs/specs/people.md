@@ -7,13 +7,16 @@ and series: the ones in the library to play, the others to request through Seerr
 
 ## Behaviour
 ### Cast while paused (player)
-- When playback is paused, a strip appears above the control bar with the title's main cast:
-  round photo, name and role ("as …"), at most 12 in Plex's billing order, then the directors.
-  It appears with the controls and hides with them; it is not shown while playing.
+- Pausing does not open the cast by itself. While paused, a small hint "⌄ Cast & Crew" sits
+  below the control buttons (in the bar's bottom margin, so nothing moves). Down from any
+  button opens a row below the buttons and pushes the bar up: the title's main cast with round
+  photo, name and role ("as …"), at most 12 in Plex's billing order, then the directors.
+  It always opens on the first person. Not offered while playing; playing again closes it.
 - The list is the whole title's cast from Plex (for an episode: the episode's cast, else the
   show's). It does not know who is on screen in the paused picture; see Open points.
-- Up from the control bar moves into the strip, Down returns to the bar. OK on a person opens
-  their page over the paused player; Back returns to the player, still paused at the same place.
+- Up or Back in the row closes it and returns to the buttons. OK on a person opens their page
+  over the paused player; Back returns to the player, still paused at the same place, with the
+  row open on that person.
 
 ### Cast on the detail page
 - The detail page of a film or show has a row "Cast & Crew" below the existing content: the
@@ -54,13 +57,14 @@ and series: the ones in the library to play, the others to request through Seerr
   ceremonies list hundreds of guest appearances.
 
 ## Remote keys
-- Player, paused: Up from the bar into the cast strip, Left/Right move, OK opens the person,
-  Down back to the bar, Back hides the controls as today.
+- Player, paused: Down from the buttons opens the cast row on its first person, Left/Right
+  move, OK opens the person, Up or Back close the row and return to the buttons.
 - Person page: Down from the top to the filter, then the grid; OK on "More" shows the full
   biography, Back closes it; Back leaves the page.
 
 ## Checks
-- Pause a film: the strip shows the main cast with photos; play: it hides.
+- Pause a film: only the hint shows; Down opens the row on the first person; Up closes it;
+  play: the hint and the row hide.
 - Person page of an actor with titles in the library and outside it: badges right, OK on an
   "In Plex" title opens its detail page, OK on another opens the Seerr page.
 - Request a title from the person page: badge becomes "Requested" without reopening.

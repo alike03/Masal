@@ -551,6 +551,7 @@ class PlayerActivity : ComponentActivity() {
             touch()
         } else {
             plex.controls = false
+            plex.castOpen = false
             handler.removeCallbacks(hideControls)
             view.requestFocus()
         }
@@ -585,6 +586,7 @@ class PlayerActivity : ComponentActivity() {
                 if (!down) when {
                     plex.panel?.back != null -> plex.panel = plex.panel?.back?.invoke()
                     plex.panel != null -> { plex.panel = null; setControls(true); plex.focusTick++ }
+                    plex.castOpen -> { plex.castOpen = false; setControls(true); plex.focusTick++ }
                     plex.controls -> setControls(false)
                     else -> finish()
                 }
@@ -598,7 +600,13 @@ class PlayerActivity : ComponentActivity() {
                     KeyEvent.KEYCODE_MEDIA_REWIND -> seekBy(-plex.skipBack * 1000L)
                     else -> togglePlay()
                 }
-                if (down && plex.panel == null) setControls(true)
+                if (down && plex.panel == null) {
+                    // Playing closes the cast row; focus goes back to the buttons.
+                    if (plex.castOpen && e.keyCode != KeyEvent.KEYCODE_MEDIA_FAST_FORWARD && e.keyCode != KeyEvent.KEYCODE_MEDIA_REWIND) {
+                        plex.castOpen = false; plex.focusTick++
+                    }
+                    setControls(true)
+                }
                 return true
             }
         }
@@ -816,7 +824,8 @@ class PlayerActivity : ComponentActivity() {
         if (page != null) {
             BackHandler {
                 plex.pages.removeAt(plex.pages.lastIndex)
-                if (plex.pages.isEmpty()) { setControls(true); plex.focusTick++ }
+                // Back on the person they came from, in the cast row.
+                if (plex.pages.isEmpty()) { setControls(true, focus = if (plex.castOpen) "cast" else "play"); plex.focusTick++ }
             }
             val profile = current?.profile
             val actions = PeopleActions(

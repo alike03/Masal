@@ -8,7 +8,7 @@ Play Plex films and episodes with Plex-style controls, subtitles and audio choic
   "Ends at" and remaining time; buttons back and forward (lengths from the settings, default
   10 s / 30 s), play/pause; pills for Subtitles and Audio, then two round icon buttons: "Open in
   Plex" (a square with an arrow out) and Settings (a gear). Auto-hide after 5 s.
-- Paused: the cast strip above the seek bar (people.md).
+- Paused: a hint "Cast & Crew" below the buttons; Down opens the cast row there (people.md).
 - "Ends at" = current time + remaining runtime; clock and end time tick every second, also
   while paused. While seeking they use the target position.
 - Subtitles panel: Off, the file's tracks (embedded and external), "Search for subtitles…":
@@ -41,10 +41,11 @@ Play Plex films and episodes with Plex-style controls, subtitles and audio choic
 
 ## Remote keys
 - Controls hidden: OK, Up or Down show them; Left/Right skip back / forward (settings) and show the seek bar.
+- Paused, on the buttons: Down opens the cast row (people.md).
 - On the seek bar: Left/Right seek, holding speeds up 10 s → 30 s → 60 s; seek applied after 600 ms.
 - Play/pause key toggles playback.
-- Back: in a settings choice returns to the settings list; otherwise closes the panel, then the
-  controls, then leaves the player.
+- Back: in a settings choice returns to the settings list; otherwise closes the panel or the
+  cast row, then the controls, then leaves the player.
 
 ## Checks
 - Pause for a minute: "Ends at" moves on.

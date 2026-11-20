@@ -5,6 +5,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -33,6 +38,8 @@ import okhttp3.mockwebserver.RecordedRequest
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -41,7 +48,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Person page, Seerr title page and the paused player's cast strip against a mock Seerr (people.md, seerr.md). */
+/** Person page, Seerr title page and the paused player's cast row against a mock Seerr (people.md, seerr.md). */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [34], qualifiers = "w960dp-h540dp-land-xhdpi")
@@ -134,8 +141,9 @@ class PeopleScreensTest {
         assertEquals(102, JSONObject(requests.last { it.path == "/api/v1/request" }.body.readUtf8()).getInt("mediaId"))
     }
 
+    @OptIn(ExperimentalTestApi::class)
     @Test
-    fun pausedPlayerShowsTheCast() {
+    fun pausedPlayerOffersTheCastBelowTheButtons() {
         val state = PlexUiState().apply {
             item = PlexItem("7", "movie", "Testfilm", "", null, null, null, 0, 0, null, null)
             controls = true; playing = false; buffering = false
@@ -146,16 +154,37 @@ class PeopleScreensTest {
         val people = mutableListOf<String>()
         show { PlexOverlay(state, PlexActions({}, {}, {}, {}, {}, openPerson = { people += it.name })) }
         rule.waitForIdle()
-        rule.onRoot().captureRoboImage("$shots/07-player-cast.png")
+        // Paused: only the hint, the cast row stays closed.
+        rule.onRoot().captureRoboImage("$shots/07-player-cast-hint.png")
         rule.onNodeWithText("Cast & Crew").assertExists()
+        rule.onNodeWithText("as Rick").assertDoesNotExist()
+        // Down from the buttons opens the row on its first person, whatever the button.
+        rule.onRoot().performKeyInput { pressKey(Key.DirectionRight); pressKey(Key.DirectionRight); pressKey(Key.DirectionDown) }
+        rule.waitForIdle()
+        assertTrue(state.castOpen)
         rule.onNodeWithText("as Rick").assertExists()
-        // Initials stand in for missing photos; OK on the round photo opens the person.
+        assertEquals(0, state.castIndex)
+        rule.onNode(isFocused()).assertExists()
+        rule.onRoot().captureRoboImage("$shots/08-player-cast-open.png")
+        rule.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+        rule.waitForIdle()
+        assertEquals(1, state.castIndex)
+        // Up closes the row again.
+        rule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
+        rule.waitForIdle()
+        assertFalse(state.castOpen)
+        rule.onNodeWithText("as Rick").assertDoesNotExist()
+        // Reopened, it starts at the first person again; OK on the round photo opens the person.
+        rule.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        rule.waitForIdle()
+        assertEquals(0, state.castIndex)
         rule.onAllNodes(hasClickAction() and hasAnyDescendant(hasText("TT")), useUnmergedTree = true)[0].performSemanticsAction(SemanticsActions.OnClick)
         assertEquals(listOf("Tess Tester"), people)
-        // Playing: no cast.
+        // Playing: no hint and no row.
         state.playing = true
         rule.waitForIdle()
         rule.onNodeWithText("Cast & Crew").assertDoesNotExist()
+        assertFalse(state.castOpen)
     }
 
     @Suppress("unused")
