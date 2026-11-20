@@ -43,6 +43,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -87,7 +89,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-private enum class SettingsPage { Main, Language, Category, Title, Order, Profiles, Rows, Seerr, HomeOrder }
+/** Settings pages; [parent] is where Back goes, [section] the start page's section a page belongs to. */
+private enum class SettingsPage(val parent: SettingsPage?, val title: Int = 0, val about: Int = 0) {
+    Main(null),
+    Home(Main, R.string.settings_section_home, R.string.settings_section_home_about),
+    Live(Main, R.string.settings_section_live, R.string.settings_section_live_about),
+    Player(Main, R.string.settings_section_player, R.string.settings_section_player_about),
+    Accounts(Main, R.string.settings_section_accounts, R.string.settings_section_accounts_about),
+    Phone(Main, R.string.settings_phone_heading, R.string.settings_section_phone_about),
+    General(Main, R.string.settings_section_general, R.string.settings_section_general_about),
+    Rows(Home), HomeOrder(Home), Category(Home), Title(Home),
+    Order(Live),
+    PlayerChoice(Player),
+    Profiles(Accounts), Seerr(Accounts),
+    Language(General);
+
+    val section: SettingsPage? get() = if (parent == Main) this else parent?.section
+}
 
 /**
  * Settings on the TV: the QR code for the phone page (logins, sources, Plex server) on the left,
@@ -156,7 +174,6 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
     // Seerr's Discover rows are offered with the Plex rows, under their own entry (seerr.md).
     val options = remember(plexOptions, sliders) { plexOptions + HomeRows.seerrOptions(sliders, ::seerrRowTitle) }
     val homeOrder by Graph.settings.homeOrder.collectAsState()
-    val homeOrderRow = remember { FocusRequester() }
     val homeRowList = homeRowEntries(vm, homeOrder)
     val channels by vm.channels.collectAsState()
     val groups = remember(channels) { channelGroups(vm) }
@@ -164,95 +181,234 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
     val liveTitle = remember(version, homeVersion) { Graph.settings.homeLiveTitle }
 
     var page by remember { mutableStateOf(SettingsPage.Main) }
-    // The entry that opened a sub-page gets the focus back when it closes.
-    var back by remember { mutableStateOf<FocusRequester?>(null) }
-    val categoryRow = remember { FocusRequester() }
-    val titleRow = remember { FocusRequester() }
-    val languageRow = remember { FocusRequester() }
-    val orderRow = remember { FocusRequester() }
-    val profilesRow = remember { FocusRequester() }
+    // Each page remembers the entry that opened the page below it; Back focuses it again.
+    val returnTo = remember { mutableMapOf<SettingsPage, FocusRequester>() }
+    var pendingFocus by remember { mutableStateOf<FocusRequester?>(null) }
+    val requesters = remember { mutableMapOf<String, FocusRequester>() }
+    fun fr(key: String) = requesters.getOrPut(key) { FocusRequester() }
+    fun open(child: SettingsPage, from: String) { returnTo[page] = fr(from); page = child }
+    fun up() {
+        val parent = page.parent ?: return
+        page = parent
+        pendingFocus = returnTo[parent]
+    }
     var profilesView by remember { mutableStateOf<ProfilesView>(ProfilesView.List) }
-    val seerrRow = remember { FocusRequester() }
     // Seerr page: the profile whose request user is being picked ("" = main account), null for the list.
     var seerrPick by remember { mutableStateOf<String?>(null) }
     // Home rows: one entry per profile ("" = the main account), each opening that profile's rows.
     var rowsProfile by remember { mutableStateOf("") }
-    val rowsEntries = remember { mutableMapOf<String, FocusRequester>() }
+    // Player section: which setting's choices are open.
+    var playerSetting by remember { mutableStateOf("") }
     val categoryOrder by vm.categoryOrder.collectAsState()
-    // The category being moved on the order page; Back then puts it down instead of leaving the page.
+    // The category or row being moved on an order page; Back then puts it down instead of leaving the page.
     var moving by remember { mutableStateOf<String?>(null) }
-    val list = rememberLazyListState()
+    // The section focused on the start page, described on the left.
+    var focusedSection by remember { mutableStateOf(SettingsPage.Home) }
+    val nothingSetUp = sources.isEmpty() && !Graph.plex.configured
 
-    val done = remember { FocusRequester() }
-    LaunchedEffect(Unit) { if (autoFocus) { delay(150); runCatching { done.requestFocus() } } }
-    // Leaving the side menu: the first button while the list is at its top (otherwise the nearest entry).
+    LaunchedEffect(Unit) { if (autoFocus) { delay(150); runCatching { fr("section:" + SettingsPage.Home.name).requestFocus() } } }
+    // Leaving the side menu: the start page's first section.
     val entry = LocalEntryFocus.current
     LaunchedEffect(entry) {
-        entry { page == SettingsPage.Main && list.firstVisibleItemIndex <= 2 && runCatching { done.requestFocus() }.isSuccess }
+        entry { page == SettingsPage.Main && runCatching { fr("section:" + focusedSection.name).requestFocus() }.isSuccess }
     }
+
+    val texts = SectionTexts(
+        home = pluralStringResource(R.plurals.settings_home_value, homeRowList.size, homeRowList.size),
+        live = if (sources.isEmpty()) stringResource(R.string.settings_sources_none) else pluralStringResource(R.plurals.settings_live_value, sources.size, sources.size),
+        player = remember(homeVersion, page) {
+            context.getString(R.string.settings_player_value, Graph.settings.subtitleSize, Graph.settings.skipBackSeconds, Graph.settings.skipForwardSeconds)
+        },
+        accounts = plexCode?.let { stringResource(R.string.settings_accounts_code, it) } ?: listOfNotNull(
+            stringResource(if (Graph.plex.configured) R.string.settings_accounts_plex_on else R.string.settings_accounts_plex_off),
+            if (Graph.seerr.configured) "Seerr" else null,
+        ).joinToString(", "),
+        phone = url,
+        general = Language.stored(context).let { code -> Language.choices.firstOrNull { it.first == code }?.second ?: stringResource(R.string.language_device) },
+    )
 
     Row(
         Modifier.fillMaxSize().padding(start = EdgePadding, end = EdgePadding, top = NavHeight + 16.dp),
         horizontalArrangement = Arrangement.spacedBy(48.dp),
     ) {
         Column(Modifier.width(240.dp)) {
-            Box(Modifier.size(220.dp).background(Color.White, RoundedCornerShape(8.dp)).padding(10.dp)) {
-                Image(qr, contentDescription = stringResource(R.string.settings_qr_description), modifier = Modifier.fillMaxSize())
+            val section = if (page == SettingsPage.Main) focusedSection else page.section
+            if (section == SettingsPage.Phone || (page == SettingsPage.Main && nothingSetUp)) {
+                Box(Modifier.size(220.dp).background(Color.White, RoundedCornerShape(8.dp)).padding(10.dp)) {
+                    Image(qr, contentDescription = stringResource(R.string.settings_qr_description), modifier = Modifier.fillMaxSize())
+                }
+                Text(url, color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
+                Text(stringResource(R.string.settings_pin_value, pin), color = TextMain, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 4.dp))
+                Text(stringResource(R.string.settings_qr_hint), color = TextDim, fontSize = 14.sp, modifier = Modifier.padding(top = 12.dp))
+                serverError?.let { Text(it, color = Accent, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
+            } else if (section != null) {
+                Text(stringResource(section.title), color = TextMain, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(section.about), color = TextDim, fontSize = 15.sp, lineHeight = 21.sp, modifier = Modifier.padding(top = 10.dp))
             }
-            Text(url, color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
-            Text(stringResource(R.string.settings_pin_value, pin), color = TextMain, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(top = 4.dp))
-            Text(
-                stringResource(R.string.settings_qr_hint),
-                color = TextDim, fontSize = 14.sp, modifier = Modifier.padding(top = 12.dp),
-            )
-            serverError?.let { Text(it, color = Accent, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
         }
-        // Back in a sub-page returns to the list. Handled on the key itself (like the TV tab), so the
-        // key never reaches the side menu's Back handling.
+        // Back goes one level up. Handled on the key itself (like the TV tab), so the key never
+        // reaches the side menu's Back handling.
         Box(Modifier.weight(1f).onPreviewKeyEvent { e ->
             if (page == SettingsPage.Main || e.key != Key.Back) return@onPreviewKeyEvent false
             if (e.type == KeyEventType.KeyUp) when {
                 moving != null -> moving = null
                 page == SettingsPage.Profiles && profilesView != ProfilesView.List -> profilesView = ProfilesView.List
                 page == SettingsPage.Seerr && seerrPick != null -> seerrPick = null
-                else -> page = SettingsPage.Main
+                else -> up()
             }
             true
         }) {
+            // A page's list focuses the entry Back returns to, else its first entry.
+            val restore: @Composable (FocusRequester) -> Unit = { first ->
+                LaunchedEffect(page) {
+                    val r = pendingFocus
+                    pendingFocus = null
+                    // Two frames: the list's rows are composed during the first one.
+                    repeat(2) { androidx.compose.runtime.withFrameNanos { } }
+                    if (r == null || runCatching { r.requestFocus() }.isFailure) {
+                        if (page != SettingsPage.Main || r != null) runCatching { first.requestFocus() }
+                    }
+                }
+            }
             when (page) {
                 SettingsPage.Main -> {
-                    LaunchedEffect(Unit) {
-                        val r = back ?: return@LaunchedEffect
-                        back = null
-                        // Two frames: the list's rows are composed during the first one.
-                        repeat(2) { androidx.compose.runtime.withFrameNanos { } }
-                        runCatching { r.requestFocus() }
+                    restore(fr("section:" + SettingsPage.Home.name))
+                    SettingsList(stringResource(R.string.settings_title)) {
+                        Sections.forEach { sec ->
+                            item(key = sec.name) {
+                                SettingRow(stringResource(sec.title), texts.of(sec), { open(sec, "section:" + sec.name) },
+                                    Modifier.focusRequester(fr("section:" + sec.name)).onFocusChanged { if (it.isFocused) focusedSection = sec })
+                            }
+                        }
                     }
-                    MainList(
-                        list, done, categoryRow, titleRow, languageRow, orderRow,
-                        plexCode, plexStatus, onLink = { linkRequest++ },
-                        onAndroidSettings = { Apps.openSystemSettings(context) },
-                        liveGroup = liveGroup, liveTitle = liveTitle,
-                        onLanguage = { back = languageRow; page = SettingsPage.Language },
-                        onCategory = { back = categoryRow; page = SettingsPage.Category },
-                        onTitle = { back = titleRow; page = SettingsPage.Title },
-                        orderValue = stringResource(if (categoryOrder.isEmpty()) R.string.settings_category_order_default else R.string.settings_category_order_custom),
-                        onOrder = { back = orderRow; moving = null; page = SettingsPage.Order },
-                        profilesRow = profilesRow,
-                        onProfiles = { back = profilesRow; profilesView = ProfilesView.List; page = SettingsPage.Profiles },
-                        seerrRow = seerrRow,
-                        onSeerr = { back = seerrRow; seerrPick = null; page = SettingsPage.Seerr },
-                        options = options,
-                        rowsEntry = { key -> rowsEntries.getOrPut(key) { FocusRequester() } },
-                        onRows = { key -> back = rowsEntries[key]; rowsProfile = key; page = SettingsPage.Rows },
-                        pin = pin,
-                        onNewPin = { pin = Graph.settings.renewSetupPin() },
-                        homeOrderRow = homeOrderRow,
-                        homeOrderValue = stringResource(if (homeOrder.isEmpty()) R.string.settings_category_order_default else R.string.settings_category_order_custom),
-                        onHomeOrder = { back = homeOrderRow; moving = null; page = SettingsPage.HomeOrder },
-                        sourceNames = sources.map { it.name },
-                    )
+                }
+                SettingsPage.Home -> {
+                    val rowGroups = options.groupBy { rowsKey(it) }
+                    restore(fr(rowGroups.keys.firstOrNull()?.let { "rows:$it" } ?: "home:order"))
+                    SettingsList(stringResource(R.string.settings_section_home)) {
+                        if (options.isEmpty()) item { Text(stringResource(R.string.settings_home_rows_empty), color = TextDim, fontSize = 15.sp) }
+                        // One entry per profile with how many of its rows are on; OK opens its rows (a long list per profile).
+                        rowGroups.forEach { (key, rows) ->
+                            item(key = "rows:$key") {
+                                val on = remember(homeVersion, rows) { rows.count { Graph.settings.homeRowShown(it) } }
+                                SettingRow(stringResource(R.string.settings_rows_for, profileTitle(key)),
+                                    stringResource(R.string.settings_home_rows_count, on, rows.size),
+                                    { rowsProfile = key; open(SettingsPage.Rows, "rows:$key") },
+                                    Modifier.focusRequester(fr("rows:$key")))
+                            }
+                        }
+                        item(key = "home-order") {
+                            SettingRow(stringResource(R.string.settings_home_order),
+                                stringResource(if (homeOrder.isEmpty()) R.string.settings_category_order_default else R.string.settings_category_order_custom),
+                                { moving = null; open(SettingsPage.HomeOrder, "home:order") },
+                                Modifier.focusRequester(fr("home:order")))
+                        }
+                        item(key = "live-row") {
+                            val value = when (liveGroup) {
+                                "" -> stringResource(R.string.settings_category_none)
+                                com.alike.masal.data.Settings.FavouritesGroup -> stringResource(R.string.common_favourites)
+                                else -> liveGroup
+                            }
+                            SettingRow(stringResource(R.string.settings_live_row), value, { open(SettingsPage.Category, "home:live") },
+                                Modifier.focusRequester(fr("home:live")))
+                        }
+                        item(key = "live-title") {
+                            SettingRow(stringResource(R.string.settings_live_row_title), liveTitle, { open(SettingsPage.Title, "home:title") },
+                                Modifier.focusRequester(fr("home:title")))
+                        }
+                    }
+                }
+                SettingsPage.Live -> {
+                    restore(fr("live:order"))
+                    SettingsList(stringResource(R.string.settings_section_live)) {
+                        item {
+                            SettingRow(stringResource(R.string.settings_category_order),
+                                stringResource(if (categoryOrder.isEmpty()) R.string.settings_category_order_default else R.string.settings_category_order_custom),
+                                { moving = null; open(SettingsPage.Order, "live:order") }, Modifier.focusRequester(fr("live:order")))
+                        }
+                        item { Heading(stringResource(R.string.settings_sources_heading)) }
+                        item {
+                            Column {
+                                if (sources.isEmpty()) Text(stringResource(R.string.settings_sources_none), color = TextDim, fontSize = 15.sp)
+                                sources.forEach { Text(it.name, color = TextMain, fontSize = 15.sp, modifier = Modifier.padding(top = 2.dp)) }
+                                Text(stringResource(R.string.settings_sources_hint), color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                            }
+                        }
+                    }
+                }
+                SettingsPage.Player -> {
+                    restore(fr("player:size"))
+                    val st = Graph.settings
+                    SettingsList(stringResource(R.string.settings_section_player)) {
+                        playerEntries(context, st).forEach { e ->
+                            item(key = e.key) {
+                                SettingRow(stringResource(e.label), e.value, { playerSetting = e.key; open(SettingsPage.PlayerChoice, "player:" + e.key) },
+                                    Modifier.focusRequester(fr("player:" + e.key)))
+                            }
+                        }
+                        item { Text(stringResource(R.string.player_settings_note), color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp, start = 4.dp)) }
+                    }
+                }
+                SettingsPage.PlayerChoice -> {
+                    val e = playerEntries(context, Graph.settings).first { it.key == playerSetting }
+                    ChoiceList(stringResource(e.label), stringResource(R.string.player_settings_note), e.choices,
+                        selected = e.choices.indexOfFirst { it.first == e.current }) { v ->
+                        e.store(v)
+                        Graph.settings.homeChanged() // the section's values follow
+                        up()
+                    }
+                }
+                SettingsPage.Accounts -> {
+                    restore(fr("accounts:plex"))
+                    SettingsList(stringResource(R.string.settings_section_accounts)) {
+                        item { Heading("Plex") }
+                        item {
+                            Column {
+                                plexCode?.let { code ->
+                                    Text(stringResource(R.string.settings_plex_open_link), color = TextDim, fontSize = 16.sp)
+                                    Text(code, color = Accent, fontSize = 40.sp, fontWeight = FontWeight.Bold, letterSpacing = 6.sp)
+                                }
+                                Text(plexStatus, color = TextDim, fontSize = 15.sp)
+                                MasalButton(stringResource(if (Graph.plex.configured) R.string.settings_plex_link_again else R.string.settings_plex_new_code),
+                                    { linkRequest++ }, Modifier.padding(top = 12.dp, bottom = 4.dp).focusRequester(fr("accounts:plex")), Icons.Filled.Refresh)
+                            }
+                        }
+                        if (Graph.plex.configured) item {
+                            val names = remember(homeVersion) { Graph.settings.profiles.joinToString(", ") { it.name } }
+                            SettingRow(stringResource(R.string.settings_profiles), names.ifBlank { stringResource(R.string.settings_profiles_value_none) },
+                                { profilesView = ProfilesView.List; open(SettingsPage.Profiles, "accounts:profiles") }, Modifier.focusRequester(fr("accounts:profiles")))
+                        }
+                        if (Graph.plex.configured) item {
+                            val value = remember(homeVersion) {
+                                if (Graph.seerr.configured) context.getString(R.string.settings_seerr_connected, Graph.settings.seerrUserName)
+                                else context.getString(R.string.settings_seerr_not_set)
+                            }
+                            SettingRow("Seerr", value, { seerrPick = null; open(SettingsPage.Seerr, "accounts:seerr") }, Modifier.focusRequester(fr("accounts:seerr")))
+                        }
+                    }
+                }
+                SettingsPage.Phone -> {
+                    restore(fr("phone:pin"))
+                    SettingsList(stringResource(R.string.settings_phone_heading)) {
+                        item {
+                            Column {
+                                SettingRow(stringResource(R.string.settings_new_pin), pin, { pin = Graph.settings.renewSetupPin() }, Modifier.focusRequester(fr("phone:pin")))
+                                Text(stringResource(R.string.settings_new_pin_hint), color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp, start = 4.dp))
+                            }
+                        }
+                    }
+                }
+                SettingsPage.General -> {
+                    restore(fr("general:language"))
+                    SettingsList(stringResource(R.string.settings_section_general)) {
+                        item {
+                            SettingRow(stringResource(R.string.language_title), texts.general, { open(SettingsPage.Language, "general:language") },
+                                Modifier.focusRequester(fr("general:language")))
+                        }
+                        // Network, display, apps: reachable from here when Masal replaces the stock home screen.
+                        item { SettingRow(stringResource(R.string.settings_android_settings), "", { Apps.openSystemSettings(context) }) }
+                    }
                 }
                 SettingsPage.Language -> {
                     val device = stringResource(R.string.language_device)
@@ -262,7 +418,7 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                         stringResource(R.string.language_title), stringResource(R.string.language_note),
                         choices, selected = choices.indexOfFirst { it.first == current },
                     ) { code ->
-                        page = SettingsPage.Main
+                        up()
                         // Redraws the activity in the new language; an unchanged choice just returns.
                         context.findActivity()?.let { Language.set(it, code) }
                     }
@@ -287,7 +443,7 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                     ) { g ->
                         Graph.settings.homeLiveGroup = g
                         Graph.settings.homeChanged()
-                        page = SettingsPage.Main
+                        up()
                     }
                 }
                 SettingsPage.Order -> OrderList(
@@ -322,10 +478,10 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                 }
                 SettingsPage.Profiles -> ProfilesPage(profilesView, { profilesView = it }) { vm.refreshPlex() }
                 SettingsPage.Seerr -> SeerrPage(seerrPick) { seerrPick = it }
-                SettingsPage.Title -> TitleEditor(liveTitle, onCancel = { page = SettingsPage.Main }) { t ->
+                SettingsPage.Title -> TitleEditor(liveTitle, onCancel = { up() }) { t ->
                     Graph.settings.homeLiveTitle = t
                     Graph.settings.homeChanged()
-                    page = SettingsPage.Main
+                    up()
                 }
             }
         }
@@ -342,132 +498,55 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 /** Channel categories of the loaded sources, in provider order. */
 private fun channelGroups(vm: MasalViewModel) = vm.categoryNames()
 
-@Composable
-private fun MainList(
-    list: LazyListState,
-    first: FocusRequester,
-    categoryRow: FocusRequester,
-    titleRow: FocusRequester,
-    languageRow: FocusRequester,
-    orderRow: FocusRequester,
-    plexCode: String?,
-    plexStatus: String,
-    onLink: () -> Unit,
-    onAndroidSettings: () -> Unit,
-    liveGroup: String,
-    liveTitle: String,
-    onLanguage: () -> Unit,
-    onCategory: () -> Unit,
-    onTitle: () -> Unit,
-    orderValue: String,
-    onOrder: () -> Unit,
-    profilesRow: FocusRequester,
-    onProfiles: () -> Unit,
-    seerrRow: FocusRequester,
-    onSeerr: () -> Unit,
-    options: List<HomeRowOption>,
-    rowsEntry: (String) -> FocusRequester,
-    onRows: (String) -> Unit,
-    pin: String,
-    onNewPin: () -> Unit,
-    homeOrderRow: FocusRequester,
-    homeOrderValue: String,
-    onHomeOrder: () -> Unit,
-    sourceNames: List<String>,
-) {
-    val homeVersion by Graph.settings.homeVersion.collectAsState() // check marks follow every change
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val language = Language.stored(context).let { code ->
-        Language.choices.firstOrNull { it.first == code }?.second ?: stringResource(R.string.language_device)
+/** The sections of the start page, in order. */
+private val Sections = listOf(SettingsPage.Home, SettingsPage.Live, SettingsPage.Player, SettingsPage.Accounts, SettingsPage.Phone, SettingsPage.General)
+
+/** Each section's value on the start page. */
+private class SectionTexts(val home: String, val live: String, val player: String, val accounts: String, val phone: String, val general: String) {
+    fun of(p: SettingsPage) = when (p) {
+        SettingsPage.Home -> home; SettingsPage.Live -> live; SettingsPage.Player -> player
+        SettingsPage.Accounts -> accounts; SettingsPage.Phone -> phone; else -> general
     }
-    val categoryNone = stringResource(R.string.settings_category_none)
+}
+
+/** A page of settings: its title, then the entries. */
+@Composable
+private fun SettingsList(title: String, content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {
     LazyColumn(
-        state = list,
         modifier = Modifier.widthIn(max = 640.dp),
         contentPadding = PaddingValues(bottom = 48.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        item { Text(stringResource(R.string.settings_title), color = TextMain, fontSize = 26.sp, fontWeight = FontWeight.Bold) }
-
-        item { Heading("Plex") }
-        item {
-            Column {
-                plexCode?.let { code ->
-                    Text(stringResource(R.string.settings_plex_open_link), color = TextDim, fontSize = 16.sp)
-                    Text(code, color = Accent, fontSize = 40.sp, fontWeight = FontWeight.Bold, letterSpacing = 6.sp)
-                }
-                Text(plexStatus, color = TextDim, fontSize = 15.sp)
-                Row(Modifier.padding(top = 12.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    MasalButton(stringResource(if (Graph.plex.configured) R.string.settings_plex_link_again else R.string.settings_plex_new_code), onLink,
-                        Modifier.focusRequester(first), Icons.Filled.Refresh)
-                    // Network, display, apps: reachable from here when Masal replaces the stock home screen.
-                    MasalButton(stringResource(R.string.settings_android_settings), onAndroidSettings, icon = Icons.Filled.Settings, primary = false)
-                }
-            }
-        }
-        if (Graph.plex.configured) item {
-            val names = remember(homeVersion) { Graph.settings.profiles.joinToString(", ") { it.name } }
-            SettingRow(stringResource(R.string.settings_profiles), names.ifBlank { stringResource(R.string.settings_profiles_value_none) },
-                onProfiles, Modifier.focusRequester(profilesRow))
-        }
-        if (Graph.plex.configured) item {
-            val value = remember(homeVersion) {
-                if (Graph.seerr.configured) context.getString(R.string.settings_seerr_connected, Graph.settings.seerrUserName)
-                else context.getString(R.string.settings_seerr_not_set)
-            }
-            SettingRow("Seerr", value, onSeerr, Modifier.focusRequester(seerrRow))
-        }
-
-        item { Heading(stringResource(R.string.settings_phone_heading)) }
-        item {
-            Column {
-                SettingRow(stringResource(R.string.settings_new_pin), pin, onNewPin)
-                Text(stringResource(R.string.settings_new_pin_hint), color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp, start = 4.dp))
-            }
-        }
-
-        item { Heading(stringResource(R.string.language_title)) }
-        item { SettingRow(stringResource(R.string.language_title), language, onLanguage, Modifier.focusRequester(languageRow)) }
-
-        item { Heading(stringResource(R.string.settings_live_row_heading)) }
-        item {
-            val categoryValue = when (liveGroup) {
-                "" -> categoryNone
-                com.alike.masal.data.Settings.FavouritesGroup -> stringResource(R.string.common_favourites)
-                else -> liveGroup
-            }
-            SettingRow(stringResource(R.string.settings_channel_category), categoryValue, onCategory, Modifier.focusRequester(categoryRow))
-        }
-        item { SettingRow(stringResource(R.string.settings_row_title), liveTitle, onTitle, Modifier.focusRequester(titleRow)) }
-
-        item { Heading(stringResource(R.string.settings_tv_tab_heading)) }
-        item { SettingRow(stringResource(R.string.settings_category_order), orderValue, onOrder, Modifier.focusRequester(orderRow)) }
-
-        item { Heading(stringResource(R.string.settings_home_rows)) }
-        if (options.isEmpty()) {
-            item { Text(stringResource(R.string.settings_home_rows_empty), color = TextDim, fontSize = 15.sp) }
-        }
-        // One entry per profile with how many of its rows are on; OK opens its rows (a long list per profile).
-        options.groupBy { rowsKey(it) }.forEach { (key, rows) ->
-            item(key = "rows:$key") {
-                val on = remember(homeVersion, rows) { rows.count { Graph.settings.homeRowShown(it) } }
-                SettingRow(profileTitle(key), stringResource(R.string.settings_home_rows_count, on, rows.size), { onRows(key) },
-                    Modifier.focusRequester(rowsEntry(key)))
-            }
-        }
-        item(key = "home-order") {
-            SettingRow(stringResource(R.string.settings_home_order), homeOrderValue, onHomeOrder, Modifier.focusRequester(homeOrderRow))
-        }
-
-        item { Heading(stringResource(R.string.settings_sources_heading)) }
-        item {
-            Column {
-                if (sourceNames.isEmpty()) Text(stringResource(R.string.settings_sources_none), color = TextDim, fontSize = 15.sp)
-                sourceNames.forEach { Text(it, color = TextMain, fontSize = 15.sp, modifier = Modifier.padding(top = 2.dp)) }
-                Text(stringResource(R.string.settings_sources_hint), color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-            }
-        }
+        item { Text(title, color = TextMain, fontSize = 26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp)) }
+        content()
     }
+}
+
+/** One player setting (player.md): label, shown value, choices and how a choice is stored. */
+private class PlayerEntry(
+    val key: String, val label: Int, val value: String, val current: String,
+    val choices: List<Pair<String, String>>, val store: (String) -> Unit,
+)
+
+private fun playerEntries(context: Context, s: com.alike.masal.data.Settings): List<PlayerEntry> {
+    val ps = com.alike.masal.player.PlayerSettings
+    fun pct(v: Int) = context.getString(R.string.player_percent, v)
+    fun sec(v: Int) = context.getString(R.string.player_seconds, v)
+    fun choices(list: List<com.alike.masal.player.PlayerSettings.Choice>) = list.map { it.key to context.getString(it.label) }
+    fun label(list: List<com.alike.masal.player.PlayerSettings.Choice>, key: String) = context.getString(with(ps) { list.of(key) }.label)
+    return listOf(
+        PlayerEntry("size", R.string.player_subtitle_size, pct(s.subtitleSize), s.subtitleSize.toString(),
+            ps.sizes.map { it.toString() to pct(it) }) { s.subtitleSize = it.toInt() },
+        PlayerEntry("colour", R.string.player_subtitle_colour, label(ps.colors, s.subtitleColor), s.subtitleColor, choices(ps.colors)) { s.subtitleColor = it },
+        PlayerEntry("background", R.string.player_subtitle_background, label(ps.backgrounds, s.subtitleBackground), s.subtitleBackground,
+            choices(ps.backgrounds)) { s.subtitleBackground = it },
+        PlayerEntry("position", R.string.player_subtitle_position, label(ps.positions, s.subtitlePosition), s.subtitlePosition,
+            choices(ps.positions)) { s.subtitlePosition = it },
+        PlayerEntry("back", R.string.player_skip_back, sec(s.skipBackSeconds), s.skipBackSeconds.toString(),
+            ps.skipBack.map { it.toString() to sec(it) }) { s.skipBackSeconds = it.toInt() },
+        PlayerEntry("forward", R.string.player_skip_forward, sec(s.skipForwardSeconds), s.skipForwardSeconds.toString(),
+            ps.skipForward.map { it.toString() to sec(it) }) { s.skipForwardSeconds = it.toInt() },
+    )
 }
 
 /** Settings entry of the Seerr rows; Plex profile ids are numbers, so it cannot clash. */

@@ -22,7 +22,6 @@
     <string name="settings_plex_link_again">Plex neu verknüpfen</string>
     <string name="settings_plex_new_code">Neuer Plex-Code</string>
     <string name="settings_android_settings">Android-Einstellungen</string>
-    <string name="settings_live_row_heading">Live-TV-Zeile auf der Startseite</string>
     <string name="settings_channel_category">Senderkategorie</string>
     <string name="settings_category_none">Keine (Zeile ausgeblendet)</string>
     <string name="settings_category_missing">%1$s (nicht in den geladenen Sendern)</string>
@@ -96,7 +95,6 @@
     <string name="setup_name_playlist_placeholder">Meine Playlist</string>
     <string name="setup_playlist_url">Playlist-URL</string>
     <string name="setup_m3u_epg">Programmführer-URL (XMLTV), optional</string>
-    <string name="settings_tv_tab_heading">TV-Tab</string>
     <string name="settings_category_order">Reihenfolge der Kategorien</string>
     <string name="settings_category_order_default">Wie beim Anbieter</string>
     <string name="settings_category_order_custom">Eigene Reihenfolge</string>
@@ -165,4 +163,24 @@
     <string name="setup_login_button">Anmelden</string>
     <string name="setup_login_wrong">Falscher PIN.</string>
     <string name="setup_login_locked">Zu viele Versuche. Versuche es in %1$d s wieder.</string>
+    <string name="settings_section_home">Startbildschirm</string>
+    <string name="settings_section_home_about">Welche Zeilen der Startbildschirm zeigt, ihre Reihenfolge und die Live-TV-Zeile.</string>
+    <string name="settings_section_live">Live-TV</string>
+    <string name="settings_section_live_about">Deine IPTV-Quellen und die Reihenfolge der Kategorien im TV-Tab. Quellen fügst du auf der Seite fürs Handy hinzu.</string>
+    <string name="settings_section_player">Player</string>
+    <string name="settings_section_player_about">Aussehen der Untertitel und Sprunglängen, wie beim Zahnrad im Player.</string>
+    <string name="settings_section_accounts">Konten</string>
+    <string name="settings_section_accounts_about">Plex, die Profile deines Plex Home und Seerr für Anfragen.</string>
+    <string name="settings_section_phone_about">Logins, Quellen und Plex vom Handy oder Computer im selben Netzwerk ändern.</string>
+    <string name="settings_section_general">Allgemein</string>
+    <string name="settings_section_general_about">Sprache und die Einstellungen des Geräts für Netzwerk, Bild und Apps.</string>
+    <string name="settings_player_value">%1$d %%, %2$d / %3$d s</string>
+    <string name="settings_accounts_code">Plex-Code %1$s</string>
+    <string name="settings_accounts_plex_on">Plex verbunden</string>
+    <string name="settings_accounts_plex_off">Plex nicht verbunden</string>
+    <string name="settings_rows_for">Zeilen: %1$s</string>
+    <string name="settings_live_row">Live-TV-Zeile</string>
+    <string name="settings_live_row_title">Titel der Live-TV-Zeile</string>
+    <plurals name="settings_home_value"><item quantity="one">%d Zeile</item><item quantity="other">%d Zeilen</item></plurals>
+    <plurals name="settings_live_value"><item quantity="one">%d Quelle</item><item quantity="other">%d Quellen</item></plurals>
 </resources>

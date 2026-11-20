@@ -22,7 +22,6 @@
     <string name="settings_plex_link_again">Link Plex again</string>
     <string name="settings_plex_new_code">New Plex code</string>
     <string name="settings_android_settings">Android settings</string>
-    <string name="settings_live_row_heading">Live TV row on Home</string>
     <string name="settings_channel_category">Channel category</string>
     <string name="settings_category_none">None (row hidden)</string>
     <string name="settings_category_missing">%1$s (not in the loaded channels)</string>
@@ -96,7 +95,6 @@
     <string name="setup_name_playlist_placeholder">My playlist</string>
     <string name="setup_playlist_url">Playlist URL</string>
     <string name="setup_m3u_epg">Guide (XMLTV) URL, optional</string>
-    <string name="settings_tv_tab_heading">TV tab</string>
     <string name="settings_category_order">Category order</string>
     <string name="settings_category_order_default">As the provider lists them</string>
     <string name="settings_category_order_custom">Own order</string>
@@ -165,4 +163,24 @@
     <string name="setup_login_button">Sign in</string>
     <string name="setup_login_wrong">Wrong PIN.</string>
     <string name="setup_login_locked">Too many attempts. Try again in %1$d s.</string>
+    <string name="settings_section_home">Home screen</string>
+    <string name="settings_section_home_about">Which rows Home shows, their order, and the live TV row.</string>
+    <string name="settings_section_live">Live TV</string>
+    <string name="settings_section_live_about">Your IPTV sources and the order of the categories in the TV tab. Sources are added on the phone page.</string>
+    <string name="settings_section_player">Player</string>
+    <string name="settings_section_player_about">Subtitle look and skip lengths, the same as the gear in the player.</string>
+    <string name="settings_section_accounts">Accounts</string>
+    <string name="settings_section_accounts_about">Plex, the profiles of your Plex Home, and Seerr for requests.</string>
+    <string name="settings_section_phone_about">Change logins, sources and Plex from a phone or computer in the same network.</string>
+    <string name="settings_section_general">General</string>
+    <string name="settings_section_general_about">Language, and the device\'s own settings for network, display and apps.</string>
+    <string name="settings_player_value">%1$d %%, %2$d / %3$d s</string>
+    <string name="settings_accounts_code">Plex code %1$s</string>
+    <string name="settings_accounts_plex_on">Plex connected</string>
+    <string name="settings_accounts_plex_off">Plex not connected</string>
+    <string name="settings_rows_for">Rows: %1$s</string>
+    <string name="settings_live_row">Live TV row</string>
+    <string name="settings_live_row_title">Live TV row title</string>
+    <plurals name="settings_home_value"><item quantity="one">%d row</item><item quantity="other">%d rows</item></plurals>
+    <plurals name="settings_live_value"><item quantity="one">%d source</item><item quantity="other">%d sources</item></plurals>
 </resources>

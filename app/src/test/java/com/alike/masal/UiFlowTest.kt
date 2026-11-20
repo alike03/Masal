@@ -22,6 +22,7 @@ import org.junit.Assert.assertTrue
 import org.junit.BeforeClass
 import org.junit.Rule
 import org.junit.Test
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import com.alike.masal.data.SeerrStatus
 import com.alike.masal.data.SeerrTitle
 import org.junit.runner.RunWith
@@ -221,7 +222,7 @@ class UiFlowTest {
         shot("14-profile-collection")
     }
 
-    /** Settings with the remote: live TV row category (Back cancels, OK picks) and Home rows. */
+    /** Settings with the remote: sections, live TV row category (Back cancels, OK picks), Home rows, category order, player. */
     @Test
     fun settingsScreen() {
         val vm = seed()
@@ -238,21 +239,31 @@ class UiFlowTest {
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
         rule.mainClock.advanceTimeBy(1_000)
         rule.waitForIdle()
-        expectFocus("first button", "Plex")
-        press(KeyEvent.KEYCODE_DPAD_DOWN)
-        expectFocus("PIN of the phone page", "PIN")
-        press(KeyEvent.KEYCODE_DPAD_DOWN)
-        expectFocus("language row", "Language")
-        press(KeyEvent.KEYCODE_DPAD_DOWN)
-        expectFocus("category row", "Channel category")
+        // Start page: the sections with their values. Nothing is set up here, so the left side
+        // shows the phone page's QR code and PIN (first setup) instead of the section's description.
+        expectFocus("first section", "Home screen")
+        assertTrue("QR code while nothing is set up", rule.onAllNodesWithContentDescription("QR code for the setup page").fetchSemanticsNodes().isNotEmpty())
         shot("09-settings")
+
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        rule.mainClock.advanceTimeBy(300)
+        assertTrue("inside, the left side describes the section", rule.onAllNodesWithText("Which rows Home shows", substring = true).fetchSemanticsNodes().isNotEmpty())
+        expectFocus("Home rows: one entry per profile, the account first", "Your account")
+        expectFocus("with how many rows are on", "1 of 2 on")
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        expectFocus("the profile's entry", "Tester Kind")
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        expectFocus("row order", "Order")
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        expectFocus("live TV row", "Live TV row")
+        shot("09b-settings-home")
 
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         expectFocus("picker starts on the saved category", "Testgruppe HD")
         shot("10-settings-category")
         press(KeyEvent.KEYCODE_DPAD_UP)
         press(KeyEvent.KEYCODE_BACK)
-        expectFocus("Back returns to the row", "Channel category")
+        expectFocus("Back returns to the row", "Live TV row")
         assertTrue("Back leaves the category unchanged", Graph.settings.homeLiveGroup == "Testgruppe HD")
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         press(KeyEvent.KEYCODE_DPAD_UP)
@@ -260,31 +271,12 @@ class UiFlowTest {
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         expectFocus("OK returns to the row with the new value", "Filme")
         assertTrue("OK picks the category", Graph.settings.homeLiveGroup == "Filme")
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        expectFocus("title row", "Live TV row title")
 
-        press(KeyEvent.KEYCODE_DPAD_DOWN)
-        expectFocus("title row", "Row title")
-        press(KeyEvent.KEYCODE_DPAD_DOWN)
-        expectFocus("category order row", "Category order")
-        val before = vm.categoryNames()
-        press(KeyEvent.KEYCODE_DPAD_CENTER)
-        expectFocus("order page starts on the first category", before.first())
-        press(KeyEvent.KEYCODE_DPAD_CENTER)
-        press(KeyEvent.KEYCODE_DPAD_DOWN)
-        assertTrue("OK and Down move the first category one down", vm.categoryNames().take(2) == listOf(before[1], before[0]))
-        expectFocus("focus stays on the moved category", before.first())
-        shot("11-settings-category-order")
-        press(KeyEvent.KEYCODE_BACK)
-        expectFocus("Back puts it down and stays on the page", before.first())
-        press(KeyEvent.KEYCODE_BACK)
-        expectFocus("Back returns to the row", "Own order")
-        vm.setCategoryOrder(emptyList())
-
-        press(KeyEvent.KEYCODE_DPAD_DOWN)
-        expectFocus("Home rows: one entry per profile, the account first", "Your account")
-        expectFocus("with how many rows are on", "1 of 2 on")
-        press(KeyEvent.KEYCODE_DPAD_DOWN)
-        expectFocus("the profile's entry", "Tester Kind")
-        press(KeyEvent.KEYCODE_DPAD_UP)
+        // The account's rows, and Back to its entry.
+        press(KeyEvent.KEYCODE_DPAD_UP, times = 4)
+        expectFocus("back on the account's entry", "Your account")
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         rule.mainClock.advanceTimeBy(300)
         expectFocus("OK opens the account's rows", "Recently Added Movies")
@@ -299,6 +291,49 @@ class UiFlowTest {
         press(KeyEvent.KEYCODE_BACK)
         rule.mainClock.advanceTimeBy(300)
         expectFocus("Back returns to the account's entry", "Your account")
+
+        // Back again: the start page, on the section that was open.
+        press(KeyEvent.KEYCODE_BACK)
+        rule.mainClock.advanceTimeBy(300)
+        expectFocus("Back returns to the section", "Home screen")
+
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        expectFocus("live TV section", "Live TV")
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        rule.mainClock.advanceTimeBy(300)
+        expectFocus("category order row", "Category order")
+        val before = vm.categoryNames()
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        expectFocus("order page starts on the first category", before.first())
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        assertTrue("OK and Down move the first category one down", vm.categoryNames().take(2) == listOf(before[1], before[0]))
+        expectFocus("focus stays on the moved category", before.first())
+        shot("11-settings-category-order")
+        press(KeyEvent.KEYCODE_BACK)
+        expectFocus("Back puts it down and stays on the page", before.first())
+        press(KeyEvent.KEYCODE_BACK)
+        expectFocus("Back returns to the row", "Own order")
+        vm.setCategoryOrder(emptyList())
+        press(KeyEvent.KEYCODE_BACK)
+        rule.mainClock.advanceTimeBy(300)
+        expectFocus("Back returns to the live TV section", "Live TV")
+
+        // Player: the gear panel's settings, here too.
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        expectFocus("player section", "Player")
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        rule.mainClock.advanceTimeBy(300)
+        expectFocus("subtitle size", "Subtitle size")
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        expectFocus("subtitle colour", "White")
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertTrue("colour stored", Graph.settings.subtitleColor == "yellow")
+        expectFocus("back on the colour with the new value", "Yellow")
+        shot("13-settings-player")
+        Graph.settings.subtitleColor = "white"
         Graph.settings.removeProfile("kid-2")
     }
 

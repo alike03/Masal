@@ -22,7 +22,6 @@
     <string name="settings_plex_link_again">Plex\'i yeniden bağla</string>
     <string name="settings_plex_new_code">Yeni Plex kodu</string>
     <string name="settings_android_settings">Android ayarları</string>
-    <string name="settings_live_row_heading">Ana Sayfa\'daki canlı TV satırı</string>
     <string name="settings_channel_category">Kanal kategorisi</string>
     <string name="settings_category_none">Yok (satır gizli)</string>
     <string name="settings_category_missing">%1$s (yüklenen kanallarda yok)</string>
@@ -96,7 +95,6 @@
     <string name="setup_name_playlist_placeholder">Listem</string>
     <string name="setup_playlist_url">Liste URL\'si</string>
     <string name="setup_m3u_epg">Rehber (XMLTV) URL\'si, isteğe bağlı</string>
-    <string name="settings_tv_tab_heading">TV sekmesi</string>
     <string name="settings_category_order">Kategori sırası</string>
     <string name="settings_category_order_default">Sağlayıcının sırası</string>
     <string name="settings_category_order_custom">Kendi sıran</string>
@@ -165,4 +163,24 @@
     <string name="setup_login_button">Giriş yap</string>
     <string name="setup_login_wrong">Yanlış PIN.</string>
     <string name="setup_login_locked">Çok fazla deneme. %1$d sn sonra tekrar dene.</string>
+    <string name="settings_section_home">Ana ekran</string>
+    <string name="settings_section_home_about">Ana ekranda hangi satırların göründüğü, sıraları ve canlı TV satırı.</string>
+    <string name="settings_section_live">Canlı TV</string>
+    <string name="settings_section_live_about">IPTV kaynakların ve TV sekmesindeki kategorilerin sırası. Kaynaklar telefon sayfasından eklenir.</string>
+    <string name="settings_section_player">Oynatıcı</string>
+    <string name="settings_section_player_about">Altyazı görünümü ve atlama süreleri, oynatıcıdaki dişli ile aynı.</string>
+    <string name="settings_section_accounts">Hesaplar</string>
+    <string name="settings_section_accounts_about">Plex, Plex Home profillerin ve istekler için Seerr.</string>
+    <string name="settings_section_phone_about">Girişleri, kaynakları ve Plex\'i aynı ağdaki bir telefondan ya da bilgisayardan değiştir.</string>
+    <string name="settings_section_general">Genel</string>
+    <string name="settings_section_general_about">Dil ve cihazın ağ, görüntü ve uygulama ayarları.</string>
+    <string name="settings_player_value">%1$d %%, %2$d / %3$d sn</string>
+    <string name="settings_accounts_code">Plex kodu %1$s</string>
+    <string name="settings_accounts_plex_on">Plex bağlı</string>
+    <string name="settings_accounts_plex_off">Plex bağlı değil</string>
+    <string name="settings_rows_for">Satırlar: %1$s</string>
+    <string name="settings_live_row">Canlı TV satırı</string>
+    <string name="settings_live_row_title">Canlı TV satırı başlığı</string>
+    <plurals name="settings_home_value"><item quantity="one">%d satır</item><item quantity="other">%d satır</item></plurals>
+    <plurals name="settings_live_value"><item quantity="one">%d kaynak</item><item quantity="other">%d kaynak</item></plurals>
 </resources>
