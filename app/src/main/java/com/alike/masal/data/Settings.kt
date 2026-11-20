@@ -232,6 +232,11 @@ class Settings(context: Context) {
         get() = prefs.getString("seerr_user_name", "") ?: ""
         set(v) = prefs.edit().putString("seerr_user_name", v).apply()
 
+    /** Language of Seerr's titles, summaries and posters (seerr.md); "" follows the app language. */
+    var seerrLanguage: String
+        get() = prefs.getString("seerr_language", "") ?: ""
+        set(v) = prefs.edit().putString("seerr_language", v).apply()
+
     /** Seerr user chosen per profile ("" = main account) as id and name; missing: matched by name. */
     var seerrUsers: Map<String, Pair<Int, String>>
         get() = runCatching {

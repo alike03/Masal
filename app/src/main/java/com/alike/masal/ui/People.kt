@@ -52,6 +52,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -96,7 +97,10 @@ class PeopleActions(
     val onPlexTitle: (String, String) -> Unit,
     /** Plays a film in Plex by its ratingKey and title; null where playing is not offered. */
     val onPlayPlex: ((String, String) -> Unit)? = null,
-    /** Opens a YouTube trailer (video id) in a YouTube app; null where it is not offered (inside the player). */
+    /**
+     * Opens a YouTube trailer (video id) in a YouTube app, used when the embedded player is refused;
+     * null where trailers are not offered (inside the player).
+     */
     val onTrailer: ((String) -> Unit)? = null,
 )
 
@@ -441,6 +445,24 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
     var picking by remember { mutableStateOf(false) }
     var sending by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
+    // The trailer plays inline in place of the poster (seerr.md); "Full screen" moves it over the screen.
+    var trailerOn by remember { mutableStateOf(false) }
+    var trailer by remember { mutableStateOf<YouTubeTrailer?>(null) }
+    var fullScreen by remember { mutableStateOf(false) }
+    var trailerFailed by remember { mutableStateOf(false) }
+    fun stopTrailer() { trailer?.destroy(); trailer = null; trailerOn = false; fullScreen = false }
+    DisposableEffect(Unit) { onDispose { trailer?.destroy() } }
+    fun startTrailer(key: String) {
+        com.alike.masal.Playback.stopPreviews()
+        trailerOn = true
+        if (VideoPreviews.enabled) trailer = YouTubeTrailer(context, key) { st ->
+            when (st) {
+                TrailerState.Ended -> stopTrailer()
+                TrailerState.Failed -> { stopTrailer(); trailerFailed = true; message = context.getString(R.string.seerr_trailer_failed) }
+                else -> {}
+            }
+        }
+    }
     fun send(seasons: List<Int>) {
         if (sending) return
         sending = true; message = null
@@ -462,7 +484,15 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().onPreviewKeyEvent { e ->
+        if (!trailerOn || fullScreen) return@onPreviewKeyEvent false
+        when (e.key) {
+            // Back stops the trailer before it leaves the page.
+            Key.Back -> { if (e.type == KeyEventType.KeyUp) stopTrailer(); true }
+            Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause -> { if (e.type == KeyEventType.KeyUp) trailer?.toggle(); true }
+            else -> false
+        }
+    }) {
         when {
             d == null && failed == null -> Text(stringResource(R.string.browse_loading), color = TextDim, modifier = Modifier.align(Alignment.Center))
             d == null -> Text(stringResource(R.string.browse_load_failed, failed.orEmpty()), color = Accent, modifier = Modifier.align(Alignment.Center))
@@ -473,11 +503,15 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 item(key = "header") {
-                    Row(Modifier.padding(horizontal = EdgePadding)) {
-                        Box(Modifier.size(width = 130.dp, height = 195.dp).clip(RoundedCornerShape(6.dp)).background(Panel)) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = EdgePadding)) {
+                        if (trailerOn) {
+                            // YouTube asks for at least 480 x 270 for a 16:9 player; nothing may cover it.
+                            if (!fullScreen) TrailerView(trailer, Modifier.size(width = 480.dp, height = 270.dp).clip(RoundedCornerShape(6.dp)))
+                            else Box(Modifier.size(width = 480.dp, height = 270.dp).clip(RoundedCornerShape(6.dp)).background(Panel))
+                        } else Box(Modifier.size(width = 130.dp, height = 195.dp).clip(RoundedCornerShape(6.dp)).background(Panel)) {
                             NetImage(d.title.poster, d.title.title, Modifier.fillMaxSize())
                         }
-                        Column(Modifier.padding(start = 24.dp).width(540.dp)) {
+                        Column(Modifier.padding(start = 24.dp).let { if (trailerOn) it.weight(1f) else it.width(540.dp) }) {
                             Text(d.title.title, color = TextMain, fontSize = 30.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             val length = if (mediaType == "tv") d.seasons.size.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.seerr_seasons_count, it, it) }
                                 else d.runtime?.let { formatDuration(it * 60_000L) }
@@ -496,7 +530,21 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
                                 onCancel = { confirming = false },
                                 onOpen = { d.title.ratingKey?.let { actions.onPlexTitle(it, d.title.title) } },
                                 onPlay = actions.onPlayPlex?.takeIf { mediaType == "movie" }?.let { play -> { d.title.ratingKey?.let { play(it, d.title.title) } } },
-                                onTrailer = d.trailer?.let { key -> actions.onTrailer?.let { open -> { open(key) } } })
+                                trailerLabel = when {
+                                    d.trailer == null || actions.onTrailer == null -> null
+                                    trailerFailed -> stringResource(R.string.seerr_trailer_external)
+                                    trailerOn -> stringResource(R.string.seerr_trailer_fullscreen)
+                                    else -> stringResource(R.string.seerr_trailer)
+                                },
+                                onTrailer = {
+                                    val key = d.trailer
+                                    when {
+                                        key == null -> {}
+                                        trailerFailed -> actions.onTrailer?.invoke(key)
+                                        trailerOn -> fullScreen = true
+                                        else -> startTrailer(key)
+                                    }
+                                })
                             message?.let { Text(it, color = Accent, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp)) }
                         }
                     }
@@ -507,6 +555,7 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
             }
         }
         if (picking && d != null) SeasonPicker(d.seasons, sending, onCancel = { picking = false }, onRequest = { send(it) })
+        if (fullScreen) TrailerFullScreen(trailer) { fullScreen = false }
     }
 }
 
@@ -520,8 +569,9 @@ private fun RequestActions(
     onRequest: () -> Unit, onConfirm: () -> Unit, onCancel: () -> Unit, onOpen: () -> Unit,
     /** Plays a film in Plex; null where playing is not offered (series, inside the player). */
     onPlay: (() -> Unit)? = null,
-    /** Opens the trailer in a YouTube app; null without a trailer. */
-    onTrailer: (() -> Unit)? = null,
+    /** The trailer button's text ("Trailer", "Full screen", "Open in YouTube"); null without a trailer. */
+    trailerLabel: String? = null,
+    onTrailer: () -> Unit = {},
 ) {
     val canRequest = requestable(d, mediaType)
     val canOpen = d.title.status == SeerrStatus.Available && d.title.ratingKey != null
@@ -546,9 +596,9 @@ private fun RequestActions(
         if (canOpen && onPlay != null) MasalButton(stringResource(R.string.browse_play), onPlay, mod())
         if (canOpen) MasalButton(stringResource(R.string.seerr_open), onOpen, mod(), primary = onPlay == null)
         if (canRequest) MasalButton(stringResource(R.string.seerr_request), onRequest, mod(), primary = !canOpen)
-        if (onTrailer != null) MasalButton(stringResource(R.string.seerr_trailer), onTrailer, mod(), primary = false)
+        if (trailerLabel != null) MasalButton(trailerLabel, onTrailer, mod(), primary = false)
         // Nothing to press: an empty focus target keeps the page reachable for the cast row.
-        if (!canOpen && !canRequest && onTrailer == null) Box(mod().size(1.dp).focusable())
+        if (!canOpen && !canRequest && trailerLabel == null) Box(mod().size(1.dp).focusable())
     }
 }
 

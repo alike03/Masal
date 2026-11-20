@@ -86,6 +86,17 @@ class SeerrTest {
     }
 
     @Test
+    fun chosenLanguageOverTheAppLanguage() {
+        settings.seerrLanguage = "fr"
+        try {
+            seerr.search("test")
+            assertTrue(requests.last().path!!.endsWith("&language=fr"))
+        } finally { settings.seerrLanguage = "" }
+        seerr.search("test")
+        assertTrue(requests.last().path!!.endsWith("&language=" + seerr.language()))
+    }
+
+    @Test
     fun trailerBeforeTeaser() {
         assertEquals("trailer01", seerr.details("movie", 101).trailer)
         assertNull(seerr.details("movie", 102).trailer)

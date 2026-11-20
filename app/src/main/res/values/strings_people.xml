@@ -52,4 +52,7 @@
     </plurals>
     <string name="seerr_trailer">Trailer</string>
     <string name="seerr_no_youtube_app">No app for YouTube trailers is installed</string>
+    <string name="seerr_trailer_fullscreen">Full screen</string>
+    <string name="seerr_trailer_external">Open in YouTube</string>
+    <string name="seerr_trailer_failed">YouTube does not allow this trailer here.</string>
 </resources>

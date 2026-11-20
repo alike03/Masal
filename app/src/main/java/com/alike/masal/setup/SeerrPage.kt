@@ -39,11 +39,29 @@ import kotlinx.coroutines.withContext
  * and "Clear cache". Address and key are entered on the phone page. [pick] is the profile whose
  * user is being chosen ("" = main account), null for the overview.
  */
+/** [SeerrPage]'s pick while the language is being chosen; profile keys are "" or numbers. */
+private const val LanguagePick = "#language"
+
+/** Languages Seerr (TMDB) can be asked for, by their own name. */
+private val SeerrLanguages = listOf("en" to "English", "de" to "Deutsch", "fr" to "Français", "it" to "Italiano", "es" to "Español", "tr" to "Türkçe")
+
 @Composable
 internal fun SeerrPage(pick: String?, onPick: (String?) -> Unit) {
     var version by remember { mutableIntStateOf(0) }
     val users by produceState<Result<List<SeerrUser>>?>(null) {
         value = if (Graph.seerr.configured) withContext(Dispatchers.IO) { runCatching { Graph.seerr.users() } } else null
+    }
+    if (pick == LanguagePick) {
+        val app = stringResource(R.string.settings_seerr_language_app)
+        val choices = listOf("" to app) + SeerrLanguages
+        ChoiceList(stringResource(R.string.settings_seerr_language), stringResource(R.string.settings_seerr_language_note), choices,
+            choices.indexOfFirst { it.first == Graph.settings.seerrLanguage }) { code ->
+            Graph.settings.seerrLanguage = code
+            Graph.settings.homeChanged() // Home's Seerr rows load in the new language
+            version++
+            onPick(null)
+        }
+        return
     }
     if (pick != null) {
         val list = users?.getOrNull().orEmpty()
@@ -77,6 +95,10 @@ internal fun SeerrPage(pick: String?, onPick: (String?) -> Unit) {
         Text(stringResource(R.string.settings_seerr_connected, Graph.settings.seerrUserName), color = TextDim, fontSize = 15.sp,
             modifier = Modifier.padding(top = 4.dp))
         Text(stringResource(R.string.settings_seerr_note), color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
+        val language = remember(version) {
+            SeerrLanguages.firstOrNull { it.first == Graph.settings.seerrLanguage }?.second
+        } ?: stringResource(R.string.settings_seerr_language_app)
+        SettingRow(stringResource(R.string.settings_seerr_language), language, { onPick(LanguagePick) }, Modifier.focusRequester(first))
         Heading(stringResource(R.string.settings_seerr_request_as))
         when {
             users == null -> Text(stringResource(R.string.settings_seerr_users_loading), color = TextDim, fontSize = 15.sp)
@@ -88,8 +110,7 @@ internal fun SeerrPage(pick: String?, onPick: (String?) -> Unit) {
                 val chosen = remember(version) { Graph.settings.seerrUsers[k]?.second }
                 val auto = users?.getOrNull()?.let { Graph.seerr.matchUser(k, it)?.name }
                 val value = chosen ?: auto?.let { stringResource(R.string.settings_seerr_auto_user, it) } ?: stringResource(R.string.settings_seerr_auto)
-                SettingRow(profileTitle(k), value, { if (users?.isSuccess == true) onPick(k) },
-                    if (k.isEmpty()) Modifier.focusRequester(first) else Modifier)
+                SettingRow(profileTitle(k), value, { if (users?.isSuccess == true) onPick(k) })
             }
         }
         MasalButton(stringResource(R.string.settings_seerr_clear_cache), { Graph.seerr.cache.clear(); message = cleared }, primary = false)

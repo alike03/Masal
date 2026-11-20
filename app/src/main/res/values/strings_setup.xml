@@ -183,4 +183,7 @@
     <string name="settings_live_row_title">Live TV row title</string>
     <plurals name="settings_home_value"><item quantity="one">%d row</item><item quantity="other">%d rows</item></plurals>
     <plurals name="settings_live_value"><item quantity="one">%d source</item><item quantity="other">%d sources</item></plurals>
+    <string name="settings_seerr_language">Language</string>
+    <string name="settings_seerr_language_app">App language</string>
+    <string name="settings_seerr_language_note">Titles, summaries and posters from Seerr. Popular and upcoming rows always come in the language of your user in Seerr (Seerr, Settings, Users).</string>
 </resources>

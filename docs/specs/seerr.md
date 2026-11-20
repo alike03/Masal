@@ -10,6 +10,12 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
 - Optional, on the phone setup page (`setup.md`) under Plex: Seerr address and the API key
   (Seerr, Settings, General, "API Key"). "Save" checks both with `GET /api/v1/auth/me` and
   shows the Seerr user the key belongs to, or why it failed.
+- Settings, Accounts, Seerr, "Language": the language of Seerr's titles, summaries and posters:
+  "App language" (default) or English, Deutsch, Français, Italiano, Español, Türkçe. It is
+  sent as `language` on search, title, person and filmography pages and on the Trending,
+  studio and network rows. Seerr's popular, upcoming, keyword, genre and streaming lists ignore
+  it and always use the display language of Seerr's own user (Seerr, Settings, Users); the
+  setting says so. Cached pages are kept per language, so a change loads them anew.
 - Like all logins, the key stays in the app's private storage, is excluded from backup and is
   never logged or shown again; the setup page shows only that a key is set.
 - The TV's Settings shows Seerr as "Connected as <user>" or "Not set up", with "Clear cache"
@@ -44,9 +50,19 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
 - Series: "Request" opens a list of seasons with their state; seasons already in Plex or
   requested are marked and cannot be picked. "All missing seasons" is preselected; OK toggles
   a season, "Request" sends them (`mediaType tv`, `seasons`).
-- "Trailer" (when TMDB has one; a trailer, else a teaser) opens the YouTube video in the first
-  installed of TizenTube, SmartTube, YouTube for Android TV, else in whatever opens YouTube
-  links; without any such app a short message says so. Not offered inside the player.
+- "Trailer" (when TMDB has one; a trailer, else a teaser) plays it on the page: YouTube's own
+  embedded player (IFrame Player API in a WebView) takes the poster's place at 480 x 270, with
+  nothing drawn over it. The button then says "Full screen": the same player fills the screen
+  without restarting; OK or play/pause pauses and plays, Back returns to the page. On the page,
+  play/pause pauses and plays, Back stops the trailer (Back again leaves the page). The trailer
+  closes by itself when it ends. Masal's own previews stop while it plays.
+- YouTube requires the app's identity as the Referer: the player page is loaded with the base
+  URL `https://<application id>`. YouTube's rules: at least 200 x 200 (480 x 270 recommended for
+  16:9), no overlays on the player, autoplay only while it is visible.
+- If YouTube refuses the video here (the owner does not allow embedding, or another player
+  error), a short message says so and the button becomes "Open in YouTube": it opens the video
+  in the first installed of TizenTube, SmartTube, YouTube for Android TV, else in whatever opens
+  YouTube links. Trailers are not offered inside the player.
 - Seerr's defaults decide server, quality profile and folder; 4K is not offered.
 - After sending: a short message "Requested" (or Seerr's error text, e.g. quota reached) and
   the badge changes at once.
@@ -56,7 +72,7 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
   that hold titles, in Seerr's order (`GET /settings/discover`), each with a check mark like the
   Plex rows; all off by default. Stored as `home_rows_on` entries "seerr:<slider id>".
 - Offered slider types and what they load (as Seerr's own Discover page does, first page only,
-  about 20 titles). `language` (the app language) goes along only on trending, studio, network
+  about 20 titles). `language` (see Setup) goes along only on trending, studio, network
   and search: on `discover/movies` and `discover/tv` Seerr reads it as the titles' original
   language and would filter the list, so there Seerr's own language setting applies:
   - Trending (4): `discover/trending`.
@@ -116,6 +132,8 @@ state), `person/<id>`, `person/<id>/combined_credits` (each title with `mediaInf
 4 partly available, 5 available, 6 deleted. Checked against Seerr 3.5.2's API description.
 
 ## Open points
+- Embedded trailer not yet verified on the TV: whether YouTube accepts the WebView's Referer,
+  whether ads appear before trailers, and memory while it plays.
 - Seerr's Plex Watchlist slider is left out for now: it is per Seerr user, and whether
   `X-API-User` selects whose watchlist is returned is not checked yet.
 - Slider type numbers come from Seerr 3.5.2's code (`DiscoverSliderType`); the API description

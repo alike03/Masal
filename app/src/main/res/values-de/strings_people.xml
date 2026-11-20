@@ -26,7 +26,7 @@
     <string name="people_leave_no">Nein</string>
     <string name="seerr_status_in_plex">In Plex</string>
     <string name="seerr_status_requested">Angefragt</string>
-    <string name="seerr_status_processing">Wird hinzugefügt</string>
+    <string name="seerr_status_processing">Bald verfügbar</string>
     <string name="seerr_request">Anfragen</string>
     <string name="seerr_request_confirm">%1$s anfragen?</string>
     <string name="seerr_cancel">Abbrechen</string>
@@ -52,4 +52,7 @@
     </plurals>
     <string name="seerr_trailer">Trailer</string>
     <string name="seerr_no_youtube_app">Keine App für YouTube-Trailer installiert</string>
+    <string name="seerr_trailer_fullscreen">Vollbild</string>
+    <string name="seerr_trailer_external">In YouTube öffnen</string>
+    <string name="seerr_trailer_failed">YouTube erlaubt diesen Trailer hier nicht.</string>
 </resources>

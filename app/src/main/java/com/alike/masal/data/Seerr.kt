@@ -168,7 +168,10 @@ class SeerrClient(private val http: OkHttpClient, private val settings: Settings
 
     private fun get(path: String): JSONObject = JSONObject(call(Request.Builder().url(url(path))))
 
-    private fun lang() = "language=" + Language.tag().substringBefore('-').ifBlank { "en" }
+    /** The language asked of Seerr: the one chosen in Settings, else the app language (seerr.md). */
+    fun language(): String = settings.seerrLanguage.ifBlank { Language.tag() }.substringBefore('-').ifBlank { "en" }
+
+    private fun lang() = "language=" + language()
 
     /** The Seerr user the key belongs to; checks address and key. */
     fun me(url: String = settings.seerrUrl, key: String = settings.seerrKey): SeerrUser {
@@ -241,7 +244,7 @@ class SeerrClient(private val http: OkHttpClient, private val settings: Settings
     }
 
     // "2": lists cached before the language fix were filtered by original language.
-    private fun discoverKey(slider: SeerrSlider) = "discover2-${slider.id}-${slider.type}-${slider.data.orEmpty().hashCode()}-${Language.tag()}"
+    private fun discoverKey(slider: SeerrSlider) = "discover2-${slider.id}-${slider.type}-${slider.data.orEmpty().hashCode()}-${language()}"
 
     /** A slider's first page from the cache when younger than [maxAgeMs] (12 hours). */
     fun cachedDiscover(slider: SeerrSlider, maxAgeMs: Long = DiscoverMaxAge): List<SeerrTitle>? =
@@ -281,7 +284,7 @@ class SeerrClient(private val http: OkHttpClient, private val settings: Settings
         return cast + mergeJobs(crew)
     }
 
-    private fun titleKey(mediaType: String, tmdbId: Int) = "title-$mediaType-$tmdbId-${Language.tag()}"
+    private fun titleKey(mediaType: String, tmdbId: Int) = "title-$mediaType-$tmdbId-${language()}"
 
     /** A title's page from the cache, or null when there is none younger than a week. */
     fun cachedDetails(mediaType: String, tmdbId: Int): SeerrDetails? =
@@ -334,7 +337,7 @@ class SeerrClient(private val http: OkHttpClient, private val settings: Settings
     // ---- people ----
 
     fun person(tmdbId: Int): SeerrPerson {
-        val key = "person-$tmdbId-${Language.tag()}"
+        val key = "person-$tmdbId-${language()}"
         val raw = cache.get(key) ?: call(Request.Builder().url(url("/person/$tmdbId?" + lang()))).also { cache.put(key, it) }
         val o = JSONObject(raw)
         fun s(k: String) = o.optString(k).takeIf { it.isNotBlank() && it != "null" }
@@ -352,7 +355,7 @@ class SeerrClient(private val http: OkHttpClient, private val settings: Settings
         return parseCredits(raw)
     }
 
-    private fun creditsKey(tmdbId: Int) = "credits-$tmdbId-${Language.tag()}"
+    private fun creditsKey(tmdbId: Int) = "credits-$tmdbId-${language()}"
 
     /** One entry per title, newest first; an actor who also directed it gets both in [SeerrTitle.jobs]. */
     internal fun parseCredits(raw: String): List<SeerrTitle> {

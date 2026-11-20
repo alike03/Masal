@@ -152,8 +152,12 @@ class PeopleScreensTest {
         rule.onRoot().captureRoboImage("$shots/09-film-in-plex.png")
         rule.onNodeWithText("Open").assertExists()
         press("Play")
+        assertEquals(listOf("7"), played)
+        // The trailer plays inline (a black box without video in tests); the button offers full screen.
         press("Trailer")
-        assertEquals(listOf("7", "yt:trailer01"), played)
+        rule.onNodeWithText("Full screen").assertExists()
+        rule.onRoot().captureRoboImage("$shots/10-trailer-inline.png")
+        assertEquals("the YouTube app is only the fallback", listOf("7"), played)
     }
 
     @OptIn(ExperimentalTestApi::class)
