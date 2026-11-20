@@ -94,6 +94,8 @@ class PeopleActions(
     val onSeerrTitle: (SeerrTitle) -> Unit,
     /** A title in Plex by its ratingKey (film or show) and title. */
     val onPlexTitle: (String, String) -> Unit,
+    /** Plays a film in Plex by its ratingKey and title; null where playing is not offered. */
+    val onPlayPlex: ((String, String) -> Unit)? = null,
 )
 
 /** Actors (at most [actors]) and directors: what the player's paused strip shows. */
@@ -200,7 +202,11 @@ fun StatusBadge(status: SeerrStatus, modifier: Modifier = Modifier) {
 
 /** A Seerr title's poster: full colour with an "In Plex" badge, dimmed otherwise. */
 @Composable
-fun SeerrPosterCard(t: SeerrTitle, caption: String?, onClick: () -> Unit, modifier: Modifier = Modifier, width: Dp = 104.dp, onFocus: () -> Unit = {}) {
+fun SeerrPosterCard(
+    t: SeerrTitle, caption: String?, onClick: () -> Unit, modifier: Modifier = Modifier, width: Dp = 104.dp, onFocus: () -> Unit = {},
+    /** Title and caption under the poster; Home's rows show posters only, the info block names the title. */
+    showLabels: Boolean = true,
+) {
     val dim = if (t.status == SeerrStatus.Available) 1f else 0.45f
     Column(Modifier.width(width)) {
         FocusCard(onClick, onFocus, modifier.fillMaxWidth().aspectRatio(2f / 3f)) {
@@ -211,6 +217,7 @@ fun SeerrPosterCard(t: SeerrTitle, caption: String?, onClick: () -> Unit, modifi
             NetImage(t.poster, t.title, Modifier.fillMaxSize().alpha(dim))
             StatusBadge(t.status, Modifier.align(Alignment.TopStart).padding(5.dp))
         }
+        if (!showLabels) return@Column
         Text(t.title, color = TextMain.copy(alpha = if (dim < 1f) 0.75f else 1f), fontSize = 12.sp, maxLines = 1,
             overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
         caption?.takeIf { it.isNotBlank() }?.let { Text(it, color = TextDim, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
@@ -486,7 +493,8 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
                                 onRequest = { if (mediaType == "tv") picking = true else confirming = true },
                                 onConfirm = { send(emptyList()) },
                                 onCancel = { confirming = false },
-                                onOpen = { d.title.ratingKey?.let { actions.onPlexTitle(it, d.title.title) } })
+                                onOpen = { d.title.ratingKey?.let { actions.onPlexTitle(it, d.title.title) } },
+                                onPlay = actions.onPlayPlex?.takeIf { mediaType == "movie" }?.let { play -> { d.title.ratingKey?.let { play(it, d.title.title) } } })
                             message?.let { Text(it, color = Accent, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp)) }
                         }
                     }
@@ -508,6 +516,8 @@ private fun requestable(d: SeerrDetails, mediaType: String) =
 private fun RequestActions(
     d: SeerrDetails, mediaType: String, confirming: Boolean, sending: Boolean, firstModifier: Modifier,
     onRequest: () -> Unit, onConfirm: () -> Unit, onCancel: () -> Unit, onOpen: () -> Unit,
+    /** Plays a film in Plex; null where playing is not offered (series, inside the player). */
+    onPlay: (() -> Unit)? = null,
 ) {
     val canRequest = requestable(d, mediaType)
     val canOpen = d.title.status == SeerrStatus.Available && d.title.ratingKey != null
@@ -529,7 +539,8 @@ private fun RequestActions(
     Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         var first = true
         fun mod(): Modifier = if (first) { first = false; firstModifier } else Modifier
-        if (canOpen) MasalButton(stringResource(R.string.seerr_open), onOpen, mod())
+        if (canOpen && onPlay != null) MasalButton(stringResource(R.string.browse_play), onPlay, mod())
+        if (canOpen) MasalButton(stringResource(R.string.seerr_open), onOpen, mod(), primary = onPlay == null)
         if (canRequest) MasalButton(stringResource(R.string.seerr_request), onRequest, mod(), primary = !canOpen)
         // Nothing to press: an empty focus target keeps the page reachable for the cast row.
         if (!canOpen && !canRequest) Box(mod().size(1.dp).focusable())

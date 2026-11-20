@@ -58,6 +58,37 @@ class SeerrTest {
     fun stop() { server.shutdown(); settings.clearSeerr(); cacheDir.deleteRecursively() }
 
     @Test
+    fun discoverSlidersHoldingTitlesInSeerrsOrder() {
+        val sliders = seerr.sliders()
+        // Recently Added (1) and the genre tiles (6) are left out; switched off in Seerr is still offered.
+        assertEquals(listOf(4, 7, 20, 21), sliders.map { it.id })
+        assertEquals(listOf(null, null, "Test keyword films", "On Test+"), sliders.map { it.title })
+        assertEquals("seerr:20", sliders[2].rowId)
+        assertEquals("/discover/movies?keywords=818%2C9715&", sliders[2].path("2026-11-20"))
+        assertEquals("/discover/tv?watchRegion=CH&watchProviders=8%7C337&", sliders[3].path("2026-11-20"))
+        assertEquals("/discover/movies?primaryReleaseDateGte=2026-11-20&", sliders[1].path("2026-11-20"))
+    }
+
+    @Test
+    fun discoverRowIsCachedForTwelveHours() {
+        val trending = seerr.sliders().first()
+        val titles = seerr.discover(trending, "2026-11-20")
+        // People are left out, each title once.
+        assertEquals(listOf("Testfilm", "Testserie"), titles.map { it.title })
+        assertEquals("7", titles[0].ratingKey)
+        assertTrue(requests.last().path!!.startsWith("/api/v1/discover/trending?page=1&language="))
+        assertEquals(titles, seerr.cachedDiscover(trending))
+        File(cacheDir, cacheDir.list()!!.single { it.startsWith("discover-4-") }).setLastModified(System.currentTimeMillis() - 13 * 3600_000L)
+        assertNull(seerr.cachedDiscover(trending))
+    }
+
+    @Test
+    fun requestMarksTheTitle() {
+        seerr.request("movie", 102, emptyList(), null)
+        assertTrue("movie:102" in seerr.requested.value)
+    }
+
+    @Test
     fun keyIsChecked() {
         assertEquals("MEMO Tester", seerr.me().name)
         assertEquals("test-key", requests.last().getHeader("X-Api-Key"))
@@ -203,6 +234,18 @@ object MockSeerr {
             val path = request.path.orEmpty().substringBefore('?')
             fun json(s: String) = MockResponse().setHeader("Content-Type", "application/json").setBody(s)
             return when {
+                path == "/api/v1/settings/discover" -> json("""[
+                    {"id":4,"type":4,"order":3,"isBuiltIn":true,"enabled":true,"title":null,"data":null},
+                    {"id":1,"type":1,"order":0,"isBuiltIn":true,"enabled":true,"title":null,"data":null},
+                    {"id":6,"type":6,"order":5,"isBuiltIn":true,"enabled":true,"title":null,"data":null},
+                    {"id":7,"type":7,"order":6,"isBuiltIn":true,"enabled":false,"title":null,"data":null},
+                    {"id":20,"type":13,"order":12,"isBuiltIn":false,"enabled":true,"title":"Test keyword films","data":"818,9715"},
+                    {"id":21,"type":21,"order":13,"isBuiltIn":false,"enabled":true,"title":"On Test+","data":"CH,8|337"}]""")
+                path == "/api/v1/discover/trending" || path == "/api/v1/discover/movies" -> json("""{"page":1,"results":[
+                    {"id":101,"mediaType":"movie","title":"Testfilm","releaseDate":"2019-05-01","posterPath":"/p101.jpg","mediaInfo":{"status":5,"ratingKey":"7"}},
+                    {"id":501,"mediaType":"person","name":"Tess Tester","profilePath":"/t.jpg"},
+                    {"id":300,"mediaType":"tv","name":"Testserie","firstAirDate":"2021-02-01","posterPath":"/p300.jpg"},
+                    {"id":101,"mediaType":"movie","title":"Testfilm","releaseDate":"2019-05-01","posterPath":"/p101.jpg"}]}""")
                 path == "/api/v1/auth/me" -> json("""{"id":1,"displayName":"MEMO Tester"}""")
                 path == "/api/v1/user" -> json(Users)
                 path == "/api/v1/search" -> json("""{"page":1,"results":[

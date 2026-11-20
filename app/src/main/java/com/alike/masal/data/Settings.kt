@@ -172,6 +172,20 @@ class Settings(context: Context) {
     fun homeRowShown(option: HomeRowOption): Boolean =
         option.id in homeRowsOn || (option.defaultOn && option.id !in homeRowsOff)
 
+    private val _homeOrder = MutableStateFlow(readHomeOrder())
+    /**
+     * Home's row order (home.md, "Row order"): row ids, also of rows switched off for now, so they
+     * keep their place. Empty: the default order. Changing it redraws Home without reloading rows.
+     */
+    val homeOrder: StateFlow<List<String>> = _homeOrder
+
+    private fun readHomeOrder() = prefs.getString("home_order", "").orEmpty().split('\n').filter { it.isNotBlank() }
+
+    fun setHomeOrder(ids: List<String>) {
+        prefs.edit().putString("home_order", ids.joinToString("\n")).apply()
+        _homeOrder.value = ids
+    }
+
     fun setHomeRowShown(option: HomeRowOption, shown: Boolean) {
         homeRowsOn = if (shown && !option.defaultOn) homeRowsOn + option.id else homeRowsOn - option.id
         homeRowsOff = if (!shown && option.defaultOn) homeRowsOff + option.id else homeRowsOff - option.id

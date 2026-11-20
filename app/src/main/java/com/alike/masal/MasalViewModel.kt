@@ -28,6 +28,23 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import com.alike.masal.data.SeerrSlider
+import com.alike.masal.data.SeerrTitle
+
+/** A Seerr Discover slider shown on Home (seerr.md). */
+data class SeerrRow(val id: String, val title: String, val titles: List<SeerrTitle>)
+
+/** A slider's name: its own title, or Masal's name for Seerr's built-in sliders. */
+fun seerrRowTitle(s: SeerrSlider): String = s.title ?: com.alike.masal.data.Language.text(
+    when (s.type) {
+        SeerrSlider.Trending -> R.string.home_seerr_trending
+        SeerrSlider.PopularMovies -> R.string.home_seerr_popular_movies
+        SeerrSlider.UpcomingMovies -> R.string.home_seerr_upcoming_movies
+        SeerrSlider.PopularTv -> R.string.home_seerr_popular_tv
+        SeerrSlider.UpcomingTv -> R.string.home_seerr_upcoming_tv
+        else -> R.string.home_seerr_row
+    },
+)
 
 class MasalViewModel(app: Application) : AndroidViewModel(app) {
     val channels = MutableStateFlow<List<Channel>>(emptyList())
@@ -43,6 +60,11 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
     @Volatile private var profileRows: Map<String, ProfileRows> = emptyMap()
     /** Everything that can be shown as a row on Home (Plex's rows and all collections), for Settings. */
     val homeRowOptions = MutableStateFlow<List<HomeRowOption>>(emptyList())
+    /** Seerr's Discover sliders that can be rows on Home (seerr.md); empty without Seerr. */
+    val seerrSliders = MutableStateFlow<List<SeerrSlider>>(emptyList())
+    /** The Seerr rows switched on, in Seerr's order, each with its first page of titles. */
+    val seerrRows = MutableStateFlow<List<SeerrRow>>(emptyList())
+    private var seerrJob: Job? = null
     /** Plex's own Home rows as loaded, before the user's choice. */
     @Volatile private var plexHomeHubs: List<PlexHub> = emptyList()
     /** First titles of collections shown on Home that Plex does not promote. */
@@ -90,7 +112,7 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         // Only the Home layout changed (rows chosen in Settings): rebuild the rows, reload nothing else.
-        viewModelScope.launch { Graph.settings.homeVersion.drop(1).collect { rebuildHomeRows() } }
+        viewModelScope.launch { Graph.settings.homeVersion.drop(1).collect { rebuildHomeRows(); refreshSeerrRows(reloadSliders = false) } }
         loadBackdrops()
         runCatching { connectivity?.registerDefaultNetworkCallback(network) }
     }
@@ -161,6 +183,7 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
                 ensureActive()
                 recent.onSuccess { recentlyAdded.value = it }
             }
+            refreshSeerrRows()
             if (Graph.settings.plexAccountName.isBlank()) runCatching { Graph.plex.accountName() }.getOrNull()?.let { Graph.settings.plexAccountName = it }
             profileRows = loadProfiles()
             ensureActive()
@@ -188,6 +211,30 @@ class MasalViewModel(app: Application) : AndroidViewModel(app) {
             out[p.id] = ProfileRows(deck.getOrDefault(emptyList()), hubs, collections)
         }
         return out
+    }
+
+    /**
+     * Seerr's sliders (asked again with [reloadSliders]) and the rows switched on: each from the
+     * cache when younger than 12 hours, else from Seerr. Unreachable Seerr: no rows, no error.
+     */
+    fun refreshSeerrRows(reloadSliders: Boolean = true) {
+        seerrJob?.cancel()
+        if (!Graph.seerr.configured) { seerrSliders.value = emptyList(); seerrRows.value = emptyList(); return }
+        seerrJob = viewModelScope.launch(Dispatchers.IO) {
+            val sliders = if (reloadSliders || seerrSliders.value.isEmpty()) {
+                runCatching { Graph.seerr.sliders() }.getOrNull() ?: seerrSliders.value
+            } else seerrSliders.value
+            ensureActive()
+            seerrSliders.value = sliders
+            val on = Graph.settings.homeRowsOn
+            val today = java.time.LocalDate.now().toString()
+            val rows = sliders.filter { it.rowId in on }.mapNotNull { sl ->
+                val titles = Graph.seerr.cachedDiscover(sl) ?: runCatching { Graph.seerr.discover(sl, today) }.getOrNull()
+                titles?.takeIf { it.isNotEmpty() }?.let { SeerrRow(sl.rowId, seerrRowTitle(sl), it) }
+            }
+            ensureActive()
+            seerrRows.value = rows
+        }
     }
 
     fun rebuildHomeRows() {

@@ -48,4 +48,12 @@
     <string name="apps_android_settings">Android-Einstellungen</string>
     <!-- Default title of the live TV row on Home -->
     <string name="common_live_tv">Live-TV</string>
+    <string name="home_seerr_trending">Im Trend</string>
+    <string name="home_seerr_popular_movies">Beliebte Filme</string>
+    <string name="home_seerr_upcoming_movies">Demnächst: Filme</string>
+    <string name="home_seerr_popular_tv">Beliebte Serien</string>
+    <string name="home_seerr_upcoming_tv">Demnächst: Serien</string>
+    <string name="home_seerr_row">Seerr</string>
+    <string name="home_seerr_kind_movie">Film</string>
+    <string name="home_seerr_kind_tv">Serie</string>
 </resources>

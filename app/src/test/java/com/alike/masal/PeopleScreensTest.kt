@@ -142,6 +142,18 @@ class PeopleScreensTest {
         assertEquals(102, JSONObject(requests.last { it.path == "/api/v1/request" }.body.readUtf8()).getInt("mediaId"))
     }
 
+    @Test
+    fun filmInPlexCanBePlayedFromItsSeerrPage() {
+        val played = mutableListOf<String>()
+        val withPlay = PeopleActions(actions.onPerson, actions.onSeerrTitle, actions.onPlexTitle, onPlayPlex = { rk, _ -> played += rk })
+        show { SeerrTitleScreen("movie", 101, false, null, withPlay) }
+        waitFor("A fictitious film.")
+        rule.onRoot().captureRoboImage("$shots/09-film-in-plex.png")
+        rule.onNodeWithText("Open").assertExists()
+        press("Play")
+        assertEquals(listOf("7"), played)
+    }
+
     @OptIn(ExperimentalTestApi::class)
     @Test
     fun pausedPlayerOffersTheCastBelowTheButtons() {

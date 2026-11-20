@@ -48,4 +48,12 @@
     <string name="apps_android_settings">Android ayarları</string>
     <!-- Default title of the live TV row on Home -->
     <string name="common_live_tv">Canlı TV</string>
+    <string name="home_seerr_trending">Trend olanlar</string>
+    <string name="home_seerr_popular_movies">Popüler filmler</string>
+    <string name="home_seerr_upcoming_movies">Yakında: Filmler</string>
+    <string name="home_seerr_popular_tv">Popüler diziler</string>
+    <string name="home_seerr_upcoming_tv">Yakında: Diziler</string>
+    <string name="home_seerr_row">Seerr</string>
+    <string name="home_seerr_kind_movie">Film</string>
+    <string name="home_seerr_kind_tv">Dizi</string>
 </resources>

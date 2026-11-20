@@ -196,6 +196,9 @@ class MainActivity : ComponentActivity() {
                     },
                     onSeerrTitle = { t -> open(Detail(t.tmdbId.toString(), kind = "seerr", title = t.title, section = t.mediaType, profile = profile)) },
                     onPlexTitle = { rk, _ -> open(Detail(rk, null, profile = profile)) },
+                    onPlayPlex = { rk, title ->
+                        playPlex(PlexItem(rk, "movie", title, "", null, null, null, 0, 0, null, null, profile = profile), fromStart = false)
+                    },
                 )
                 // A title chosen on a person page inside the player opens here once the player has closed.
                 LaunchedEffect(openAfter) {
@@ -289,6 +292,7 @@ class MainActivity : ComponentActivity() {
                                         onApp = { Apps.launch(this@MainActivity, it.pkg) },
                                         onEditApps = { editApps = true; selectTab(NavTab.Apps, true) },
                                         topRequests = homeTop,
+                                        seerr = peopleActions(null),
                                     )
                                     t == NavTab.Search -> SearchScreen(vm, autoFocus, openItem, ::playChannels, peopleActions(null))
                                     t == NavTab.Apps -> AppsScreen(vm, autoFocus, editApps) { Apps.launch(this@MainActivity, it.pkg) }

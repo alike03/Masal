@@ -151,4 +151,8 @@
     <string name="setup_seerr_failed">Seerr nicht erreichbar: %1$s</string>
     <string name="setup_seerr_missing">Adresse und API-Schlüssel eingeben.</string>
     <string name="setup_seerr_removed">Seerr entfernt</string>
+    <string name="settings_home_order">Reihenfolge</string>
+    <string name="settings_home_order_hint">OK nimmt eine Zeile auf, Hoch und Runter verschieben sie, OK legt sie ab.</string>
+    <string name="settings_home_order_reset">Reihenfolge zurücksetzen</string>
+    <string name="settings_home_order_empty">Noch keine Zeilen auf dem Startbildschirm.</string>
 </resources>

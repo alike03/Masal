@@ -79,10 +79,66 @@ data class SeerrUser(val id: Int, val name: String, val plexUsername: String?)
 /** Search results: titles not in Plex (in Plex they come from Plex's own search) and people. */
 data class SeerrSearch(val titles: List<SeerrTitle>, val people: List<CastMember>)
 
+/**
+ * One of Seerr's Discover sliders that holds titles (seerr.md, "Discover rows on Home"). [type] is
+ * Seerr's `DiscoverSliderType`; built-in sliders have no [title] of their own.
+ */
+data class SeerrSlider(val id: Int, val type: Int, val title: String?, val data: String?) {
+    companion object {
+        const val Trending = 4
+        const val PopularMovies = 5
+        const val UpcomingMovies = 7
+        const val PopularTv = 9
+        const val UpcomingTv = 11
+        const val MovieKeyword = 13
+        const val MovieGenre = 14
+        const val TvKeyword = 15
+        const val TvGenre = 16
+        const val Search = 17
+        const val Studio = 18
+        const val Network = 19
+        const val MovieStreaming = 20
+        const val TvStreaming = 21
+        /** The types Masal can show as a row of titles. */
+        val TitleTypes = setOf(Trending, PopularMovies, UpcomingMovies, PopularTv, UpcomingTv, MovieKeyword, MovieGenre,
+            TvKeyword, TvGenre, Search, Studio, Network, MovieStreaming, TvStreaming)
+    }
+
+    /** Home row id; also the key in `home_rows_on` and `home_order`. */
+    val rowId get() = "seerr:$id"
+
+    /** The list behind the slider, as Seerr's own Discover page loads it (without page and language). */
+    fun path(today: String): String? {
+        fun enc(v: String?) = URLEncoder.encode(v.orEmpty(), "UTF-8").replace("+", "%20")
+        val d = data.orEmpty()
+        val region = enc(d.substringBefore(',')); val providers = enc(d.substringAfter(',', ""))
+        return when (type) {
+            Trending -> "/discover/trending?"
+            PopularMovies -> "/discover/movies?"
+            PopularTv -> "/discover/tv?"
+            UpcomingMovies -> "/discover/movies?primaryReleaseDateGte=$today&"
+            UpcomingTv -> "/discover/tv?firstAirDateGte=$today&"
+            MovieKeyword -> "/discover/movies?keywords=${enc(d)}&"
+            TvKeyword -> "/discover/tv?keywords=${enc(d)}&"
+            MovieGenre -> "/discover/movies?genre=${enc(d)}&"
+            TvGenre -> "/discover/tv?genre=${enc(d)}&"
+            Studio -> "/discover/movies/studio/${enc(d)}?"
+            Network -> "/discover/tv/network/${enc(d)}?"
+            Search -> "/search?query=${enc(d)}&"
+            MovieStreaming -> "/discover/movies?watchRegion=$region&watchProviders=$providers&"
+            TvStreaming -> "/discover/tv?watchRegion=$region&watchProviders=$providers&"
+            else -> null
+        }
+    }
+}
+
 /** A failed Seerr call; [message] is Seerr's own text where it gave one (e.g. quota reached). */
 class SeerrException(message: String, val code: Int = 0) : Exception(message)
 
 private const val TmdbImages = "https://image.tmdb.org/t/p/"
+
+/** How long a Discover row is kept before Home loads it again (seerr.md). */
+const val DiscoverMaxAge = 12L * 3600_000
 
 fun tmdbImage(path: String?, size: String): String? = path?.takeIf { it.startsWith("/") }?.let { TmdbImages + size + it }
 
@@ -164,6 +220,46 @@ class SeerrClient(private val http: OkHttpClient, private val settings: Settings
             CastMember(it.optString("name"), null, null, tmdbImage(it.optString("profilePath"), "w185"), tmdbId = it.optInt("id"))
         }
         return SeerrSearch(titles, people)
+    }
+
+    // ---- Discover rows on Home ----
+
+    /** Seerr's Discover sliders that hold titles, in Seerr's order (also those switched off in Seerr). */
+    fun sliders(): List<SeerrSlider> = parseSliders(call(Request.Builder().url(url("/settings/discover"))))
+
+    internal fun parseSliders(raw: String): List<SeerrSlider> {
+        val arr = JSONArray(raw)
+        return (0 until arr.length()).map { arr.getJSONObject(it) }
+            .sortedBy { it.optInt("order", Int.MAX_VALUE) }
+            .map { o ->
+                fun s(k: String) = o.optString(k).takeIf { it.isNotBlank() && it != "null" }
+                SeerrSlider(o.optInt("id"), o.optInt("type"), s("title"), s("data"))
+            }
+            .filter { it.type in SeerrSlider.TitleTypes }
+    }
+
+    private fun discoverKey(slider: SeerrSlider) = "discover-${slider.id}-${slider.type}-${slider.data.orEmpty().hashCode()}-${Language.tag()}"
+
+    /** A slider's first page from the cache when younger than [maxAgeMs] (12 hours). */
+    fun cachedDiscover(slider: SeerrSlider, maxAgeMs: Long = DiscoverMaxAge): List<SeerrTitle>? =
+        cache.get(discoverKey(slider), maxAgeMs = maxAgeMs)?.let { runCatching { parseResults(it) }.getOrNull() }
+
+    /** A slider's first page (about 20 titles) as Seerr has it now; stored for 12 hours. */
+    fun discover(slider: SeerrSlider, today: String): List<SeerrTitle> {
+        val path = slider.path(today) ?: return emptyList()
+        val raw = call(Request.Builder().url(url(path + "page=1&" + lang())))
+        cache.put(discoverKey(slider), raw)
+        return parseResults(raw)
+    }
+
+    /** Films and series of a list response; people (trending, search) are left out. */
+    internal fun parseResults(raw: String): List<SeerrTitle> {
+        val arr = JSONObject(raw).optJSONArray("results") ?: return emptyList()
+        return (0 until arr.length()).map { arr.getJSONObject(it) }
+            .filter { it.optString("mediaType").let { t -> t.isBlank() || t == "movie" || t == "tv" } }
+            .map { title(it) }
+            .filter { it.title.isNotBlank() }
+            .distinctBy { it.mediaType + it.tmdbId }
     }
 
     private fun castOf(o: JSONObject): List<CastMember> {
@@ -270,7 +366,11 @@ class SeerrClient(private val http: OkHttpClient, private val settings: Settings
         call(req)
         // The cached title page shows the old status.
         cache.remove(titleKey(mediaType, tmdbId))
+        requested.value = requested.value + "$mediaType:$tmdbId"
     }
+
+    /** Titles requested from Masal in this session ("movie:<tmdbId>"): Home's Seerr rows mark them at once. */
+    val requested = kotlinx.coroutines.flow.MutableStateFlow<Set<String>>(emptySet())
 
     /**
      * The Seerr user a profile requests as ("" or null = the main account): the one chosen in
@@ -306,7 +406,7 @@ class SeerrClient(private val http: OkHttpClient, private val settings: Settings
 class SeerrCache(private val dir: File, private val maxAgeMs: Long = 7L * 24 * 3600_000, private val maxEntries: Int = 300) {
     private fun file(key: String) = File(dir, key.replace(Regex("[^A-Za-z0-9._-]"), "_") + ".json")
 
-    fun get(key: String, now: Long = System.currentTimeMillis()): String? {
+    fun get(key: String, now: Long = System.currentTimeMillis(), maxAgeMs: Long = this.maxAgeMs): String? {
         val f = file(key)
         if (!f.exists() || now - f.lastModified() > maxAgeMs) return null
         return runCatching { f.readText() }.getOrNull()

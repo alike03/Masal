@@ -37,7 +37,8 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
 - Button by status:
   - Not requested: "Request".
   - Requested / Processing: the state and the request date, no button.
-  - In Plex (reached from an old cache entry): "Open" goes to Masal's detail page.
+  - In Plex: "Open" goes to Masal's detail page; for a film "Play" comes first and starts it
+    (resuming). Inside the player there is no "Play" (it would leave the current title).
 - Film: "Request" asks once ("Request <title>?" Request / Cancel) and sends
   `POST /api/v1/request` with `mediaType movie` and the TMDB id.
 - Series: "Request" opens a list of seasons with their state; seasons already in Plex or
@@ -46,6 +47,38 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
 - Seerr's defaults decide server, quality profile and folder; 4K is not offered.
 - After sending: a short message "Requested" (or Seerr's error text, e.g. quota reached) and
   the badge changes at once.
+
+### Discover rows on Home
+- With Seerr set up, Settings, Home rows has an entry "Seerr" listing Seerr's Discover sliders
+  that hold titles, in Seerr's order (`GET /settings/discover`), each with a check mark like the
+  Plex rows; all off by default. Stored as `home_rows_on` entries "seerr:<slider id>".
+- Offered slider types and what they load (as Seerr's own Discover page does, first page only,
+  about 20 titles, in the app language):
+  - Trending (4): `discover/trending`.
+  - Popular Movies (5): `discover/movies`. Popular Series (9): `discover/tv`.
+  - Upcoming Movies (7): `discover/movies?primaryReleaseDateGte=<today>`.
+    Upcoming Series (11): `discover/tv?firstAirDateGte=<today>`.
+  - Custom sliders with their own title: TMDB keyword (13 movies, 15 series:
+    `discover/movies|tv?keywords=<data>`), genre (14, 16: `discover/movies|tv?genre=<data>`),
+    studio (18: `discover/movies/studio/<data>`), network (19: `discover/tv/network/<data>`),
+    search (17: `search?query=<data>`), streaming services (20, 21:
+    `discover/movies|tv?watchRegion=<data before ,>&watchProviders=<data after ,>`).
+  - Not offered: Recently Added (1) and Recent Requests (2) (Plex's own rows cover them), Plex
+    Watchlist (3, see Open points), and the genre, studio and network overview sliders (6, 8, 10,
+    12), which show category tiles, not titles.
+  - Built-in sliders have no title in Seerr; Masal names them in the app language.
+- Sliders switched off in Seerr itself are still offered; Masal's choice is its own.
+- On Home a Seerr row looks like a Plex row: posters with the status badge from `people.md`
+  ("In Plex", "Requested" / "Processing", none). The info block shows title, year and the
+  two-line summary; the background is the title's backdrop. No trailer preview.
+- OK: a film in Plex starts playing (resuming where it was left), a series in Plex opens
+  Masal's detail page, any other title the Seerr title page ("Request"). Requests go out as the
+  main account's Seerr user.
+- Each row's list is cached for 12 hours (in `SeerrCache`) and loaded again in the background
+  when Home's rows are rebuilt after that; the status badges follow a request from Masal at once.
+- Seerr not set up: no "Seerr" entry, no Seerr rows (choices are kept). Seerr unreachable:
+  the rows are left out, no error box. A slider deleted in Seerr disappears from Settings and
+  Home.
 
 ## Remote keys
 - Seerr title page: Down from the top to the button row, then the cast row; Back leaves.
@@ -60,6 +93,10 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
 - Series with season 1 in Plex: season 1 is marked and cannot be picked, the others are
   preselected.
 - Seerr not reachable: search shows the Plex results and no Seerr rows, no error box.
+- Switch on "Trending" under Settings, Home rows, Seerr: a Trending row appears on Home; a film
+  in Plex has the badge and plays on OK, a series in Plex opens its detail page, another title
+  opens the Seerr page.
+- A custom keyword slider made in Seerr appears in Settings with its own title.
 - JVM tests with a mock Seerr: auth check, search mapping and de-duplication against Plex,
   request bodies for film and seasons, `X-API-User` per profile, error text passed on.
 
@@ -67,10 +104,14 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
 `/api/v1` with header `X-Api-Key`; `X-API-User` on requests. `auth/me`, `user` (users with
 their Plex ids), `search?query=&language=`, `movie/<tmdbId>`, `tv/<tmdbId>` (seasons with
 state), `person/<id>`, `person/<id>/combined_credits` (each title with `mediaInfo.status` and
-`ratingKey`), `request` (POST). Status values: 1 unknown, 2 pending, 3 processing,
+`ratingKey`), `request` (POST), `settings/discover` (sliders: `id`, `type`, `title`, `data`,
+`enabled`), the `discover/...` lists above (`results` with the same title fields as search). Status values: 1 unknown, 2 pending, 3 processing,
 4 partly available, 5 available, 6 deleted. Checked against Seerr 3.5.2's API description.
 
 ## Open points
-- Seerr's watchlist and "Discover" rows on Home are left out for now.
+- Seerr's Plex Watchlist slider is left out for now: it is per Seerr user, and whether
+  `X-API-User` selects whose watchlist is returned is not checked yet.
+- Slider type numbers come from Seerr 3.5.2's code (`DiscoverSliderType`); the API description
+  gives them only as numbers.
 - Not yet verified on the TV. A Plex Home member without an own plex.tv login may not exist as a
   Seerr user at all; such a profile requests as the key's user until one is picked in Settings.

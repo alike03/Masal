@@ -151,4 +151,8 @@
     <string name="setup_seerr_failed">Seerr\'e ulaşılamıyor: %1$s</string>
     <string name="setup_seerr_missing">Adresi ve API anahtarını gir.</string>
     <string name="setup_seerr_removed">Seerr kaldırıldı</string>
+    <string name="settings_home_order">Sıralama</string>
+    <string name="settings_home_order_hint">OK bir satırı seçer, Yukarı ve Aşağı taşır, OK bırakır.</string>
+    <string name="settings_home_order_reset">Sıralamayı sıfırla</string>
+    <string name="settings_home_order_empty">Ana ekranda henüz satır yok.</string>
 </resources>

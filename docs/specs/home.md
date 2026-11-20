@@ -8,8 +8,8 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
   only peeks in at the bottom.
 - Rows open like an accordion: moving down, the previous row slides straight up and out (no
   fade, no tilt) while its header closes, and the next row's header opens above its title.
-- Rows, in order:
-  1. "Get started" card, only when neither IPTV nor Plex is set up.
+- Rows, in this default order (the order can be changed in Settings, see "Row order" below):
+  1. "Get started" card, only when neither IPTV nor Plex is set up. Always first, not sortable.
   2. Apps: only the apps pinned on Home, in the user's order, then an "Edit" card.
   3. Continue Watching (Plex on deck), then each profile's Continue Watching when switched on
      (profiles.md).
@@ -21,12 +21,25 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
   5. Plex rows, chosen in Settings (see "Home rows" below). A collection row says next to its
      title whether it holds movies or TV shows ("Movies" / "TV shows"). Without hubs (older servers):
      one "Recently Added" row. Then each profile's other rows, named after the profile.
+  6. Seerr rows switched on in Settings (seerr.md, "Discover rows on Home"), in Seerr's order.
 - Home rows: every Plex Home row (Recently Added Movies/TV and the like) and every collection of
   every movie and TV library can be shown on Home. By default Home shows what Plex shows on its own
   Home (its rows and the collections promoted there). Choices are stored as differences from that
   default (`home_rows_on`, `home_rows_off`), so a collection newly promoted in Plex still appears
   unless it was switched off. Order: Plex's own order, then extra collections in library order.
   Extra collections show their first 20 titles. Changing rows does not reload IPTV.
+- Row order: Settings, Home rows, "Order" lists every row currently on Home (Apps, Continue
+  Watching and each profile's, the live TV row, Plex rows, collections, profile rows, Seerr rows)
+  in Home's order. OK picks a row up (it is marked as moving), Up/Down move it, OK or Back puts
+  it down; the order is saved at once and Home follows without reloading.
+  - Stored as a list of row ids (`home_order`): "apps", "deck", "tv", "hub:<id>" (Plex rows,
+    collections, profile rows and decks, as today), "seerr:<slider id>".
+  - A row that is not in the stored list yet (a collection newly promoted in Plex, a Seerr row
+    just switched on) goes right after the row that precedes it in the default order, or first
+    if none does. Switching a row off and on again keeps its place.
+  - Rows that are switched off, empty or not loaded are skipped; the others keep their order.
+  - "Reset order" above the list returns to the default order.
+  - Home starts on the first card of the first row in this order.
 - Info block per item:
   - Plex title: logo art (or title text), episode title, facts line (S1 • E5, date, runtime,
     rating), two-line summary, top three cast. Smaller and lower, like Plex.
@@ -68,6 +81,9 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
 - Down from the apps row: apps slide up and out, Continue Watching's header opens.
 - Focus on "Edit": no video starts, background stays the app photo, no text above the rows.
 - Switch a collection on in Settings: it appears on Home at once, without reloading channels.
+- Order: move Live TV above Apps: Home starts with Live TV; restart Masal: still first.
+- Switch on a new collection after reordering: it appears after its default neighbour, the
+  rest of the order is unchanged. "Reset order": default order again.
 - Flicking through the live TV row: gradient behind, picture fades in, no logo placeholder.
 - Home key on the TV tab or a title page: Home tab, first focus restored, pages closed.
 - With Masal as default home screen: Back in the menu on Home goes to the first app; as a normal

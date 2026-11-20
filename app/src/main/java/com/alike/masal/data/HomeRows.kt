@@ -12,6 +12,53 @@ data class HomeRowOption(val id: String, val title: String, val group: String, v
 
 object HomeRows {
     const val PlexGroup = "Plex"
+    const val SeerrGroup = "Seerr"
+
+    /** Home row ids that are not Plex hubs (home.md, "Row order"); hubs are "hub:<id>", Seerr rows "seerr:<id>". */
+    const val AppsRow = "apps"
+    const val DeckRow = "deck"
+    const val LiveRow = "tv"
+
+    /** Seerr's Discover sliders as choices (seerr.md): all off by default, named by [name] when Seerr gives no title. */
+    fun seerrOptions(sliders: List<SeerrSlider>, name: (SeerrSlider) -> String): List<HomeRowOption> =
+        sliders.map { HomeRowOption(it.rowId, name(it), SeerrGroup, false) }
+
+    /**
+     * The stored order with every row of [present] (given in the default order) in it: a row not
+     * stored yet goes right after the row before it in the default order that is stored, or first.
+     * Stored rows that are not present (switched off for now) keep their place.
+     */
+    fun merged(present: List<String>, stored: List<String>): List<String> {
+        val out = stored.distinct().toMutableList()
+        present.forEachIndexed { i, id ->
+            if (id in out) return@forEachIndexed
+            val before = (i - 1 downTo 0).map { present[it] }.firstOrNull { it in out }
+            out.add(if (before == null) 0 else out.indexOf(before) + 1, id)
+        }
+        return out
+    }
+
+    /** [present] rows in the user's order. */
+    fun ordered(present: List<String>, stored: List<String>): List<String> {
+        val set = present.toHashSet()
+        return merged(present, stored).filter { it in set }
+    }
+
+    /**
+     * The order to store after moving [id] by [delta] places among the [present] rows: it swaps with
+     * its visible neighbour, rows switched off stay where they are.
+     */
+    fun move(present: List<String>, stored: List<String>, id: String, delta: Int): List<String> {
+        val all = merged(present, stored).toMutableList()
+        val set = present.toHashSet()
+        val visible = all.filter { it in set }
+        val from = visible.indexOf(id)
+        val to = from + delta
+        if (from < 0 || to !in visible.indices) return all
+        val a = all.indexOf(id); val b = all.indexOf(visible[to])
+        all[a] = visible[to]; all[b] = id
+        return all
+    }
 
     /** A profile's Continue Watching (the main account's is always shown and not a choice). */
     const val Continue = "continue"

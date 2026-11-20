@@ -22,6 +22,8 @@ import org.junit.Assert.assertTrue
 import org.junit.BeforeClass
 import org.junit.Rule
 import org.junit.Test
+import com.alike.masal.data.SeerrStatus
+import com.alike.masal.data.SeerrTitle
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -149,6 +151,33 @@ class UiFlowTest {
         // Not pressed, that would close the test's activity: no enabled Back callback means the
         // system handles Back, which leaves the app.
         assertTrue("as a normal app, Back on Home leaves", !rule.activity.onBackPressedDispatcher.hasEnabledCallbacks())
+    }
+
+    /** Home's row order (home.md) and a Seerr Discover row (seerr.md): Home starts on the first row of the order. */
+    @Test
+    fun homeRowOrderAndSeerrRow() {
+        Graph.settings.setHomeOrder(listOf("tv", "seerr:4", "apps"))
+        try {
+            val vm = seed()
+            rule.runOnUiThread {
+                vm.seerrRows.value = listOf(SeerrRow("seerr:4", "Trending", listOf(
+                    SeerrTitle(901, "movie", "Testfilm Gamma", 2025, null, null, "Ein fiktiver Film aus Seerr.", SeerrStatus.None, null),
+                    SeerrTitle(902, "movie", "Testfilm Delta", 2024, null, null, null, SeerrStatus.Available, "f1"),
+                )))
+            }
+            rule.mainClock.advanceTimeBy(1_000)
+            rule.waitForIdle()
+            expectFocus("Home starts on the live row, first in the order", "Testkanal")
+            press(KeyEvent.KEYCODE_DPAD_DOWN)
+            expectFocus("then the Seerr row", "Testfilm Gamma")
+            rule.mainClock.advanceTimeBy(500)
+            assertTrue("the info block names the title", rule.onAllNodesWithText("Ein fiktiver Film aus Seerr.").fetchSemanticsNodes().isNotEmpty())
+            shot("home-seerr-row")
+            press(KeyEvent.KEYCODE_DPAD_DOWN)
+            expectFocus("then the apps", "Testplayer")
+        } finally {
+            Graph.settings.setHomeOrder(emptyList())
+        }
     }
 
     /** The Home live TV row can show the favourite channels instead of a category. */

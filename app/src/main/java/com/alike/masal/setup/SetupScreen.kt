@@ -72,6 +72,8 @@ import com.alike.masal.MasalViewModel
 import com.alike.masal.R
 import com.alike.masal.data.Apps
 import com.alike.masal.data.HomeRowOption
+import com.alike.masal.data.HomeRows
+import com.alike.masal.seerrRowTitle
 import com.alike.masal.data.Language
 import com.alike.masal.ui.Accent
 import com.alike.masal.ui.EdgePadding
@@ -87,7 +89,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-private enum class SettingsPage { Main, Language, Category, Title, Order, Profiles, Rows, Seerr }
+private enum class SettingsPage { Main, Language, Category, Title, Order, Profiles, Rows, Seerr, HomeOrder }
 
 /**
  * Settings on the TV: the QR code for the phone page (logins, sources, Plex server) on the left,
@@ -170,7 +172,13 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
     val version by Graph.settings.version.collectAsState()
     val homeVersion by Graph.settings.homeVersion.collectAsState()
     val sources = remember(version) { Graph.settings.sources }
-    val options by vm.homeRowOptions.collectAsState()
+    val plexOptions by vm.homeRowOptions.collectAsState()
+    val sliders by vm.seerrSliders.collectAsState()
+    // Seerr's Discover rows are offered with the Plex rows, under their own entry (seerr.md).
+    val options = remember(plexOptions, sliders) { plexOptions + HomeRows.seerrOptions(sliders, ::seerrRowTitle) }
+    val homeOrder by Graph.settings.homeOrder.collectAsState()
+    val homeOrderRow = remember { FocusRequester() }
+    val homeRowList = homeRowEntries(vm, homeOrder)
     val channels by vm.channels.collectAsState()
     val groups = remember(channels) { channelGroups(vm) }
     val liveGroup = remember(version, homeVersion) { Graph.settings.homeLiveGroup }
@@ -257,6 +265,9 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                         options = options,
                         rowsEntry = { key -> rowsEntries.getOrPut(key) { FocusRequester() } },
                         onRows = { key -> back = rowsEntries[key]; rowsProfile = key; page = SettingsPage.Rows },
+                        homeOrderRow = homeOrderRow,
+                        homeOrderValue = stringResource(if (homeOrder.isEmpty()) R.string.settings_category_order_default else R.string.settings_category_order_custom),
+                        onHomeOrder = { back = homeOrderRow; moving = null; page = SettingsPage.HomeOrder },
                         sourceNames = sources.map { it.name },
                     )
                 }
@@ -296,17 +307,32 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                         page = SettingsPage.Main
                     }
                 }
-                SettingsPage.Order -> CategoryOrderList(
-                    names = remember(channels, categoryOrder) { channelGroups(vm) },
+                SettingsPage.Order -> OrderList(
+                    title = stringResource(R.string.settings_category_order),
+                    note = stringResource(R.string.settings_category_order_note),
+                    empty = stringResource(R.string.settings_category_order_empty),
+                    entries = remember(channels, categoryOrder) { channelGroups(vm).map { it to it } },
                     custom = categoryOrder.isNotEmpty(),
                     moving = moving,
                     onPick = { moving = if (moving == it) null else it },
                     onMove = { name, delta -> vm.moveCategory(name, delta) },
                     onReset = { moving = null; vm.setCategoryOrder(emptyList()) },
                 )
+                SettingsPage.HomeOrder -> OrderList(
+                    title = stringResource(R.string.settings_home_order),
+                    note = stringResource(R.string.settings_home_order_hint),
+                    empty = stringResource(R.string.settings_home_order_empty),
+                    entries = homeRowList,
+                    custom = homeOrder.isNotEmpty(),
+                    moving = moving,
+                    onPick = { moving = if (moving == it) null else it },
+                    onMove = { id, delta -> Graph.settings.setHomeOrder(HomeRows.move(homeRowList.map { it.first }, homeOrder, id, delta)) },
+                    onReset = { moving = null; Graph.settings.setHomeOrder(emptyList()) },
+                    resetLabel = stringResource(R.string.settings_home_order_reset),
+                )
                 SettingsPage.Rows -> HomeRowsPage(
                     profileTitle(rowsProfile),
-                    options.filter { (it.profile ?: "") == rowsProfile },
+                    options.filter { rowsKey(it) == rowsProfile },
                 ) { o ->
                     Graph.settings.setHomeRowShown(o, !Graph.settings.homeRowShown(o))
                     Graph.settings.homeChanged()
@@ -359,6 +385,9 @@ private fun MainList(
     options: List<HomeRowOption>,
     rowsEntry: (String) -> FocusRequester,
     onRows: (String) -> Unit,
+    homeOrderRow: FocusRequester,
+    homeOrderValue: String,
+    onHomeOrder: () -> Unit,
     sourceNames: List<String>,
 ) {
     val homeVersion by Graph.settings.homeVersion.collectAsState() // check marks follow every change
@@ -426,12 +455,15 @@ private fun MainList(
             item { Text(stringResource(R.string.settings_home_rows_empty), color = TextDim, fontSize = 15.sp) }
         }
         // One entry per profile with how many of its rows are on; OK opens its rows (a long list per profile).
-        options.groupBy { it.profile ?: "" }.forEach { (key, rows) ->
+        options.groupBy { rowsKey(it) }.forEach { (key, rows) ->
             item(key = "rows:$key") {
                 val on = remember(homeVersion, rows) { rows.count { Graph.settings.homeRowShown(it) } }
                 SettingRow(profileTitle(key), stringResource(R.string.settings_home_rows_count, on, rows.size), { onRows(key) },
                     Modifier.focusRequester(rowsEntry(key)))
             }
+        }
+        item(key = "home-order") {
+            SettingRow(stringResource(R.string.settings_home_order), homeOrderValue, onHomeOrder, Modifier.focusRequester(homeOrderRow))
         }
 
         item { Heading(stringResource(R.string.settings_sources_heading)) }
@@ -445,10 +477,50 @@ private fun MainList(
     }
 }
 
+/** Settings entry of the Seerr rows; Plex profile ids are numbers, so it cannot clash. */
+private const val SeerrRowsKey = "seerr"
+
+/** Which Home rows entry an option belongs to: "" the main account, a profile id, or the Seerr rows. */
+private fun rowsKey(o: HomeRowOption) = o.profile ?: if (o.group == HomeRows.SeerrGroup) SeerrRowsKey else ""
+
+/**
+ * Every row now on Home with its name, in Home's order (home.md, "Row order"): what the Order
+ * page lists. Mirrors HomeScreen's rows; "Get started" is not sortable and left out.
+ */
+@Composable
+private fun homeRowEntries(vm: MasalViewModel, stored: List<String>): List<Pair<String, String>> {
+    val apps by vm.apps.collectAsState()
+    val onDeck by vm.onDeck.collectAsState()
+    val profileDecks by vm.profileDecks.collectAsState()
+    val hubs by vm.homeHubs.collectAsState()
+    val recent by vm.recentlyAdded.collectAsState()
+    val seerrRows by vm.seerrRows.collectAsState()
+    val channels by vm.channels.collectAsState()
+    val homeVersion by Graph.settings.homeVersion.collectAsState()
+    val appsName = stringResource(R.string.common_apps)
+    val continueName = stringResource(R.string.home_continue_watching)
+    val recentName = stringResource(R.string.home_recently_added)
+    fun named(title: String, owner: String?) = if (owner.isNullOrBlank()) title else "$title ($owner)"
+    val all = remember(apps, onDeck, profileDecks, hubs, recent, seerrRows, channels, homeVersion) {
+        buildList {
+            if (apps.isNotEmpty()) add(HomeRows.AppsRow to appsName)
+            if (onDeck.isNotEmpty()) add(HomeRows.DeckRow to continueName)
+            profileDecks.forEach { add("hub:${it.id}" to named(it.title, it.owner)) }
+            if (Graph.settings.homeLiveGroup.isNotBlank() && channels.isNotEmpty()) add(HomeRows.LiveRow to Graph.settings.homeLiveTitle)
+            hubs.ifEmpty { if (recent.isNotEmpty()) listOf(com.alike.masal.data.PlexHub("recent", recentName, recent)) else emptyList() }
+                .forEach { add("hub:${it.id}" to named(it.title, it.owner)) }
+            seerrRows.forEach { add(it.id to named(it.title, HomeRows.SeerrGroup)) }
+        }
+    }
+    val names = all.toMap()
+    return HomeRows.ordered(all.map { it.first }, stored).map { it to names.getValue(it) }
+}
+
 /** Name of a profile's rows in Settings: the linked account's name for "" (or "Your account"), else the member's. */
 @Composable
 internal fun profileTitle(key: String): String =
-    if (key.isEmpty()) Graph.settings.plexAccountName.ifBlank { stringResource(R.string.settings_rows_main_account) }
+    if (key == SeerrRowsKey) HomeRows.SeerrGroup
+    else if (key.isEmpty()) Graph.settings.plexAccountName.ifBlank { stringResource(R.string.settings_rows_main_account) }
     else Graph.settings.profiles.firstOrNull { it.id == key }?.name ?: key
 
 /** One profile's Home rows, grouped as Plex and then by library; OK switches a row. */
@@ -543,14 +615,20 @@ internal fun ChoiceList(title: String, note: String, choices: List<Pair<String, 
  * it down (no long press over HDMI-CEC). Every move is stored at once.
  */
 @Composable
-private fun CategoryOrderList(
-    names: List<String>,
+private fun OrderList(
+    title: String,
+    note: String,
+    empty: String,
+    /** Id and name of each entry, in the current order. */
+    entries: List<Pair<String, String>>,
     custom: Boolean,
     moving: String?,
     onPick: (String) -> Unit,
     onMove: (String, Int) -> Unit,
     onReset: () -> Unit,
+    resetLabel: String = stringResource(R.string.settings_category_order_reset),
 ) {
+    val names = entries.map { it.first }
     val first = remember { FocusRequester() }
     val list = rememberLazyListState()
     LaunchedEffect(Unit) { delay(60); runCatching { first.requestFocus() } }
@@ -562,19 +640,18 @@ private fun CategoryOrderList(
         if (i + 1 !in visible.drop(1).dropLast(1)) list.animateScrollToItem((i - 2).coerceAtLeast(0))
     }
     Column(Modifier.widthIn(max = 640.dp)) {
-        Text(stringResource(R.string.settings_category_order), color = TextMain, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-        Text(stringResource(R.string.settings_category_order_note), color = TextDim, fontSize = 15.sp,
-            modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
+        Text(title, color = TextMain, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+        Text(note, color = TextDim, fontSize = 15.sp, modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
         if (names.isEmpty()) {
-            Text(stringResource(R.string.settings_category_order_empty), color = TextDim, fontSize = 15.sp)
+            Text(empty, color = TextDim, fontSize = 15.sp)
             return@Column
         }
         LazyColumn(state = list, contentPadding = PaddingValues(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             item(key = "reset") {
-                if (custom) MasalButton(stringResource(R.string.settings_category_order_reset), onReset,
+                if (custom) MasalButton(resetLabel, onReset,
                     Modifier.padding(bottom = 8.dp), Icons.Filled.Refresh, primary = false)
             }
-            itemsIndexed(names, key = { _, n -> "cat:$n" }) { i, name ->
+            itemsIndexed(entries, key = { _, e -> "cat:${e.first}" }) { i, (name, label) ->
                 val isMoving = name == moving
                 ListSurface(
                     onClick = { onPick(name) },
@@ -590,7 +667,7 @@ private fun CategoryOrderList(
                 ) {
                     Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("${i + 1}", fontSize = 13.sp, modifier = Modifier.width(36.dp))
-                        Text(name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        Text(label, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f))
                         if (isMoving) Text("▲ ▼  " + stringResource(R.string.settings_category_order_moving), fontSize = 13.sp, color = Accent)
                     }

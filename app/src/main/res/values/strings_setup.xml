@@ -151,4 +151,8 @@
     <string name="setup_seerr_failed">Seerr not reachable: %1$s</string>
     <string name="setup_seerr_missing">Enter the address and the API key.</string>
     <string name="setup_seerr_removed">Seerr removed</string>
+    <string name="settings_home_order">Order</string>
+    <string name="settings_home_order_hint">OK picks a row up, Up and Down move it, OK puts it down.</string>
+    <string name="settings_home_order_reset">Reset order</string>
+    <string name="settings_home_order_empty">No rows on Home yet.</string>
 </resources>
