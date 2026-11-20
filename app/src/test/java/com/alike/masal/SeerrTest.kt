@@ -77,8 +77,11 @@ class SeerrTest {
         assertEquals(listOf("Testfilm", "Testserie"), titles.map { it.title })
         assertEquals("7", titles[0].ratingKey)
         assertTrue(requests.last().path!!.startsWith("/api/v1/discover/trending?page=1&language="))
+        // On discover/movies and /tv `language` would filter by original language: not sent.
+        seerr.discover(seerr.sliders()[1], "2026-11-20")
+        assertEquals("/api/v1/discover/movies?primaryReleaseDateGte=2026-11-20&page=1", requests.last().path)
         assertEquals(titles, seerr.cachedDiscover(trending))
-        File(cacheDir, cacheDir.list()!!.single { it.startsWith("discover-4-") }).setLastModified(System.currentTimeMillis() - 13 * 3600_000L)
+        File(cacheDir, cacheDir.list()!!.single { it.startsWith("discover2-4-") }).setLastModified(System.currentTimeMillis() - 13 * 3600_000L)
         assertNull(seerr.cachedDiscover(trending))
     }
 

@@ -240,7 +240,8 @@ class SeerrClient(private val http: OkHttpClient, private val settings: Settings
             .filter { it.type in SeerrSlider.TitleTypes }
     }
 
-    private fun discoverKey(slider: SeerrSlider) = "discover-${slider.id}-${slider.type}-${slider.data.orEmpty().hashCode()}-${Language.tag()}"
+    // "2": lists cached before the language fix were filtered by original language.
+    private fun discoverKey(slider: SeerrSlider) = "discover2-${slider.id}-${slider.type}-${slider.data.orEmpty().hashCode()}-${Language.tag()}"
 
     /** A slider's first page from the cache when younger than [maxAgeMs] (12 hours). */
     fun cachedDiscover(slider: SeerrSlider, maxAgeMs: Long = DiscoverMaxAge): List<SeerrTitle>? =
@@ -249,7 +250,10 @@ class SeerrClient(private val http: OkHttpClient, private val settings: Settings
     /** A slider's first page (about 20 titles) as Seerr has it now; stored for 12 hours. */
     fun discover(slider: SeerrSlider, today: String): List<SeerrTitle> {
         val path = slider.path(today) ?: return emptyList()
-        val raw = call(Request.Builder().url(url(path + "page=1&" + lang())))
+        // On discover/movies and discover/tv Seerr reads `language` as the titles' original
+        // language (a filter), not the display language: leave it out there, like Seerr's page.
+        val filterLists = path.startsWith("/discover/movies?") || path.startsWith("/discover/tv?")
+        val raw = call(Request.Builder().url(url(path + "page=1" + if (filterLists) "" else "&" + lang())))
         cache.put(discoverKey(slider), raw)
         return parseResults(raw)
     }

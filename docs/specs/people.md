@@ -31,9 +31,9 @@ and series: the ones in the library to play, the others to request through Seerr
   first, each title once (an actor who also directed shows it once, with both jobs in the
   caption). Caption: year and role or job.
 - Every poster shows its status as a small badge in the corner, from Seerr:
-  - "In Plex" (available, also partly available series): full colour, accent badge.
-  - "Requested" / "Processing": dimmed poster, badge with the state.
-  - Nothing: dimmed poster, no badge.
+  - "In Plex" (available, also partly available series): accent badge.
+  - "Requested" / "Processing": dark badge with the state.
+  - Nothing: no badge. Posters are never dimmed; the badge says it all.
 - OK on a title in Plex opens Masal's detail page of that title (Seerr gives its Plex id). OK
   on any other title opens the Seerr title page (`seerr.md`) with "Request".
 - Opened from the player, OK on a title in Plex asks first, because playing it leaves the

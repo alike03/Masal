@@ -56,7 +56,9 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
   that hold titles, in Seerr's order (`GET /settings/discover`), each with a check mark like the
   Plex rows; all off by default. Stored as `home_rows_on` entries "seerr:<slider id>".
 - Offered slider types and what they load (as Seerr's own Discover page does, first page only,
-  about 20 titles, in the app language):
+  about 20 titles). `language` (the app language) goes along only on trending, studio, network
+  and search: on `discover/movies` and `discover/tv` Seerr reads it as the titles' original
+  language and would filter the list, so there Seerr's own language setting applies:
   - Trending (4): `discover/trending`.
   - Popular Movies (5): `discover/movies`. Popular Series (9): `discover/tv`.
   - Upcoming Movies (7): `discover/movies?primaryReleaseDateGte=<today>`.

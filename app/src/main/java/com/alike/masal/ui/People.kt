@@ -209,18 +209,17 @@ fun SeerrPosterCard(
     /** Title and caption under the poster; Home's rows show posters only, the info block names the title. */
     showLabels: Boolean = true,
 ) {
-    val dim = if (t.status == SeerrStatus.Available) 1f else 0.45f
     Column(Modifier.width(width)) {
         FocusCard(onClick, onFocus, modifier.fillMaxWidth().aspectRatio(2f / 3f)) {
             if (t.poster == null) {
                 Text(t.title, color = TextMain, fontSize = 13.sp, textAlign = TextAlign.Center,
-                    modifier = Modifier.align(Alignment.Center).padding(8.dp).alpha(dim))
+                    modifier = Modifier.align(Alignment.Center).padding(8.dp))
             }
-            NetImage(t.poster, t.title, Modifier.fillMaxSize().alpha(dim))
+            NetImage(t.poster, t.title, Modifier.fillMaxSize())
             StatusBadge(t.status, Modifier.align(Alignment.TopStart).padding(5.dp))
         }
         if (!showLabels) return@Column
-        Text(t.title, color = TextMain.copy(alpha = if (dim < 1f) 0.75f else 1f), fontSize = 12.sp, maxLines = 1,
+        Text(t.title, color = TextMain, fontSize = 12.sp, maxLines = 1,
             overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
         caption?.takeIf { it.isNotBlank() }?.let { Text(it, color = TextDim, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
     }
