@@ -26,7 +26,7 @@
     <string name="people_leave_no">Hayır</string>
     <string name="seerr_status_in_plex">Plex\'te</string>
     <string name="seerr_status_requested">İstendi</string>
-    <string name="seerr_status_processing">İşleniyor</string>
+    <string name="seerr_status_processing">Ekleniyor</string>
     <string name="seerr_request">İste</string>
     <string name="seerr_request_confirm">%1$s istensin mi?</string>
     <string name="seerr_cancel">Vazgeç</string>
