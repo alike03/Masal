@@ -5,42 +5,35 @@ import android.content.Context
 import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.ViewGroup
+import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import kotlinx.coroutines.delay
 
 /** What the embedded YouTube player reports. */
 enum class TrailerState { Loading, Playing, Paused, Ended, Failed }
 
 /**
- * YouTube's own embedded player (IFrame Player API) in a WebView, for Seerr trailers (seerr.md).
- * The page's base URL is `https://<application id>`, which YouTube requires as the Referer to
- * identify the app; nothing is drawn over the player. Focus stays in Compose: the remote controls
- * the player through [toggle].
+ * YouTube's own embed page (`youtube.com/embed/<id>`) in a WebView, for Seerr trailers
+ * (seerr.md). YouTube requires the app's identity as the Referer: the page is requested with
+ * `Referer: https://<application id>`. Nothing is drawn over the player; focus stays in Compose
+ * and the remote controls the page's video element through [toggle]. Player events and console
+ * messages are logged under tag `MasalTrailer` (no addresses with logins pass through here).
  */
 @SuppressLint("SetJavaScriptEnabled")
 class YouTubeTrailer(context: Context, videoId: String, private val onState: (TrailerState) -> Unit) {
     private val main = Handler(Looper.getMainLooper())
+    private val id = videoId.filter { it.isLetterOrDigit() || it == '-' || it == '_' }
+    private val referer = "https://" + context.packageName
 
     val view: WebView = WebView(context).apply {
         setBackgroundColor(Color.BLACK)
@@ -49,13 +42,31 @@ class YouTubeTrailer(context: Context, videoId: String, private val onState: (Tr
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
         settings.mediaPlaybackRequiresUserGesture = false
-        webChromeClient = WebChromeClient()
         addJavascriptInterface(Bridge(), "Masal")
-        val origin = "https://" + context.packageName
-        loadDataWithBaseURL("$origin/", page(videoId.filter { it.isLetterOrDigit() || it == '-' || it == '_' }, origin), "text/html", "utf-8", null)
+        webChromeClient = object : WebChromeClient() {
+            override fun onConsoleMessage(m: ConsoleMessage): Boolean {
+                Log.i(Tag, "console ${m.messageLevel()}: ${m.message().take(300)}")
+                return true
+            }
+        }
+        webViewClient = object : WebViewClient() {
+            // Links in the player (title, YouTube logo) must not navigate away inside Masal.
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) =
+                !request.url.toString().startsWith("https://www.youtube.com/embed/")
+
+            override fun onPageFinished(view: WebView, url: String) {
+                Log.i(Tag, "page loaded")
+                view.evaluateJavascript(Watch, null)
+            }
+        }
+        Log.i(Tag, "load $id")
+        loadUrl(
+            "https://www.youtube.com/embed/$id?autoplay=1&controls=0&playsinline=1&rel=0&iv_load_policy=3&fs=0",
+            mapOf("Referer" to "$referer/"),
+        )
     }
 
-    fun toggle() = view.evaluateJavascript("toggle()", null)
+    fun toggle() = view.evaluateJavascript("(function(){var v=document.querySelector('video');if(!v)return;if(v.paused)v.play();else v.pause();})()", null)
 
     fun destroy() {
         (view.parent as? ViewGroup)?.removeView(view)
@@ -64,29 +75,42 @@ class YouTubeTrailer(context: Context, videoId: String, private val onState: (Tr
 
     private inner class Bridge {
         @JavascriptInterface
-        fun state(s: Int) = main.post {
-            onState(when (s) { 1, 3 -> TrailerState.Playing; 2 -> TrailerState.Paused; 0 -> TrailerState.Ended; else -> TrailerState.Loading })
-        }.let { }
+        fun state(s: String) {
+            Log.i(Tag, "state $s")
+            main.post {
+                onState(when (s) { "playing" -> TrailerState.Playing; "pause" -> TrailerState.Paused; "ended" -> TrailerState.Ended; else -> TrailerState.Loading })
+            }
+        }
 
-        // 2, 5, 100, 101, 150, 153: bad id, HTML5 error, removed, embedding not allowed, no client identity.
         @JavascriptInterface
-        fun error(@Suppress("UNUSED_PARAMETER") code: Int) = main.post { onState(TrailerState.Failed) }.let { }
+        fun error(what: String) {
+            Log.i(Tag, "error ${what.take(200)}")
+            main.post { onState(TrailerState.Failed) }
+        }
     }
 
-    private fun page(id: String, origin: String) = """<!doctype html><html><head>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#p{position:absolute;left:0;top:0;width:100%;height:100%}</style>
-</head><body><div id="p"></div><script>
-var player;
-var tag=document.createElement('script');tag.src='https://www.youtube.com/iframe_api';document.head.appendChild(tag);
-function onYouTubeIframeAPIReady(){player=new YT.Player('p',{width:'100%',height:'100%',videoId:'$id',
- playerVars:{autoplay:1,controls:0,playsinline:1,rel:0,iv_load_policy:3,origin:'$origin'},
- events:{onReady:function(e){e.target.playVideo();},onStateChange:function(e){Masal.state(e.data);},onError:function(e){Masal.error(e.data);}}});}
-function toggle(){if(!player||!player.getPlayerState)return;if(player.getPlayerState()==1)player.pauseVideo();else player.playVideo();}
-</script></body></html>"""
+    private companion object {
+        const val Tag = "MasalTrailer"
+
+        /**
+         * Runs in the embed page: reports the video element's events, starts it, and reports YouTube's
+         * error screen (embedding not allowed, video unavailable) or a page without a video after 8 s.
+         */
+        const val Watch = """(function(){
+var hooked=false;
+function hook(){var v=document.querySelector('video');if(!v||hooked)return !!v;hooked=true;
+['playing','pause','ended'].forEach(function(e){v.addEventListener(e,function(){Masal.state(e);});});
+var p=v.play();if(p&&p.catch)p.catch(function(err){Masal.state('blocked:'+err);});return true;}
+var tries=0;var t=setInterval(function(){tries++;
+var err=document.querySelector('.ytp-error');
+if(err&&err.offsetParent!==null){clearInterval(t);Masal.error(err.innerText||'ytp-error');return;}
+if(hook()&&tries>2){clearInterval(t);return;}
+if(tries>16){clearInterval(t);if(!hooked)Masal.error('no video');}},500);
+})();"""
+    }
 }
 
-/** The trailer's WebView in this place; it moves between the page and full screen without restarting. */
+/** The trailer's WebView in this place. */
 @Composable
 fun TrailerView(trailer: YouTubeTrailer?, modifier: Modifier = Modifier) {
     if (trailer == null) {
@@ -95,26 +119,4 @@ fun TrailerView(trailer: YouTubeTrailer?, modifier: Modifier = Modifier) {
         return
     }
     AndroidView(factory = { (trailer.view.parent as? ViewGroup)?.removeView(trailer.view); trailer.view }, modifier = modifier)
-}
-
-/** The trailer over the whole screen: OK or play/pause pauses and plays, Back returns to the page. */
-@Composable
-fun TrailerFullScreen(trailer: YouTubeTrailer?, onClose: () -> Unit) {
-    Dialog(onClose, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        val focus = remember { FocusRequester() }
-        LaunchedEffect(Unit) { delay(50); runCatching { focus.requestFocus() } }
-        Box(
-            Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black).focusRequester(focus)
-                .onPreviewKeyEvent { e ->
-                    when (e.key) {
-                        Key.DirectionCenter, Key.Enter, Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause -> {
-                            if (e.type == KeyEventType.KeyUp) trailer?.toggle()
-                            true
-                        }
-                        else -> false
-                    }
-                }
-                .focusable(),
-        ) { TrailerView(trailer, Modifier.fillMaxSize()) }
-    }
 }

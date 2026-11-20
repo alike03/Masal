@@ -51,7 +51,6 @@
     </plurals>
     <string name="seerr_trailer">Trailer</string>
     <string name="seerr_no_youtube_app">Keine App für YouTube-Trailer installiert</string>
-    <string name="seerr_trailer_fullscreen">Vollbild</string>
     <string name="seerr_trailer_external">In YouTube öffnen</string>
     <string name="seerr_trailer_failed">YouTube erlaubt diesen Trailer hier nicht.</string>
     <string name="seerr_status_available">Verfügbar</string>

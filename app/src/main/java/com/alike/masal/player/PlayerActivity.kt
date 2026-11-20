@@ -161,7 +161,8 @@ class PlayerActivity : ComponentActivity() {
                             touch = ::touch,
                             settings = { openSettings() },
                             openInPlex = ::openInPlex,
-                            openPerson = { plex.pages.add(PlayerPage.Person(it)) },
+                            // A person page over the player: playback pauses (people.md).
+                            openPerson = { player.pause(); plex.pages.add(PlayerPage.Person(it)) },
                         ))
                         PlayerPages()
                     }
@@ -600,13 +601,8 @@ class PlayerActivity : ComponentActivity() {
                     KeyEvent.KEYCODE_MEDIA_REWIND -> seekBy(-plex.skipBack * 1000L)
                     else -> togglePlay()
                 }
-                if (down && plex.panel == null) {
-                    // Playing closes the cast row; focus goes back to the buttons.
-                    if (plex.castOpen && e.keyCode != KeyEvent.KEYCODE_MEDIA_FAST_FORWARD && e.keyCode != KeyEvent.KEYCODE_MEDIA_REWIND) {
-                        plex.castOpen = false; plex.focusTick++
-                    }
-                    setControls(true)
-                }
+                // The cast row stays open while playing (people.md).
+                if (down && plex.panel == null) setControls(true, focus = if (plex.castOpen) "cast" else "play")
                 return true
             }
         }

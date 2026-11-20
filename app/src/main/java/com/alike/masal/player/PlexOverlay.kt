@@ -216,9 +216,10 @@ private fun Controls(state: PlexUiState, actions: PlexActions) {
         TickingText({ clock.format(Date(it)) }, Modifier.align(Alignment.TopEnd).padding(top = 30.dp, end = 48.dp),
             color = TextMain, fontSize = 18, bold = true)
 
-        // Bottom: timeline and buttons. Paused, a chevron under the buttons offers the cast; Down opens
+        // Bottom: timeline and buttons. A chevron under the buttons offers the cast; Down opens
         // it below them and pushes the bar up, so the dark band reaches higher (people.md).
-        val castAvailable = !state.playing && state.cast.isNotEmpty()
+        // Offered with the controls, playing or paused (people.md).
+        val castAvailable = state.cast.isNotEmpty()
         LaunchedEffect(castAvailable) { if (!castAvailable) state.castOpen = false }
         val castShown = castAvailable && state.castOpen
         LaunchedEffect(castShown) {

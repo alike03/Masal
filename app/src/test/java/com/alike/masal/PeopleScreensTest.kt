@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.isFocused
@@ -154,10 +155,12 @@ class PeopleScreensTest {
         rule.onNodeWithText("Open").assertExists()
         press("Play")
         assertEquals(listOf("7"), played)
-        // The trailer plays inline (a black box without video in tests); the button offers full screen.
+        // The trailer fills the screen above the page (a black box without video in tests).
         press("Trailer")
-        rule.onNodeWithText("Full screen").assertExists()
-        rule.onRoot().captureRoboImage("$shots/10-trailer-inline.png")
+        rule.mainClock.advanceTimeBy(500)
+        rule.waitForIdle()
+        rule.onRoot().captureRoboImage("$shots/10-trailer.png")
+        rule.onNodeWithText("A fictitious film.").assertIsNotDisplayed()
         assertEquals("the YouTube app is only the fallback", listOf("7"), played)
     }
 
@@ -201,12 +204,19 @@ class PeopleScreensTest {
         assertEquals(0, state.castIndex)
         rule.onAllNodes(hasClickAction() and hasAnyDescendant(hasText("TT")), useUnmergedTree = true)[0].performSemanticsAction(SemanticsActions.OnClick)
         assertEquals(listOf("Tess Tester"), people)
-        // Playing: no chevron and no row.
+        // Playing: the row stays open; closed, the chevron is offered while playing too.
         state.playing = true
         rule.waitForIdle()
-        rule.onNodeWithText("Cast & Crew").assertDoesNotExist()
-        rule.onNodeWithContentDescription("Cast & Crew").assertDoesNotExist()
+        assertTrue(state.castOpen)
+        rule.onNodeWithText("Cast & Crew").assertExists()
+        rule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
+        rule.waitForIdle()
         assertFalse(state.castOpen)
+        rule.onNodeWithContentDescription("Cast & Crew").assertExists()
+        // Without a cast: nothing.
+        state.cast = emptyList()
+        rule.waitForIdle()
+        rule.onNodeWithContentDescription("Cast & Crew").assertDoesNotExist()
     }
 
     @Suppress("unused")

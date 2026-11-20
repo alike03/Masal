@@ -177,6 +177,7 @@ class UiFlowTest {
             assertTrue("the info block names the title", rule.onAllNodesWithText("Ein fiktiver Film aus Seerr.").fetchSemanticsNodes().isNotEmpty())
             shot("home-seerr-row")
             // Badges: "Available"; approved and still to come: the release date; approved, already out: "Soon".
+            assertTrue("Seerr rows say they come from Seerr", rule.onAllNodesWithText("Seerr").fetchSemanticsNodes().isNotEmpty())
             assertTrue("available badge", rule.onAllNodesWithText("Available").fetchSemanticsNodes().isNotEmpty())
             assertTrue("release date badge", rule.onAllNodesWithText("2099", substring = true).fetchSemanticsNodes().isNotEmpty())
             assertTrue("soon badge", rule.onAllNodesWithText("Soon").fetchSemanticsNodes().isNotEmpty())

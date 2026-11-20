@@ -274,7 +274,8 @@ fun HomeScreen(
         }
         if (seerr != null) seerrRows.forEach { row ->
             add(RowSpec(row.id, PosterRowHeight) {
-                PosterRow(row.title) {
+                // "Seerr" next to the title, like a profile's name on its rows (seerr.md).
+                PosterRow(row.title, owner = HomeRows.SeerrGroup) {
                     items(row.titles, key = { "${row.id}:${it.mediaType}:${it.tmdbId}" }) { t0 ->
                         // A request from Masal marks the title at once, before the row is loaded again.
                         val t = if (t0.status == SeerrStatus.None && "${t0.mediaType}:${t0.tmdbId}" in requested) t0.copy(status = SeerrStatus.Requested) else t0

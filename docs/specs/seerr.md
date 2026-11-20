@@ -50,15 +50,15 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
 - Series: "Request" opens a list of seasons with their state; seasons already in Plex or
   requested are marked and cannot be picked. "All missing seasons" is preselected; OK toggles
   a season, "Request" sends them (`mediaType tv`, `seasons`).
-- "Trailer" (when TMDB has one; a trailer, else a teaser) plays it on the page: YouTube's own
-  embedded player (IFrame Player API in a WebView) takes the poster's place at 480 x 270, with
-  nothing drawn over it. The button then says "Full screen": the same player fills the screen
-  without restarting; OK or play/pause pauses and plays, Back returns to the page. On the page,
-  play/pause pauses and plays, Back stops the trailer (Back again leaves the page). The trailer
-  closes by itself when it ends. Masal's own previews stop while it plays.
-- YouTube requires the app's identity as the Referer: the player page is loaded with the base
-  URL `https://<application id>`. YouTube's rules: at least 200 x 200 (480 x 270 recommended for
-  16:9), no overlays on the player, autoplay only while it is visible.
+- "Trailer" (when TMDB has one; a trailer, else a teaser) plays it above the page, filling the
+  screen: YouTube's own embed page (`youtube.com/embed/<id>`) in a WebView, nothing drawn over
+  it. OK or play/pause pauses and plays; Down scrolls the page up to the details and the cast
+  row while the trailer plays on, Up (or "Trailer" again) returns to it; Back stops it (Back
+  again leaves the page). It closes by itself when it ends. Masal's own previews stop meanwhile.
+- YouTube requires the app's identity as the Referer: the embed page is requested with
+  `Referer: https://<application id>`. YouTube's rules: at least 200 x 200, no overlays on the
+  player, autoplay only while it is visible. Player events and the page's console messages are
+  logged under tag `MasalTrailer`.
 - If YouTube refuses the video here (the owner does not allow embedding, or another player
   error), a short message says so and the button becomes "Open in YouTube": it opens the video
   in the first installed of TizenTube, SmartTube, YouTube for Android TV, else in whatever opens
@@ -89,7 +89,8 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
     12), which show category tiles, not titles.
   - Built-in sliders have no title in Seerr; Masal names them in the app language.
 - Sliders switched off in Seerr itself are still offered; Masal's choice is its own.
-- On Home a Seerr row looks like a Plex row: posters with the status badge from `people.md`
+- On Home a Seerr row looks like a Plex row, with "Seerr" in small dim letters next to its
+  title (like a profile's name on its rows): posters with the status badge from `people.md`
   ("In Plex", "Requested" / "Processing", none). The info block shows title, year and the
   two-line summary; the background is the title's backdrop. A title in Plex plays its Plex
   trailer after the focus rests 2.5 s, like the Plex rows; other titles have no preview (Seerr's
