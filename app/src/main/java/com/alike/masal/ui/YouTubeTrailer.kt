@@ -18,6 +18,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import kotlinx.coroutines.delay
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.focusable
 
 /** What the embedded YouTube player reports. */
 enum class TrailerState { Loading, Playing, Paused, Ended, Failed }
@@ -32,10 +46,13 @@ enum class TrailerState { Loading, Playing, Paused, Ended, Failed }
 @SuppressLint("SetJavaScriptEnabled")
 class YouTubeTrailer(context: Context, videoId: String, private val onState: (TrailerState) -> Unit) {
     private val main = Handler(Looper.getMainLooper())
-    private val id = videoId.filter { it.isLetterOrDigit() || it == '-' || it == '_' }
+    // Not called `id`: inside WebView.apply that name is the view's own id (always -1).
+    private val videoKey = videoId.filter { it.isLetterOrDigit() || it == '-' || it == '_' }
     private val referer = "https://" + context.packageName
 
     val view: WebView = WebView(context).apply {
+        // DevTools over ADB only when switched on with ADB itself: `setprop log.tag.MasalTrailer DEBUG`.
+        if (Log.isLoggable(Tag, Log.DEBUG)) WebView.setWebContentsDebuggingEnabled(true)
         setBackgroundColor(Color.BLACK)
         isFocusable = false
         isFocusableInTouchMode = false
@@ -59,14 +76,16 @@ class YouTubeTrailer(context: Context, videoId: String, private val onState: (Tr
                 view.evaluateJavascript(Watch, null)
             }
         }
-        Log.i(Tag, "load $id")
+        Log.i(Tag, "load $videoKey")
         loadUrl(
-            "https://www.youtube.com/embed/$id?autoplay=1&controls=0&playsinline=1&rel=0&iv_load_policy=3&fs=0",
+            "https://www.youtube.com/embed/$videoKey?autoplay=1&controls=0&playsinline=1&rel=0&iv_load_policy=3&fs=0",
             mapOf("Referer" to "$referer/"),
         )
     }
 
     fun toggle() = view.evaluateJavascript("(function(){var v=document.querySelector('video');if(!v)return;if(v.paused)v.play();else v.pause();})()", null)
+    fun pause() = view.evaluateJavascript("(function(){var v=document.querySelector('video');if(v)v.pause();})()", null)
+    fun play() = view.evaluateJavascript("(function(){var v=document.querySelector('video');if(v)v.play();})()", null)
 
     fun destroy() {
         (view.parent as? ViewGroup)?.removeView(view)
@@ -81,6 +100,9 @@ class YouTubeTrailer(context: Context, videoId: String, private val onState: (Tr
                 onState(when (s) { "playing" -> TrailerState.Playing; "pause" -> TrailerState.Paused; "ended" -> TrailerState.Ended; else -> TrailerState.Loading })
             }
         }
+
+        @JavascriptInterface
+        fun stats(s: String) = Log.i(Tag, "video $s").let { }
 
         @JavascriptInterface
         fun error(what: String) {
@@ -100,7 +122,10 @@ class YouTubeTrailer(context: Context, videoId: String, private val onState: (Tr
 var hooked=false;
 function hook(){var v=document.querySelector('video');if(!v||hooked)return !!v;hooked=true;
 ['playing','pause','ended'].forEach(function(e){v.addEventListener(e,function(){Masal.state(e);});});
-var p=v.play();if(p&&p.catch)p.catch(function(err){Masal.state('blocked:'+err);});return true;}
+var p=v.play();if(p&&p.catch)p.catch(function(err){Masal.state('blocked:'+err);});
+var n=0;var st=setInterval(function(){n++;if(n>15){clearInterval(st);return;}var q=v.getVideoPlaybackQuality?v.getVideoPlaybackQuality():{};
+Masal.stats('t='+v.currentTime.toFixed(1)+' size='+v.videoWidth+'x'+v.videoHeight+' frames='+q.totalVideoFrames+' dropped='+q.droppedVideoFrames+' paused='+v.paused+' ready='+v.readyState);},2000);
+return true;}
 var tries=0;var t=setInterval(function(){tries++;
 var err=document.querySelector('.ytp-error');
 if(err&&err.offsetParent!==null){clearInterval(t);Masal.error(err.innerText||'ytp-error');return;}
@@ -119,4 +144,33 @@ fun TrailerView(trailer: YouTubeTrailer?, modifier: Modifier = Modifier) {
         return
     }
     AndroidView(factory = { (trailer.view.parent as? ViewGroup)?.removeView(trailer.view); trailer.view }, modifier = modifier)
+}
+
+/**
+ * The trailer in its own full-screen window (seerr.md): over the whole screen, side rail strip
+ * included, and outside the page's drawing. OK or play/pause pauses and plays; Down or Back
+ * hide it ([onHide]) and show the page's details.
+ */
+@Composable
+fun TrailerWindow(trailer: YouTubeTrailer?, onHide: () -> Unit) {
+    Dialog(onHide, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        (androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider)
+            ?.window?.setDimAmount(0f)
+        val focus = remember { FocusRequester() }
+        LaunchedEffect(Unit) { delay(50); runCatching { focus.requestFocus() } }
+        Box(
+            Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black).focusRequester(focus)
+                .onPreviewKeyEvent { e ->
+                    when (e.key) {
+                        Key.DirectionCenter, Key.Enter, Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause -> {
+                            if (e.type == KeyEventType.KeyUp) trailer?.toggle()
+                            true
+                        }
+                        Key.DirectionDown -> { if (e.type == KeyEventType.KeyDown) onHide(); true }
+                        else -> false
+                    }
+                }
+                .focusable(),
+        ) { TrailerView(trailer, Modifier.fillMaxSize()) }
+    }
 }

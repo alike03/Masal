@@ -5,7 +5,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.isRoot
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.isFocused
@@ -144,23 +147,27 @@ class PeopleScreensTest {
         assertEquals(102, JSONObject(requests.last { it.path == "/api/v1/request" }.body.readUtf8()).getInt("mediaId"))
     }
 
+    @OptIn(ExperimentalTestApi::class)
     @Test
     fun filmInPlexCanBePlayedFromItsSeerrPage() {
         val played = mutableListOf<String>()
         val withPlay = PeopleActions(actions.onPerson, actions.onSeerrTitle, actions.onPlexTitle, onPlayPlex = { rk, _ -> played += rk },
             onTrailer = { played += "yt:$it" })
         show { SeerrTitleScreen("movie", 101, false, null, withPlay) }
-        waitFor("A fictitious film.")
-        rule.onRoot().captureRoboImage("$shots/09-film-in-plex.png")
+        rule.waitUntil(5_000) { synchronized(requests) { requests.any { it.path?.startsWith("/api/v1/movie/101") == true } } }
+        // The trailer starts with the page in its own full-screen window (a black box without video
+        // in tests); Down hides it and shows the details.
+        rule.mainClock.advanceTimeBy(500)
+        rule.waitForIdle()
+        rule.onAllNodes(isRoot()).assertCountEquals(2)
+        rule.onAllNodes(isRoot()).onLast().performKeyInput { pressKey(Key.DirectionDown) }
+        rule.mainClock.advanceTimeBy(500)
+        rule.waitForIdle()
+        rule.onAllNodes(isRoot()).assertCountEquals(1)
+        rule.onRoot().captureRoboImage("$shots/11-trailer-details.png")
         rule.onNodeWithText("Open").assertExists()
         press("Play")
         assertEquals(listOf("7"), played)
-        // The trailer fills the screen above the page (a black box without video in tests).
-        press("Trailer")
-        rule.mainClock.advanceTimeBy(500)
-        rule.waitForIdle()
-        rule.onRoot().captureRoboImage("$shots/10-trailer.png")
-        rule.onNodeWithText("A fictitious film.").assertIsNotDisplayed()
         assertEquals("the YouTube app is only the fallback", listOf("7"), played)
     }
 

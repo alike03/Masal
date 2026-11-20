@@ -49,7 +49,6 @@
         <item quantity="one">%1$d Staffel anfragen</item>
         <item quantity="other">%1$d Staffeln anfragen</item>
     </plurals>
-    <string name="seerr_trailer">Trailer</string>
     <string name="seerr_no_youtube_app">Keine App für YouTube-Trailer installiert</string>
     <string name="seerr_trailer_external">In YouTube öffnen</string>
     <string name="seerr_trailer_failed">YouTube erlaubt diesen Trailer hier nicht.</string>

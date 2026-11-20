@@ -460,16 +460,17 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
     var picking by remember { mutableStateOf(false) }
     var sending by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
-    // The trailer fills the screen above the page (seerr.md); Down scrolls to the details while it plays.
+    // The trailer starts with the page in its own full-screen window (seerr.md); Down or Back hide
+    // it (paused) and show the details, Up from the buttons brings it back.
     var trailerOn by remember { mutableStateOf(false) }
+    var trailerShown by remember { mutableStateOf(false) }
     var trailer by remember { mutableStateOf<YouTubeTrailer?>(null) }
     var trailerFailed by remember { mutableStateOf(false) }
-    val listState = rememberLazyListState()
-    val videoFocus = remember { FocusRequester() }
-    fun showVideo() { scope.launch { listState.scrollToItem(0); delay(80); runCatching { videoFocus.requestFocus() } } }
+    fun showVideo() { trailerShown = true; trailer?.play() }
+    fun showDetails() { trailer?.pause(); trailerShown = false; scope.launch { delay(120); focus.focusDefault() } }
     fun stopTrailer() {
         trailer?.destroy(); trailer = null
-        if (trailerOn) { trailerOn = false; scope.launch { delay(80); focus.focusDefault() } }
+        if (trailerOn) { trailerOn = false; trailerShown = false; scope.launch { delay(120); focus.focusDefault() } }
     }
     DisposableEffect(Unit) { onDispose { trailer?.destroy() } }
     fun startTrailer(key: String) {
@@ -505,11 +506,16 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
         }
     }
 
+    // Starts once per page when Seerr names a trailer (not inside the player, where actions.onTrailer is null).
+    var autoStarted by remember { mutableStateOf(false) }
+    LaunchedEffect(d?.trailer) {
+        val key = d?.trailer ?: return@LaunchedEffect
+        if (!autoStarted && actions.onTrailer != null) { autoStarted = true; startTrailer(key) }
+    }
+
     Box(Modifier.fillMaxSize().onPreviewKeyEvent { e ->
         if (!trailerOn) return@onPreviewKeyEvent false
         when (e.key) {
-            // Back stops the trailer before it leaves the page.
-            Key.Back -> { if (e.type == KeyEventType.KeyUp) stopTrailer(); true }
             Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause -> { if (e.type == KeyEventType.KeyUp) trailer?.toggle(); true }
             else -> false
         }
@@ -518,25 +524,18 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
             d == null && failed == null -> Text(stringResource(R.string.browse_loading), color = TextDim, modifier = Modifier.align(Alignment.Center))
             d == null -> Text(stringResource(R.string.browse_load_failed, failed.orEmpty()), color = Accent, modifier = Modifier.align(Alignment.Center))
             else -> LazyColumn(
-                state = listState,
+                state = rememberLazyListState(),
                 modifier = Modifier.fillMaxSize(),
-                // No bottom padding (a spacer ends the list): the trailer must fill the whole height.
-                contentPadding = PaddingValues(top = if (trailerOn) 0.dp else 40.dp),
+                contentPadding = PaddingValues(top = 40.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                // The trailer over the whole screen, nothing drawn over it (YouTube's rule); OK pauses
-                // and plays, Down moves to the details below while it keeps playing.
-                if (trailerOn) item(key = "trailer") {
-                    Box(Modifier.fillParentMaxSize().background(Color.Black).focusRequester(videoFocus)
-                        .onPreviewKeyEvent { e ->
-                            if (e.key == Key.DirectionCenter || e.key == Key.Enter) { if (e.type == KeyEventType.KeyUp) trailer?.toggle(); true } else false
-                        }
-                        .focusable()) {
-                        TrailerView(trailer, Modifier.fillMaxSize())
-                    }
-                }
                 item(key = "header") {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = EdgePadding)) {
+                    // Up from the buttons brings the trailer back.
+                    Row(Modifier.fillMaxWidth().padding(horizontal = EdgePadding).onPreviewKeyEvent { e ->
+                        if (!trailerOn || e.key != Key.DirectionUp || picking || confirming) return@onPreviewKeyEvent false
+                        if (e.type == KeyEventType.KeyDown) showVideo()
+                        true
+                    }) {
                         Box(Modifier.size(width = 130.dp, height = 195.dp).clip(RoundedCornerShape(6.dp)).background(Panel)) {
                             NetImage(d.title.poster, d.title.title, Modifier.fillMaxSize())
                         }
@@ -559,20 +558,10 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
                                 onCancel = { confirming = false },
                                 onOpen = { d.title.ratingKey?.let { actions.onPlexTitle(it, d.title.title) } },
                                 onPlay = actions.onPlayPlex?.takeIf { mediaType == "movie" }?.let { play -> { d.title.ratingKey?.let { play(it, d.title.title) } } },
-                                trailerLabel = when {
-                                    d.trailer == null || actions.onTrailer == null -> null
-                                    trailerFailed -> stringResource(R.string.seerr_trailer_external)
-                                    else -> stringResource(R.string.seerr_trailer)
-                                },
-                                onTrailer = {
-                                    val key = d.trailer
-                                    when {
-                                        key == null -> {}
-                                        trailerFailed -> actions.onTrailer?.invoke(key)
-                                        trailerOn -> showVideo()
-                                        else -> startTrailer(key)
-                                    }
-                                })
+                                // Only when YouTube refused to play it here: open it in a YouTube app instead.
+                                trailerLabel = if (trailerFailed && d.trailer != null && actions.onTrailer != null)
+                                    stringResource(R.string.seerr_trailer_external) else null,
+                                onTrailer = { d.trailer?.let { actions.onTrailer?.invoke(it) } })
                             message?.let { Text(it, color = Accent, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp)) }
                         }
                     }
@@ -584,6 +573,7 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
             }
         }
         if (picking && d != null) SeasonPicker(d.seasons, sending, onCancel = { picking = false }, onRequest = { send(it) })
+        if (trailerOn && trailerShown) TrailerWindow(trailer) { showDetails() }
     }
 }
 

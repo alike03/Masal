@@ -50,19 +50,22 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
 - Series: "Request" opens a list of seasons with their state; seasons already in Plex or
   requested are marked and cannot be picked. "All missing seasons" is preselected; OK toggles
   a season, "Request" sends them (`mediaType tv`, `seasons`).
-- "Trailer" (when TMDB has one; a trailer, else a teaser) plays it above the page, filling the
-  screen: YouTube's own embed page (`youtube.com/embed/<id>`) in a WebView, nothing drawn over
-  it. OK or play/pause pauses and plays; Down scrolls the page up to the details and the cast
-  row while the trailer plays on, Up (or "Trailer" again) returns to it; Back stops it (Back
-  again leaves the page). It closes by itself when it ends. Masal's own previews stop meanwhile.
+- When TMDB has a trailer (else a teaser), it starts as soon as the page opens, in its own
+  full-screen window over everything (also the side rail's strip): YouTube's own embed page
+  (`youtube.com/embed/<id>`) in a WebView, nothing drawn over it. There is no trailer button.
+  OK or play/pause pauses and plays. Down or Back hide it (paused) and show the page as usual,
+  from its top; Up from the buttons brings it back and it plays on. Back on the page leaves it.
+  When the trailer ends, only the page stays. Masal's own previews stop meanwhile. Not inside
+  the player.
 - YouTube requires the app's identity as the Referer: the embed page is requested with
   `Referer: https://<application id>`. YouTube's rules: at least 200 x 200, no overlays on the
-  player, autoplay only while it is visible. Player events and the page's console messages are
-  logged under tag `MasalTrailer`.
+  player, autoplay only while it is visible. Player events, the page's console messages and,
+  every 2 s for 30 s, the video's size and decoded and dropped frames are logged under tag
+  `MasalTrailer`. `adb shell setprop log.tag.MasalTrailer DEBUG` allows DevTools on the page.
 - If YouTube refuses the video here (the owner does not allow embedding, or another player
-  error), a short message says so and the button becomes "Open in YouTube": it opens the video
+  error), the page shows the details, a short message and the button "Open in YouTube": it opens the video
   in the first installed of TizenTube, SmartTube, YouTube for Android TV, else in whatever opens
-  YouTube links. Trailers are not offered inside the player.
+  YouTube links.
 - Seerr's defaults decide server, quality profile and folder; 4K is not offered.
 - After sending: a short message "Requested" (or Seerr's error text, e.g. quota reached) and
   the badge changes at once.
@@ -133,8 +136,9 @@ state), `person/<id>`, `person/<id>/combined_credits` (each title with `mediaInf
 4 partly available, 5 available, 6 deleted. Checked against Seerr 3.5.2's API description.
 
 ## Open points
-- Embedded trailer not yet verified on the TV: whether YouTube accepts the WebView's Referer,
-  whether ads appear before trailers, and memory while it plays.
+- Embedded trailer on the TV: sound plays but the picture stayed black inside the page; the
+  separate window is the next try. Not yet known: whether ads appear before trailers, memory
+  while it plays.
 - Seerr's Plex Watchlist slider is left out for now: it is per Seerr user, and whether
   `X-API-User` selects whose watchlist is returned is not checked yet.
 - Slider type numbers come from Seerr 3.5.2's code (`DiscoverSliderType`); the API description
