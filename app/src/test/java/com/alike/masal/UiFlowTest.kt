@@ -240,6 +240,8 @@ class UiFlowTest {
         rule.waitForIdle()
         expectFocus("first button", "Plex")
         press(KeyEvent.KEYCODE_DPAD_DOWN)
+        expectFocus("PIN of the phone page", "PIN")
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
         expectFocus("language row", "Language")
         press(KeyEvent.KEYCODE_DPAD_DOWN)
         expectFocus("category row", "Channel category")

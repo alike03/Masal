@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -84,7 +83,6 @@ import com.alike.masal.ui.OnAccent
 import com.alike.masal.ui.Panel
 import com.alike.masal.ui.TextDim
 import com.alike.masal.ui.TextMain
-import fi.iki.elonen.NanoHTTPD
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -97,40 +95,21 @@ private enum class SettingsPage { Main, Language, Category, Title, Order, Profil
  */
 @Composable
 fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
-    // The page and the Plex link poll run only while the app is in the foreground; after Home or
-    // standby the old address stops working and a new one is shown on return.
+    // The Plex link poll runs only while the app is in the foreground. The phone page runs while
+    // Masal runs (SetupHost) at a fixed address; the QR code carries the PIN, so scanning signs in.
     val lifecycleState by androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateAsState()
     val running = lifecycleState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
-    val key = remember(running) { SetupServer.randomKey() }
-    val ip = remember { SetupServer.localIp() }
-    val url = "http://$ip:$SETUP_PORT/$key"
-    val qr = remember(url) { SetupServer.qr(url, 420).asImageBitmap() }
-    var serverError by remember { mutableStateOf<String?>(null) }
+    val ip = remember(running) { SetupServer.localIp() }
+    val url = "http://$ip:$SETUP_PORT"
+    var pin by remember { mutableStateOf(Graph.settings.setupPin) }
+    val qr = remember(url, pin) { SetupServer.qr("$url/?pin=$pin", 420).asImageBitmap() }
+    val serverError by SetupHost.error.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current
     // A language picked on the phone page is only stored; the TV follows when Settings opens again.
     LaunchedEffect(running) {
         if (running && SetupServer.texts(context).getString(R.string.setup_lang_code) != context.getString(R.string.setup_lang_code)) {
             context.findActivity()?.recreate()
         }
-    }
-
-    DisposableEffect(key, running) {
-        if (!running) return@DisposableEffect onDispose { }
-        fun res(id: Int) = runCatching { context.resources.openRawResource(id).use { it.readBytes() } }.getOrNull()
-        val assets = listOfNotNull(
-            res(com.alike.masal.R.raw.favicon)?.let { "favicon.png" to ("image/png" to it) },
-            res(com.alike.masal.R.drawable.masal_mark)?.let { "logo.png" to ("image/png" to it) },
-            res(com.alike.masal.R.font.dm_sans)?.let { "dm-sans.ttf" to ("font/ttf" to it) },
-            res(com.alike.masal.R.font.fraunces)?.let { "fraunces.ttf" to ("font/ttf" to it) },
-        ).toMap()
-        val server = SetupServer(
-            context, Graph.settings, key, { Graph.settings.changed() }, assets,
-            channelGroups = { channelGroups(vm) },
-            homeRows = { vm.homeRowOptions.value },
-        )
-        runCatching { server.start(NanoHTTPD.SOCKET_READ_TIMEOUT, true) }
-            .onFailure { serverError = context.getString(R.string.settings_server_error, it.message.toString()) }
-        onDispose { server.stop() }
     }
 
     // Plex link code: the user enters it at plex.tv/link, no token copying needed.
@@ -221,6 +200,8 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                 Image(qr, contentDescription = stringResource(R.string.settings_qr_description), modifier = Modifier.fillMaxSize())
             }
             Text(url, color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
+            Text(stringResource(R.string.settings_pin_value, pin), color = TextMain, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 4.dp))
             Text(
                 stringResource(R.string.settings_qr_hint),
                 color = TextDim, fontSize = 14.sp, modifier = Modifier.padding(top = 12.dp),
@@ -265,6 +246,8 @@ fun SetupScreen(vm: MasalViewModel, autoFocus: Boolean) {
                         options = options,
                         rowsEntry = { key -> rowsEntries.getOrPut(key) { FocusRequester() } },
                         onRows = { key -> back = rowsEntries[key]; rowsProfile = key; page = SettingsPage.Rows },
+                        pin = pin,
+                        onNewPin = { pin = Graph.settings.renewSetupPin() },
                         homeOrderRow = homeOrderRow,
                         homeOrderValue = stringResource(if (homeOrder.isEmpty()) R.string.settings_category_order_default else R.string.settings_category_order_custom),
                         onHomeOrder = { back = homeOrderRow; moving = null; page = SettingsPage.HomeOrder },
@@ -385,6 +368,8 @@ private fun MainList(
     options: List<HomeRowOption>,
     rowsEntry: (String) -> FocusRequester,
     onRows: (String) -> Unit,
+    pin: String,
+    onNewPin: () -> Unit,
     homeOrderRow: FocusRequester,
     homeOrderValue: String,
     onHomeOrder: () -> Unit,
@@ -431,6 +416,14 @@ private fun MainList(
                 else context.getString(R.string.settings_seerr_not_set)
             }
             SettingRow("Seerr", value, onSeerr, Modifier.focusRequester(seerrRow))
+        }
+
+        item { Heading(stringResource(R.string.settings_phone_heading)) }
+        item {
+            Column {
+                SettingRow(stringResource(R.string.settings_new_pin), pin, onNewPin)
+                Text(stringResource(R.string.settings_new_pin_hint), color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp, start = 4.dp))
+            }
         }
 
         item { Heading(stringResource(R.string.language_title)) }

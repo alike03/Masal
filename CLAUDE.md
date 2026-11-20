@@ -13,7 +13,7 @@ Android TV app: a home interface with IPTV live TV, Plex playback and app shortc
 - `scripts/install.sh` installs, compiles and opens Masal, also on a sleeping TV (without waking it): installing ends the running app, and without this the TV wakes up with the previous app in front. It never starts other apps (`NO_START=1` installs only).
 
 ## Stack
-Kotlin, Compose for TV (`androidx.tv:tv-material`), Media3 ExoPlayer, OkHttp, Coil, NanoHTTPD (QR setup page), ZXing.
+Kotlin, Compose for TV (`androidx.tv:tv-material`), Media3 ExoPlayer, OkHttp, Coil, NanoHTTPD (setup page), ZXing.
 
 ## Build and install
 - JDK 17 and the Android SDK (set `JAVA_HOME` / `ANDROID_HOME`, or put them in `.env`; `local.properties` holds `sdk.dir`).
@@ -46,7 +46,7 @@ Compose pitfalls found by the tests: a lazy grid that overlaps the element you p
 ## Structure
 - `data/` Settings (SharedPreferences; favourites, recent channels, Home apps order, Home live TV row), IPTV (M3U, Xtream API, XMLTV EPG), Plex client (JSON API, hubs, search, collections, genres, clearLogo, UltraBlurColors, streams, subtitle search/download, PIN link, timeline/scrobble), installed apps, Home rows (`HomeRows.kt`: Plex rows and collections chosen for Home, stored as differences from Plex's own Home; a profile's rows are prefixed `p:<id>:`), profiles (`docs/specs/profiles.md`: Plex Home members with their own server token; `Graph.plexFor(item)` gives the client an item was loaded with, so detail pages and the player act as that member), Bing photo-of-the-day backdrops (no key), `foldText()` (accent and Turkish I folding).
 - Cast, people and Seerr (`docs/specs/people.md`, `seerr.md`): `data/Seerr.kt` (Seerr client with `X-Api-Key`, requests with `X-API-User` per profile, `SeerrCache` for a week in the cache folder), `ui/People.kt` (cast row, person page, Seerr title page, season picker, leave-player dialog). Plex's cast comes with `PlexItem.people`; with Seerr the cast is Seerr's (TMDB person ids) via `castFor`.
-- `setup/` QR setup page for the phone and the Settings screen on the TV (spec: `setup.md`).
+- `setup/` setup page for phone or computer (`SetupServer`, always running via `SetupHost`, PIN sign-in in `SetupAuth`) and the Settings screen on the TV (spec: `setup.md`).
 - `ui/` Home (`HomeScreen.kt`), accordion rows and info blocks (`Rows.kt`, `FoldingRows`), background and previews (`Ambient.kt`), libraries (`BrowseScreens.kt`), search (`SearchScreen.kt`), Apps page, TV tab, side menu, theme and soft scrolling (`Components.kt`).
 - `player/` `PlayerActivity` (Plex and live), `PlexOverlay.kt`, `LiveOverlay.kt`, `PlayerSettings.kt` (subtitle look and skip lengths, stored in Settings), `Media.kt` (ExoPlayer with audio focus, buffer capped at 100 MB on the Java heap, shorter start buffer for live). Live switches channels with two players (current and pending, two TextureView PlayerViews stacked in the FrameLayout, see `live-tv.md`): the pending one plays muted and without audio focus (two players with focus pause each other) and takes over on its first frame; it falls back to one player when the second stream fails. Switching decisions are logged under tag `MasalLive`, never with stream addresses (they contain the IPTV login).
 - `debug/` `SnapshotReceiver` (debug builds only).

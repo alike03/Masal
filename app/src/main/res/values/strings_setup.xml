@@ -8,7 +8,7 @@
     <!-- Settings screen on the TV -->
     <string name="settings_title">Settings</string>
     <string name="settings_qr_description">QR code for the setup page</string>
-    <string name="settings_qr_hint">Logins, live TV sources and the Plex server: scan the code with your phone (same network).</string>
+    <string name="settings_qr_hint">Logins, live TV sources and the Plex server: scan the code with your phone or open the address on any device in the same network and enter the PIN.</string>
     <string name="settings_server_error">Setup page could not start: %1$s</string>
     <string name="settings_plex_connected">Plex is connected.</string>
     <string name="settings_plex_requesting">Requesting a Plex link code</string>
@@ -155,4 +155,14 @@
     <string name="settings_home_order_hint">OK picks a row up, Up and Down move it, OK puts it down.</string>
     <string name="settings_home_order_reset">Reset order</string>
     <string name="settings_home_order_empty">No rows on Home yet.</string>
+    <string name="settings_pin_value">PIN %1$s</string>
+    <string name="settings_phone_heading">Phone page</string>
+    <string name="settings_new_pin">PIN</string>
+    <string name="settings_new_pin_hint">OK makes a new PIN; phones and computers sign in again.</string>
+    <string name="setup_login_title">Enter the PIN</string>
+    <string name="setup_login_lead">The PIN is shown in Masal\'s Settings on the TV, under the QR code.</string>
+    <string name="setup_pin_label">PIN</string>
+    <string name="setup_login_button">Sign in</string>
+    <string name="setup_login_wrong">Wrong PIN.</string>
+    <string name="setup_login_locked">Too many attempts. Try again in %1$d s.</string>
 </resources>

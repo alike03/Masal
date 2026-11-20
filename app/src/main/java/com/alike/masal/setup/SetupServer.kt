@@ -17,23 +17,23 @@ import com.alike.masal.data.Settings
 import fi.iki.elonen.NanoHTTPD
 import java.net.Inet4Address
 import java.net.NetworkInterface
-import java.security.SecureRandom
 import java.util.Locale
 import java.util.UUID
 
 const val SETUP_PORT = 8765
 
 /**
- * Temporary settings page on the local network. It only runs while the setup
- * screen is open and only answers under a random path that is shown in the QR code.
+ * Settings page on the local network at `http://<tv-ip>:8765/` (setup.md). It runs while Masal
+ * runs; only the PIN shown in Settings on the TV (or the QR code, which carries it) signs a
+ * device in, which then keeps a session cookie.
  */
 class SetupServer(
     /** For the page's texts, in the language stored in the preferences (see [texts]). */
     private val context: Context,
     private val settings: Settings,
-    private val key: String,
+    private val auth: SetupAuth,
     private val onChanged: () -> Unit,
-    /** Files the page uses (logo, favicon, fonts) by name: MIME type and bytes. Served under the same secret path. */
+    /** Files the page uses (logo, favicon, fonts) by name: MIME type and bytes. Served without sign-in. */
     private val assets: Map<String, Pair<String, ByteArray>> = emptyMap(),
     /** Channel categories of the loaded sources, in provider order, for the Home row select. */
     private val channelGroups: () -> List<String> = { emptyList() },
@@ -42,28 +42,79 @@ class SetupServer(
 ) : NanoHTTPD(SETUP_PORT) {
 
     override fun serve(session: IHTTPSession): Response {
-        val base = "/$key"
-        assets[session.uri.removePrefix("$base/")]?.takeIf { session.uri.startsWith("$base/") }?.let { (mime, bytes) ->
+        val base = ""
+        assets[session.uri.removePrefix("/")]?.let { (mime, bytes) ->
             return newFixedLengthResponse(Response.Status.OK, mime, bytes.inputStream(), bytes.size.toLong())
                 .apply { addHeader("Cache-Control", "max-age=3600") }
         }
-        if (session.uri.trimEnd('/') != base) {
+        if (session.uri != "/") {
             return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain; charset=utf-8", str(R.string.setup_not_found))
         }
+        if (session.method == Method.POST) session.parseBody(HashMap())
+        if (!auth.valid(session.cookies.read(SetupAuth.Cookie))) return signIn(session)
         var notice: String? = null
         if (session.method == Method.POST) {
-            session.parseBody(HashMap())
             val p = session.parameters.mapValues { it.value.firstOrNull().orEmpty().trim() }
             val (text, reload) = handle(p, session.parameters)
             notice = text
             // Sources and Plex reload everything; Home layout changes only redraw Home.
             if (reload) onChanged() else settings.homeChanged()
             val r = newFixedLengthResponse(Response.Status.REDIRECT_SEE_OTHER, "text/plain", "")
-            r.addHeader("Location", "$base?saved=" + java.net.URLEncoder.encode(notice, "UTF-8"))
+            r.addHeader("Location", "$base/?saved=" + java.net.URLEncoder.encode(notice, "UTF-8"))
             return r
         }
         notice = session.parameters["saved"]?.firstOrNull()
         return newFixedLengthResponse(Response.Status.OK, "text/html; charset=utf-8", page(base, notice))
+    }
+
+    /**
+     * Not signed in: a PIN from the form or from the QR code's address (`/?pin=`) signs the device
+     * in and sets the cookie; otherwise the PIN page. The PIN never stays in the address bar.
+     */
+    private fun signIn(session: IHTTPSession): Response {
+        val pin = session.parameters["pin"]?.firstOrNull()
+        val error = when (val r = pin?.let { auth.login(it) }) {
+            null -> null
+            is SetupAuth.Result.Ok -> return newFixedLengthResponse(Response.Status.REDIRECT_SEE_OTHER, "text/plain", "").apply {
+                addHeader("Location", "/")
+                addHeader("Set-Cookie", "${SetupAuth.Cookie}=${r.token}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Strict")
+            }
+            SetupAuth.Result.Wrong -> str(R.string.setup_login_wrong)
+            is SetupAuth.Result.Locked -> str(R.string.setup_login_locked, r.seconds)
+        }
+        return newFixedLengthResponse(Response.Status.OK, "text/html; charset=utf-8", signInPage(error)).apply {
+            addHeader("Cache-Control", "no-store")
+        }
+    }
+
+    private fun signInPage(error: String?): String {
+        val r = texts(context)
+        fun t(id: Int, vararg args: Any): String = esc(r.getString(id, *args))
+        return """<!doctype html><html lang="${t(R.string.setup_lang_code)}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>${t(R.string.setup_page_title)}</title>
+<link rel="icon" type="image/png" href="/favicon.png"><meta name="theme-color" content="#121110">
+<style>
+@font-face{font-family:"DM Sans";src:url("/dm-sans.ttf") format("truetype");font-weight:400 800;font-display:swap}
+@font-face{font-family:"Fraunces";src:url("/fraunces.ttf") format("truetype");font-weight:400 800;font-display:swap}
+:root{color-scheme:dark}
+body{margin:0;background:#121110;color:#f2eee8;font:16px/1.5 "DM Sans",system-ui,sans-serif}
+main{max-width:380px;margin:0 auto;padding:56px 16px;display:flex;flex-direction:column;gap:14px}
+.top{display:flex;align-items:center;gap:12px}.top img{width:44px;height:44px}
+.word{font:700 28px/1 "Fraunces",Georgia,serif}
+p{margin:0;color:#a8a29a}.err{color:#e0a458}
+input{font:600 28px/1.2 "DM Sans",system-ui,sans-serif;letter-spacing:.3em;text-align:center;width:100%;padding:12px;
+background:#1e1c1a;color:#f2eee8;border:1px solid #36322e;border-radius:10px}
+input:focus{outline:2px solid #e0a458;border-color:transparent}
+button{font:700 16px "DM Sans",system-ui,sans-serif;padding:12px;border:0;border-radius:999px;background:#e0a458;color:#1a1612;cursor:pointer}
+</style></head><body><main>
+<header class="top"><img src="/logo.png" alt=""><div class="word">Masal</div></header>
+<h1 style="margin:8px 0 0;font-size:22px">${t(R.string.setup_login_title)}</h1>
+<p>${t(R.string.setup_login_lead)}</p>
+${error?.let { "<p class=\"err\" role=\"alert\">${esc(it)}</p>" }.orEmpty()}
+<form method="post" action="/"><label for="pin" style="position:absolute;left:-9999px">${t(R.string.setup_pin_label)}</label>
+<input id="pin" name="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" autofocus required>
+<button style="width:100%;margin-top:14px">${t(R.string.setup_login_button)}</button></form>
+</main></body></html>"""
     }
 
     /** A text in the current language (read again each time: the page itself can change the language). */
@@ -173,7 +224,7 @@ class SetupServer(
             val detail = if (xtream) "${esc(host(s.server))} &middot; ${t(R.string.setup_user)} ${esc(s.user.take(2))}&hellip;" else esc(host(s.url))
             """<li><span class="badge">${if (xtream) "Xtream" else "M3U"}</span>
 <div class="src"><strong>${esc(s.name)}</strong><span>$detail</span></div>
-<form method="post" action="$base"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="${esc(s.id)}">
+<form method="post" action="$base/"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="${esc(s.id)}">
 <button class="btn ghost small" aria-label="${t(R.string.setup_remove_named, s.name)}">${t(R.string.setup_remove)}</button></form></li>"""
         }
         val sourceList = if (sources.isEmpty()) """<p class="empty">${t(R.string.setup_no_sources)}</p>"""
@@ -192,13 +243,13 @@ class SetupServer(
         val seerrCard = """<section class="card" aria-labelledby="h-seerr">
 <div class="head"><h2 id="h-seerr">Seerr</h2>$seerrChip</div>
 <p class="muted">${if (seerrSet) t(R.string.setup_seerr_connected, settings.seerrUserName, host(settings.seerrUrl)) else t(R.string.setup_seerr_lead)}</p>
-<form method="post" action="$base" class="fields"><input type="hidden" name="action" value="seerr">
+<form method="post" action="$base/" class="fields"><input type="hidden" name="action" value="seerr">
 <div class="field"><label for="seerr-url">${t(R.string.setup_seerr_url)}</label><input type="url" id="seerr-url" name="url" value="${esc(settings.seerrUrl)}" placeholder="http://seerr:5055" autocapitalize="off" autocorrect="off"></div>
 <div class="field"><label for="seerr-key">${t(R.string.setup_seerr_key)}</label><input type="password" id="seerr-key" name="key" autocomplete="off" placeholder="${t(if (settings.seerrKey.isNotBlank()) R.string.setup_token_saved else R.string.setup_token_not_set)}"></div>
 <p class="muted">${t(R.string.setup_seerr_key_hint)}</p>
 <div class="actions"><button class="btn">${t(R.string.setup_seerr_save)}</button></div>
 </form>${if (seerrSet) """
-<form method="post" action="$base"><input type="hidden" name="action" value="seerr_remove"><div class="actions"><button class="btn ghost">${t(R.string.setup_seerr_remove)}</button></div></form>""" else ""}
+<form method="post" action="$base/"><input type="hidden" name="action" value="seerr_remove"><div class="actions"><button class="btn ghost">${t(R.string.setup_seerr_remove)}</button></div></form>""" else ""}
 </section>"""
         // Home row: pick one of the loaded categories. A saved category that is not (yet) in the list
         // stays selectable, so loading sources late or a renamed category never clears the setting.
@@ -317,7 +368,7 @@ ${notice?.let { "<div class=\"notice\" role=\"status\">${esc(it)}</div>" } ?: ""
 <section class="card" aria-labelledby="h-lang">
 <h2 id="h-lang">${t(R.string.language_title)}</h2>
 <p class="muted">${t(R.string.setup_language_lead)}</p>
-<form method="post" action="$base" class="fields"><input type="hidden" name="action" value="language">
+<form method="post" action="$base/" class="fields"><input type="hidden" name="action" value="language">
 <select id="lang" name="language" aria-labelledby="h-lang">$languageOptions</select>
 <div class="actions"><button class="btn">${t(R.string.setup_save_language)}</button></div>
 </form>
@@ -329,7 +380,7 @@ $sourceList
 <section class="card" aria-labelledby="h-row">
 <h2 id="h-row">${t(R.string.setup_home_row_heading)}</h2>
 <p class="muted">${t(R.string.setup_home_row_lead)}</p>
-<form method="post" action="$base" class="fields"><input type="hidden" name="action" value="home">
+<form method="post" action="$base/" class="fields"><input type="hidden" name="action" value="home">
 <div class="field"><label for="row-group">${t(R.string.settings_channel_category)}</label><select id="row-group" name="group">$groupOptions</select><p class="hint">$groupHint</p></div>
 <div class="field"><label for="row-title">${t(R.string.settings_row_title)}</label><input type="text" id="row-title" name="title" value="${esc(settings.homeLiveTitle)}" placeholder="${t(R.string.setup_row_title_placeholder)}"></div>
 <div class="actions"><button class="btn">${t(R.string.setup_save_row)}</button></div>
@@ -345,7 +396,7 @@ $seerrCard
 <div class="head"><h2 id="h-plex">Plex</h2>$plexChip</div>
 $plexDetail
 <details><summary>${t(R.string.setup_plex_manual)}</summary>
-<form method="post" action="$base" class="fields"><input type="hidden" name="action" value="plex">
+<form method="post" action="$base/" class="fields"><input type="hidden" name="action" value="plex">
 <div class="field"><label for="plex-url">${t(R.string.setup_server_url)}</label><input type="url" id="plex-url" name="url" value="${esc(settings.plexUrl)}" placeholder="http://plex-server:32400" autocapitalize="off"></div>
 <div class="field"><label for="plex-token">${t(R.string.setup_token)}</label><input type="password" id="plex-token" name="token" placeholder="$tokenHint"></div>
 <div class="actions"><button class="btn">${t(R.string.setup_save_plex)}</button></div>
@@ -353,7 +404,7 @@ $plexDetail
 </section>
 </main>
 <dialog id="add" aria-labelledby="h-add">
-<form method="post" action="$base">
+<form method="post" action="$base/">
 <h2 id="h-add">${t(R.string.setup_add_source)}</h2>
 <fieldset class="types"><legend>${t(R.string.setup_types_legend)}</legend>
 <label class="type"><input type="radio" name="action" value="add_xtream" checked><strong>${t(R.string.setup_xtream_title)}</strong><span>${t(R.string.setup_xtream_detail)}</span></label>
@@ -405,12 +456,6 @@ $plexDetail
             val locale = if (code.isBlank()) Resources.getSystem().configuration.locales[0] else Locale.forLanguageTag(code)
             val config = Configuration(context.resources.configuration).apply { setLocales(LocaleList(locale)) }
             return context.createConfigurationContext(config)
-        }
-
-        fun randomKey(): String {
-            val chars = "abcdefghjkmnpqrstuvwxyz23456789"
-            val rnd = SecureRandom()
-            return (1..10).map { chars[rnd.nextInt(chars.length)] }.joinToString("")
         }
 
         fun localIp(): String = runCatching {

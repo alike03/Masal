@@ -8,7 +8,7 @@
     <!-- Settings screen on the TV -->
     <string name="settings_title">Ayarlar</string>
     <string name="settings_qr_description">Kurulum sayfasının QR kodu</string>
-    <string name="settings_qr_hint">Girişler, canlı TV kaynakları ve Plex sunucusu: Kodu telefonunla tara (aynı ağda).</string>
+    <string name="settings_qr_hint">Girişler, canlı TV kaynakları ve Plex sunucusu: Kodu telefonunla tara ya da adresi aynı ağdaki bir cihazda açıp PIN\'i gir.</string>
     <string name="settings_server_error">Kurulum sayfası başlatılamadı: %1$s</string>
     <string name="settings_plex_connected">Plex bağlı.</string>
     <string name="settings_plex_requesting">Plex bağlantı kodu isteniyor</string>
@@ -155,4 +155,14 @@
     <string name="settings_home_order_hint">OK bir satırı seçer, Yukarı ve Aşağı taşır, OK bırakır.</string>
     <string name="settings_home_order_reset">Sıralamayı sıfırla</string>
     <string name="settings_home_order_empty">Ana ekranda henüz satır yok.</string>
+    <string name="settings_pin_value">PIN %1$s</string>
+    <string name="settings_phone_heading">Telefon sayfası</string>
+    <string name="settings_new_pin">PIN</string>
+    <string name="settings_new_pin_hint">OK yeni bir PIN oluşturur; telefonlar ve bilgisayarlar yeniden giriş yapar.</string>
+    <string name="setup_login_title">PIN\'i gir</string>
+    <string name="setup_login_lead">PIN, TV\'de Masal\'ın Ayarlar ekranında QR kodun altında yazıyor.</string>
+    <string name="setup_pin_label">PIN</string>
+    <string name="setup_login_button">Giriş yap</string>
+    <string name="setup_login_wrong">Yanlış PIN.</string>
+    <string name="setup_login_locked">Çok fazla deneme. %1$d sn sonra tekrar dene.</string>
 </resources>

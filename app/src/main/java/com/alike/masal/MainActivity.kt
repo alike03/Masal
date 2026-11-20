@@ -144,6 +144,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The phone setup page runs while Masal runs (setup.md); it reads this activity's data.
+        com.alike.masal.setup.SetupHost.channelGroups = { vm.categoryNames() }
+        com.alike.masal.setup.SetupHost.homeRows = { vm.homeRowOptions.value }
+        com.alike.masal.setup.SetupHost.start(this)
         setContent {
             MasalTheme {
                 val sections by vm.sections.collectAsState()

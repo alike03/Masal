@@ -1,12 +1,21 @@
 # Setup page
 
 ## Purpose
-Enter Plex and IPTV logins with the phone instead of the remote.
+Enter Plex and IPTV logins with the phone or a computer instead of the remote.
 
 ## Behaviour
-- Settings shows a QR code for `http://<tv-ip>:8765/<random key>`. The web server runs only
-  while the Settings screen is open and the app is in the foreground, answers only under the
-  random path, and gets a new key after every return to the app.
+- The page is at a fixed address, `http://<tv-ip>:8765/`, and runs while Masal runs (started
+  with the app, no background service; idle it is one thread waiting on the port, no measurable
+  load). If Android has ended Masal, it is back as soon as Masal starts again.
+- Sign-in with a six-digit PIN, shown in Settings on the TV under the QR code. The QR code
+  carries the PIN (`/?pin=…`), so scanning signs in at once; the address bar then shows only
+  the address. A signed-in device keeps a cookie for a year (HttpOnly, SameSite=Strict); the
+  TV keeps only a hash of it, at most 20 devices.
+- After 5 wrong PINs in a row every PIN is refused for a minute.
+- Settings, "Phone page", "PIN": OK makes a new PIN, which signs every device out.
+- Logo, favicon and fonts are served without sign-in; everything else needs it, forms included.
+- The page is plain HTTP on the home network: someone on the same network could read the PIN
+  or the cookie in transit. Logins are still never shown on the page.
 - Saved sources show only the server host (and two letters of an Xtream user name), never the
   full playlist address, which often contains the login.
 - Plex link: the token is saved as soon as plex.tv confirms the code; a failing server lookup
@@ -33,7 +42,8 @@ Enter Plex and IPTV logins with the phone instead of the remote.
   "Remove Seerr" forgets address, key, user choices and the cache.
 - Changes apply on the TV at once. The page shows the Masal favicon.
 ## Settings screen on the TV
-- Left: the QR code and address of the phone page, for logins, sources and the Plex server.
+- Left: the QR code, address and PIN of the phone page, for logins, sources and the Plex server.
+- "Phone page" (after Plex): the PIN; OK makes a new one.
 - Right, a list moved with the remote:
   - Plex: status and link code, "Link Plex again", "Android settings" (the device's own settings).
     "Profiles" (once Plex is linked) adds and removes members of the Plex Home (profiles.md).
@@ -59,6 +69,9 @@ Enter Plex and IPTV logins with the phone instead of the remote.
 
 ## Checks
 - Scan the QR code, save Plex settings, Home shows Continue Watching.
+- Open the address on a computer: the PIN page; the PIN from the TV opens the settings, and
+  they open without PIN after a reload. A wrong PIN five times: locked for a minute.
+- "PIN" in Settings: new PIN on the TV, the computer asks for it again.
 - On the TV, switch a collection on: it is checked on the phone page after a reload, and on Home.
 - Pick Deutsch on the phone page: the page is German at once; reopen Settings on the TV: German.
 - Pick a category on the TV, Back: the setting is unchanged; OK: the live TV row shows it.

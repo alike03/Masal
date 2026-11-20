@@ -191,6 +191,31 @@ class Settings(context: Context) {
         homeRowsOff = if (!shown && option.defaultOn) homeRowsOff + option.id else homeRowsOff - option.id
     }
 
+    // ---- Phone setup page (setup.md) ----
+
+    /** The setup page's PIN, six digits, made once; never logged or printed. */
+    val setupPin: String
+        get() = prefs.getString("setup_pin", null)
+            ?: newSetupPinValue().also { prefs.edit().putString("setup_pin", it).apply() }
+
+    /** A new PIN; every signed-in phone or computer has to enter it again. */
+    fun renewSetupPin(): String {
+        val pin = newSetupPinValue()
+        prefs.edit().putString("setup_pin", pin).remove("setup_sessions").apply()
+        return pin
+    }
+
+    private fun newSetupPinValue() = "%06d".format(java.security.SecureRandom().nextInt(1_000_000))
+
+    /** SHA-256 of the session cookies of signed-in devices, newest last (at most 20). */
+    val setupSessions: List<String>
+        get() = prefs.getString("setup_sessions", "").orEmpty().split('\n').filter { it.isNotBlank() }
+
+    fun addSetupSession(hash: String) {
+        val list = (setupSessions - hash + hash).takeLast(20)
+        prefs.edit().putString("setup_sessions", list.joinToString("\n")).apply()
+    }
+
     // ---- Seerr (seerr.md) ----
 
     var seerrUrl: String

@@ -8,7 +8,7 @@
     <!-- Settings screen on the TV -->
     <string name="settings_title">Einstellungen</string>
     <string name="settings_qr_description">QR-Code für die Einrichtungsseite</string>
-    <string name="settings_qr_hint">Logins, Live-TV-Quellen und Plex-Server: Scanne den Code mit deinem Handy (im selben Netzwerk).</string>
+    <string name="settings_qr_hint">Logins, Live-TV-Quellen und Plex-Server: Scanne den Code mit dem Handy oder öffne die Adresse auf einem Gerät im selben Netzwerk und gib den PIN ein.</string>
     <string name="settings_server_error">Die Einrichtungsseite konnte nicht starten: %1$s</string>
     <string name="settings_plex_connected">Plex ist verbunden.</string>
     <string name="settings_plex_requesting">Plex-Code wird angefordert</string>
@@ -155,4 +155,14 @@
     <string name="settings_home_order_hint">OK nimmt eine Zeile auf, Hoch und Runter verschieben sie, OK legt sie ab.</string>
     <string name="settings_home_order_reset">Reihenfolge zurücksetzen</string>
     <string name="settings_home_order_empty">Noch keine Zeilen auf dem Startbildschirm.</string>
+    <string name="settings_pin_value">PIN %1$s</string>
+    <string name="settings_phone_heading">Seite fürs Handy</string>
+    <string name="settings_new_pin">PIN</string>
+    <string name="settings_new_pin_hint">OK erstellt einen neuen PIN; Handys und Computer melden sich neu an.</string>
+    <string name="setup_login_title">PIN eingeben</string>
+    <string name="setup_login_lead">Der PIN steht in Masals Einstellungen auf dem TV, unter dem QR-Code.</string>
+    <string name="setup_pin_label">PIN</string>
+    <string name="setup_login_button">Anmelden</string>
+    <string name="setup_login_wrong">Falscher PIN.</string>
+    <string name="setup_login_locked">Zu viele Versuche. Versuche es in %1$d s wieder.</string>
 </resources>
