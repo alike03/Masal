@@ -363,7 +363,7 @@ fun HeroSeerr(t: SeerrTitle, modifier: Modifier = Modifier) {
         val kind = stringResource(if (t.mediaType == "tv") R.string.home_seerr_kind_tv else R.string.home_seerr_kind_movie)
         Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(listOfNotNull(t.year?.toString(), kind).joinToString("   "), color = TextDim, fontSize = 13.sp, maxLines = 1)
-            StatusBadge(t.status, Modifier.padding(start = 10.dp))
+            StatusBadge(t.status, Modifier.padding(start = 10.dp), t.date)
         }
         t.overview?.let {
             Text(it, color = TextMain.copy(alpha = 0.92f), fontSize = 13.sp, lineHeight = 18.sp, maxLines = 2,

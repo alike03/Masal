@@ -24,7 +24,6 @@
     <string name="people_leave_player_note">%1$s wird geöffnet. Die Stelle im aktuellen Titel wird gespeichert.</string>
     <string name="people_leave_yes">Ja</string>
     <string name="people_leave_no">Nein</string>
-    <string name="seerr_status_in_plex">In Plex</string>
     <string name="seerr_status_requested">Angefragt</string>
     <string name="seerr_status_processing">Bald verfügbar</string>
     <string name="seerr_request">Anfragen</string>
@@ -55,4 +54,8 @@
     <string name="seerr_trailer_fullscreen">Vollbild</string>
     <string name="seerr_trailer_external">In YouTube öffnen</string>
     <string name="seerr_trailer_failed">YouTube erlaubt diesen Trailer hier nicht.</string>
+    <string name="seerr_status_available">Verfügbar</string>
+    <string name="seerr_status_soon">Bald</string>
+    <string name="seerr_release_on">Erscheint am %1$s</string>
+    <string name="seerr_requested_on_only">Angefragt am %1$s</string>
 </resources>

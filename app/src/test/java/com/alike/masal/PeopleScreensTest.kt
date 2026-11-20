@@ -102,7 +102,8 @@ class PeopleScreensTest {
         waitFor("Zweiter Testfilm")
         waitFor("Born")
         rule.onRoot().captureRoboImage("$shots/01-person.png")
-        assertEquals(3, rule.onAllNodes(hasText("In Plex"), useUnmergedTree = true).fetchSemanticsNodes().size) // filter tab, two badges
+        assertEquals(1, rule.onAllNodes(hasText("In Plex"), useUnmergedTree = true).fetchSemanticsNodes().size) // filter tab
+        assertEquals(2, rule.onAllNodes(hasText("Available"), useUnmergedTree = true).fetchSemanticsNodes().size) // two badges
         // In Plex: Masal's page; not in Plex: Seerr's page.
         press("Testfilm")
         press("Zweiter Testfilm")

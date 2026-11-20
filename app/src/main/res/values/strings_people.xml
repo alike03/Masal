@@ -24,16 +24,15 @@
     <string name="people_leave_player_note">%1$s opens. Your place in the current title is saved.</string>
     <string name="people_leave_yes">Yes</string>
     <string name="people_leave_no">No</string>
-    <string name="seerr_status_in_plex">In Plex</string>
     <string name="seerr_status_requested">Requested</string>
-    <string name="seerr_status_processing">Processing</string>
+    <string name="seerr_status_processing">Coming soon</string>
     <string name="seerr_request">Request</string>
     <string name="seerr_request_confirm">Request %1$s?</string>
     <string name="seerr_cancel">Cancel</string>
     <string name="seerr_sending">Sending…</string>
     <string name="seerr_requested">Requested</string>
     <string name="seerr_request_failed">Request failed: %1$s</string>
-    <string name="seerr_requested_on">%1$s on %2$s</string>
+    <string name="seerr_requested_on">%1$s, requested on %2$s</string>
     <string name="seerr_open">Open</string>
     <string name="seerr_seasons_title">Request seasons</string>
     <string name="seerr_seasons_note">Seasons in Plex or already requested cannot be picked.</string>
@@ -55,4 +54,8 @@
     <string name="seerr_trailer_fullscreen">Full screen</string>
     <string name="seerr_trailer_external">Open in YouTube</string>
     <string name="seerr_trailer_failed">YouTube does not allow this trailer here.</string>
+    <string name="seerr_status_available">Available</string>
+    <string name="seerr_status_soon">Soon</string>
+    <string name="seerr_release_on">Out on %1$s</string>
+    <string name="seerr_requested_on_only">Requested on %1$s</string>
 </resources>

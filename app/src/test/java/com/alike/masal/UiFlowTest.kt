@@ -164,6 +164,8 @@ class UiFlowTest {
                 vm.seerrRows.value = listOf(SeerrRow("seerr:4", "Trending", listOf(
                     SeerrTitle(901, "movie", "Testfilm Gamma", 2025, null, null, "Ein fiktiver Film aus Seerr.", SeerrStatus.None, null),
                     SeerrTitle(902, "movie", "Testfilm Delta", 2024, null, null, null, SeerrStatus.Available, "f1"),
+                    SeerrTitle(903, "movie", "Testfilm Epsilon", 2099, null, null, null, SeerrStatus.Processing, null, date = "2099-03-01"),
+                    SeerrTitle(904, "movie", "Testfilm Zeta", 2020, null, null, null, SeerrStatus.Processing, null, date = "2020-01-01"),
                 )))
             }
             rule.mainClock.advanceTimeBy(1_000)
@@ -174,6 +176,10 @@ class UiFlowTest {
             rule.mainClock.advanceTimeBy(500)
             assertTrue("the info block names the title", rule.onAllNodesWithText("Ein fiktiver Film aus Seerr.").fetchSemanticsNodes().isNotEmpty())
             shot("home-seerr-row")
+            // Badges: "Available"; approved and still to come: the release date; approved, already out: "Soon".
+            assertTrue("available badge", rule.onAllNodesWithText("Available").fetchSemanticsNodes().isNotEmpty())
+            assertTrue("release date badge", rule.onAllNodesWithText("2099", substring = true).fetchSemanticsNodes().isNotEmpty())
+            assertTrue("soon badge", rule.onAllNodesWithText("Soon").fetchSemanticsNodes().isNotEmpty())
             press(KeyEvent.KEYCODE_DPAD_DOWN)
             expectFocus("then the apps", "Testplayer")
         } finally {

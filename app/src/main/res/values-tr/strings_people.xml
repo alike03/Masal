@@ -24,7 +24,6 @@
     <string name="people_leave_player_note">%1$s açılacak. Şu anki başlıktaki yerin kaydedilir.</string>
     <string name="people_leave_yes">Evet</string>
     <string name="people_leave_no">Hayır</string>
-    <string name="seerr_status_in_plex">Plex\'te</string>
     <string name="seerr_status_requested">İstendi</string>
     <string name="seerr_status_processing">Yakında</string>
     <string name="seerr_request">İste</string>
@@ -33,7 +32,7 @@
     <string name="seerr_sending">Gönderiliyor…</string>
     <string name="seerr_requested">İstendi</string>
     <string name="seerr_request_failed">İstek başarısız: %1$s</string>
-    <string name="seerr_requested_on">%1$s: %2$s</string>
+    <string name="seerr_requested_on">%1$s, istek: %2$s</string>
     <string name="seerr_open">Aç</string>
     <string name="seerr_seasons_title">Sezon iste</string>
     <string name="seerr_seasons_note">Plex\'te olan veya zaten istenmiş sezonlar seçilemez.</string>
@@ -55,4 +54,8 @@
     <string name="seerr_trailer_fullscreen">Tam ekran</string>
     <string name="seerr_trailer_external">YouTube\'da aç</string>
     <string name="seerr_trailer_failed">YouTube bu fragmana burada izin vermiyor.</string>
+    <string name="seerr_status_available">Mevcut</string>
+    <string name="seerr_status_soon">Yakında</string>
+    <string name="seerr_release_on">%1$s tarihinde çıkıyor</string>
+    <string name="seerr_requested_on_only">İstek tarihi: %1$s</string>
 </resources>

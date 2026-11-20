@@ -31,9 +31,13 @@ and series: the ones in the library to play, the others to request through Seerr
   first, each title once (an actor who also directed shows it once, with both jobs in the
   caption). Caption: year and role or job.
 - Every poster shows its status as a small badge in the corner, from Seerr:
-  - "In Plex" (available, also partly available series): accent badge.
-  - "Requested" / "Processing": dark badge with the state.
+  - "Available" (in Plex, also partly available series): accent badge.
+  - "Requested": dark badge.
+  - Approved (Seerr's "processing", not in Plex yet): its release date while it is still to
+    come ("12 Dec", another year with the year), else "Soon". On the Seerr title page:
+    "Out on <date>" or "Coming soon", with the request date.
   - Nothing: no badge. Posters are never dimmed; the badge says it all.
+  - German: Verfügbar, Angefragt, Bald / the date; Turkish: Mevcut, İstendi, Yakında / the date.
 - OK on a title in Plex opens Masal's detail page of that title (Seerr gives its Plex id). OK
   on any other title opens the Seerr title page (`seerr.md`) with "Request".
 - Opened from the player, OK on a title in Plex asks first, because playing it leaves the

@@ -190,12 +190,27 @@ suspend fun castFor(item: PlexItem, show: PlexItem? = null): List<CastMember> = 
 
 // ---- status ----
 
+/** The release day of [date] (yyyy-MM-dd) when it is still to come, else null. */
+private fun futureRelease(date: String?): LocalDate? =
+    runCatching { LocalDate.parse(date) }.getOrNull()?.takeIf { it.isAfter(LocalDate.now()) }
+
+/** A short release date for a badge: "12. Dez." this year, "12. Dez. 2027" later. */
+private fun shortRelease(day: LocalDate): String {
+    val locale = java.util.Locale.getDefault()
+    val skeleton = if (day.year == LocalDate.now().year) "dMMM" else "dMMMyyyy"
+    return day.format(DateTimeFormatter.ofPattern(android.text.format.DateFormat.getBestDateTimePattern(locale, skeleton), locale))
+}
+
+/**
+ * A title's status (people.md): "Available", "Requested", or for an approved title its release
+ * date while it is still to come, else "Soon". Nothing when it is neither in Plex nor requested.
+ */
 @Composable
-fun StatusBadge(status: SeerrStatus, modifier: Modifier = Modifier) {
+fun StatusBadge(status: SeerrStatus, modifier: Modifier = Modifier, release: String? = null) {
     val text = when (status) {
-        SeerrStatus.Available -> stringResource(R.string.seerr_status_in_plex)
+        SeerrStatus.Available -> stringResource(R.string.seerr_status_available)
         SeerrStatus.Requested -> stringResource(R.string.seerr_status_requested)
-        SeerrStatus.Processing -> stringResource(R.string.seerr_status_processing)
+        SeerrStatus.Processing -> futureRelease(release)?.let { shortRelease(it) } ?: stringResource(R.string.seerr_status_soon)
         SeerrStatus.None -> return
     }
     val available = status == SeerrStatus.Available
@@ -206,7 +221,7 @@ fun StatusBadge(status: SeerrStatus, modifier: Modifier = Modifier) {
     )
 }
 
-/** A Seerr title's poster: full colour with an "In Plex" badge, dimmed otherwise. */
+/** A Seerr title's poster with its status badge (people.md). */
 @Composable
 fun SeerrPosterCard(
     t: SeerrTitle, caption: String?, onClick: () -> Unit, modifier: Modifier = Modifier, width: Dp = 104.dp, onFocus: () -> Unit = {},
@@ -220,7 +235,7 @@ fun SeerrPosterCard(
                     modifier = Modifier.align(Alignment.Center).padding(8.dp))
             }
             NetImage(t.poster, t.title, Modifier.fillMaxSize())
-            StatusBadge(t.status, Modifier.align(Alignment.TopStart).padding(5.dp))
+            StatusBadge(t.status, Modifier.align(Alignment.TopStart).padding(5.dp), t.date)
         }
         if (!showLabels) return@Column
         Text(t.title, color = TextMain, fontSize = 12.sp, maxLines = 1,
@@ -518,7 +533,7 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
                             Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(listOfNotNull(d.title.year?.toString(), length, d.genres.take(3).joinToString(", ").ifBlank { null }).joinToString("   "),
                                     color = TextDim, fontSize = 13.sp, maxLines = 1)
-                                StatusBadge(d.title.status, Modifier.padding(start = 10.dp))
+                                StatusBadge(d.title.status, Modifier.padding(start = 10.dp), d.title.date)
                             }
                             d.title.overview?.let {
                                 Text(it, color = TextMain.copy(alpha = 0.9f), fontSize = 14.sp, lineHeight = 19.sp, maxLines = 5,
@@ -586,8 +601,13 @@ private fun RequestActions(
     }
     val pending = d.title.status == SeerrStatus.Requested || d.title.status == SeerrStatus.Processing
     if (pending && !canRequest) {
-        val state = stringResource(if (d.title.status == SeerrStatus.Processing) R.string.seerr_status_processing else R.string.seerr_status_requested)
-        Text(d.requestedAt?.let { longDate(it) }?.let { stringResource(R.string.seerr_requested_on, state, it) } ?: state,
+        val requested = d.requestedAt?.let { longDate(it) }
+        val text = if (d.title.status == SeerrStatus.Processing) {
+            val state = futureRelease(d.title.date)?.let { stringResource(R.string.seerr_release_on, longDate(it.toString()).orEmpty()) }
+                ?: stringResource(R.string.seerr_status_processing)
+            requested?.let { stringResource(R.string.seerr_requested_on, state, it) } ?: state
+        } else requested?.let { stringResource(R.string.seerr_requested_on_only, it) } ?: stringResource(R.string.seerr_status_requested)
+        Text(text,
             color = TextDim, fontSize = 14.sp, modifier = Modifier.padding(top = 16.dp))
     }
     Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
