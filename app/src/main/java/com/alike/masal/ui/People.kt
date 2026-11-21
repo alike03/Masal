@@ -555,7 +555,7 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
         if (autoStarted || !offersTrailer) return@LaunchedEffect
         if (d == null) { if (failed != null) stopTrailer(snap = true); return@LaunchedEffect }
         autoStarted = true
-        val plexUrl = if (Graph.plex.configured) withContext(Dispatchers.IO) { Graph.plex.onlineTrailer(tmdbId, mediaType) } else null
+        val plexUrl = if (Graph.plex.configured) withContext(Dispatchers.IO) { Graph.plex.onlineTrailer(tmdbId, mediaType, seerr.language()) } else null
         if (plexUrl != null || d.trailer != null) startTrailer(plexUrl, d.trailer) else stopTrailer(snap = true)
     }
 

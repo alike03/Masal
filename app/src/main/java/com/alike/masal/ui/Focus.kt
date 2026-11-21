@@ -10,7 +10,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.platform.LocalWindowInfo
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 
 /** Receives how a screen takes focus when the user leaves the side menu (returns false if it could not). */
 val LocalEntryFocus = staticCompositionLocalOf<(() -> Boolean) -> Unit> { {} }
@@ -56,8 +59,12 @@ fun rememberRestorableFocus(autoFocus: Boolean, ready: Boolean): RestorableFocus
     val focus = remember { RestorableFocus(holder) }
     val entry = LocalEntryFocus.current
     LaunchedEffect(Unit) { entry { focus.restore() } }
+    val window = LocalWindowInfo.current
     LaunchedEffect(ready) {
         if (autoFocus && ready) {
+            // Started on a sleeping TV (after an install, or as the home screen at standby) nothing is
+            // drawn and the request would be lost, leaving the side menu with focus: wait for the window.
+            snapshotFlow { window.isWindowFocused }.first { it }
             delay(120)
             if (!focus.restore()) { delay(150); focus.restore() } // cards may still be composing
         }

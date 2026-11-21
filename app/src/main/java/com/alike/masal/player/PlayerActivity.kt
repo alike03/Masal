@@ -774,6 +774,22 @@ class PlayerActivity : ComponentActivity() {
     }
 
     /**
+     * The Plex app's link to a title's page (player.md): `plex://libraries/<server>/unmatched/` with
+     * the encoded metadata path; series (an episode opens its series) with `tv/` before it. Plex
+     * for Android TV 2026 shows the page for this form; the older `plex://server://` only opens
+     * Plex's Home.
+     */
+    private fun plexAppLink(serverId: String, item: PlexItem): String {
+        val (kind, key) = when (item.type) {
+            "episode" -> "tv/" to (item.grandparentRatingKey ?: item.ratingKey)
+            "season" -> "tv/" to (item.parentRatingKey ?: item.ratingKey)
+            "show" -> "tv/" to item.ratingKey
+            else -> "" to item.ratingKey
+        }
+        return "plex://libraries/$serverId/unmatched/$kind" + Uri.encode("/library/metadata/$key")
+    }
+
+    /**
      * Hands the title to the Plex app (player.md): its library link without autoplay, so Plex
      * shows the title's page where its version supports that. This player stops; onStop reports
      * the position, so Plex offers to resume there.
@@ -786,7 +802,7 @@ class PlayerActivity : ComponentActivity() {
             runOnUiThread {
                 if (isFinishing) return@runOnUiThread
                 if (id == null) { plex.message = getString(R.string.player_plex_unreachable); return@runOnUiThread }
-                val uri = Uri.parse("plex://server://$id/com.plexapp.plugins.library/library/metadata/${item.ratingKey}")
+                val uri = Uri.parse(plexAppLink(id, item))
                 val intent = Intent(Intent.ACTION_VIEW, uri).setPackage(PlexApp)
                     .putExtra("android.intent.extra.START_PLAYBACK", false)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

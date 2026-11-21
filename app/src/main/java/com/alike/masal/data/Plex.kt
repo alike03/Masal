@@ -354,13 +354,15 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings,
      * The address of Plex's online trailer for a TMDB title (seerr.md), also when it is not in the
      * library: Plex's catalogue entry by `tmdb://<id>`, then its first trailer extra. Asked with the
      * account's token; null without one. Found and "none" are kept for the session, failures not.
+     * [language] (e.g. "en") is asked for as `X-Plex-Language`: Plex hands out the trailer dubbed in
+     * the language the client asks for, where it has one; Masal passes Seerr's language (seerr.md).
      */
-    fun onlineTrailer(tmdbId: Int, mediaType: String): String? {
+    fun onlineTrailer(tmdbId: Int, mediaType: String, language: String = Language.tag()): String? {
         val token = settings.plexToken.takeIf { it.isNotBlank() } ?: return null
-        val cacheKey = "$mediaType:$tmdbId"
+        val cacheKey = "$mediaType:$tmdbId:$language"
         onlineTrailers[cacheKey]?.let { return it.ifEmpty { null } }
         fun json(url: String): JSONObject {
-            val req = Request.Builder().url(url).plexHeaders(token).build()
+            val req = Request.Builder().url(url).plexHeaders(token).header("X-Plex-Language", language).build()
             http.newCall(req).execute().use { r ->
                 if (!r.isSuccessful) error("Plex metadata HTTP ${r.code}")
                 return JSONObject(r.body!!.string()).getJSONObject("MediaContainer")

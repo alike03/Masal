@@ -142,6 +142,11 @@ class MainActivity : ComponentActivity() {
     private var homePresses by mutableIntStateOf(0)
     /** Back in the side menu on Home while Masal is the home screen: Home goes back to its top. */
     private var homeTop by mutableIntStateOf(0)
+    /** Counts standbys (screen off): each one returns to the start of Home, so the TV wakes up there. */
+    private var standbys by mutableIntStateOf(0)
+    private val screenOff = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context, intent: Intent) { standbys++ }
+    }
     /** A title (ratingKey, profile) picked on a person page in the player, opened after it closes. */
     private var openAfter by mutableStateOf<Pair<String, String?>?>(null)
 
@@ -151,6 +156,7 @@ class MainActivity : ComponentActivity() {
         com.alike.masal.setup.SetupHost.channelGroups = { vm.categoryNames() }
         com.alike.masal.setup.SetupHost.homeRows = { vm.homeRowOptions.value }
         com.alike.masal.setup.SetupHost.start(this)
+        registerReceiver(screenOff, android.content.IntentFilter(Intent.ACTION_SCREEN_OFF))
         setContent {
             MasalTheme {
                 val sections by vm.sections.collectAsState()
@@ -243,6 +249,23 @@ class MainActivity : ComponentActivity() {
                     val t = railTarget ?: return@LaunchedEffect
                     delay(150)
                     if (t != currentTab) selectTab(t, false)
+                }
+
+                // Standby: close all pages and go to Home's first card (home.md); on a sleeping TV this
+                // runs once the screen is on again, before anything else can be pressed.
+                LaunchedEffect(standbys) {
+                    if (standbys == 0) return@LaunchedEffect
+                    val closed = stack.map { it.key }
+                    stack.clear()
+                    railTarget = null
+                    editApps = false
+                    if (closed.isEmpty() && currentTab == NavTab.Home) homeTop++
+                    else {
+                        holder.removeState(NavTab.Home.key) // Home is not showing: it starts fresh on its first card
+                        selectTab(NavTab.Home, true)
+                    }
+                    delay(600)
+                    closed.forEach { holder.removeState(it) }
                 }
 
                 // Home key: close all pages and go back to Home, as the stock home screen does.
@@ -343,6 +366,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        runCatching { unregisterReceiver(screenOff) }
+        super.onDestroy()
     }
 
     override fun attachBaseContext(newBase: android.content.Context) {

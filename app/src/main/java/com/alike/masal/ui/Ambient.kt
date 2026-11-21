@@ -145,7 +145,7 @@ fun plexTrailer(key: String) = VideoSource("trailer:$key", 2_500, volume = 0.7f)
 fun seerrAmbient(t: com.alike.masal.data.SeerrTitle): Ambient {
     val inPlex = t.ratingKey?.takeIf { t.status == com.alike.masal.data.SeerrStatus.Available }
     val video = inPlex?.let { plexTrailer(it) } ?: VideoSource("trailer:tmdb:${t.mediaType}:${t.tmdbId}", 2_500, volume = 0.7f) {
-        withContext(Dispatchers.IO) { Graph.plex.onlineTrailer(t.tmdbId, t.mediaType) }?.let { MediaItem.fromUri(it) to 0L }
+        withContext(Dispatchers.IO) { Graph.plex.onlineTrailer(t.tmdbId, t.mediaType, Graph.seerr.language()) }?.let { MediaItem.fromUri(it) to 0L }
     }
     return Ambient("seerr:${t.mediaType}:${t.tmdbId}", t.backdrop, video)
 }

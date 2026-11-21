@@ -68,6 +68,11 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
   normal app, Back there leaves the app.
 - The Home key closes all open pages and returns to the Home tab, focus restored there. Pressing
   it in another app or the player brings Masal back the same way.
+- Standby (screen off): Masal closes all open pages and goes to Home's first row, first card,
+  so the TV wakes up on the start of Home with the side menu closed. Started on a sleeping TV
+  (after an install), Home takes focus once the screen is on, not the side menu.
+- Back from a page or the player, Home returns to the card it left; an earlier "back to the
+  top" from the side menu is not repeated.
 - It starts with the device, often before the network is up: when a network becomes available,
   IPTV, guide, Plex and the backdrop photo are loaded again if they failed or never loaded.
 - The device settings are reachable through the "Android settings" app tile and the button on

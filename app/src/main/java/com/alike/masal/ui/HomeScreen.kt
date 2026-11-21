@@ -24,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -311,8 +312,11 @@ fun HomeScreen(
         rowJump = jump; heroRow = row; heroShown = shown
     }
 
+    // Handled once: when Home is built again (back from a page or the player) the request is old.
+    var handledTop by rememberSaveable { mutableIntStateOf(topRequests) }
     LaunchedEffect(topRequests) {
-        if (topRequests == 0) return@LaunchedEffect
+        if (topRequests == handledTop) return@LaunchedEffect
+        handledTop = topRequests
         rowsState.focusedKey = rowsState.order.firstOrNull() ?: return@LaunchedEffect
         // The first row is composed once it is the focused one; then its first card can take focus.
         repeat(2) { androidx.compose.runtime.withFrameNanos { } }

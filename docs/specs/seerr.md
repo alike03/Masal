@@ -15,7 +15,9 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
   sent as `language` on search, title, person and filmography pages and on the Trending,
   studio and network rows. Seerr's popular, upcoming, keyword, genre and streaming lists ignore
   it and always use the display language of Seerr's own user (Seerr, Settings, Users); the
-  setting says so. Cached pages are kept per language, so a change loads them anew.
+  setting says so. Cached pages are kept per language, so a change loads them anew. Plex's
+  online trailers are asked for in this language too (`X-Plex-Language`), where Plex has a
+  dubbed version; Seerr's YouTube trailer follows the title page's language.
 - Like all logins, the key stays in the app's private storage, is excluded from backup and is
   never logged or shown again; the setup page shows only that a key is set.
 - The TV's Settings shows Seerr as "Connected as <user>" or "Not set up", with "Clear cache"

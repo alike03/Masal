@@ -28,9 +28,10 @@ Play Plex films and episodes with Plex-style controls, subtitles and audio choic
   - Subtitle position: Low (3 %), Normal (7 %), High (15 %), Higher (25 % above the bottom).
   - Skip back: 5, 10, 15, 30 s. Skip forward: 10, 15, 30, 60 s. Used by the buttons, Left/Right
     with hidden controls and the rewind / fast-forward keys.
-- Open in Plex: hands the title (the film, or the episode playing) to the Plex app with the
-  link `plex://server://<server id>/com.plexapp.plugins.library/library/metadata/<ratingKey>`
-  (server id from `/identity`) and no autoplay, then closes this player; leaving reports the
+- Open in Plex: hands the title to the Plex app's page for it: a film with the link
+  `plex://libraries/<server id>/unmatched/%2Flibrary%2Fmetadata%2F<ratingKey>`, an episode its
+  series with `.../unmatched/tv/%2Flibrary%2Fmetadata%2F<series ratingKey>` (server id from
+  `/identity`; the older `plex://server://...` only opens Plex's Home since Plex 2026.20), then closes this player; leaving reports the
   position as usual, so Plex offers to resume there. Without the Plex app or without the server
   a short message says so and the player stays, paused.
 - Requests audio focus: other apps (e.g. YouTube) pause; Masal pauses when another app takes it.
@@ -58,6 +59,6 @@ Play Plex films and episodes with Plex-style controls, subtitles and audio choic
 ## Open points
 - Not yet verified on the TV: track mapping with many embedded tracks, subtitle download and
   reload, audio switching, whether play/pause arrives over CEC.
-- Open in Plex: the link format is not documented by Plex. Forum reports say the link plays
-  reliably, while the app's info page via link broke in 2025 Plex releases. Check on the TV
-  whether Plex 2026.22 shows the title's page, starts playback or only opens its Home.
+- Open in Plex: the link format is not documented by Plex; the `libraries/.../unmatched/` form
+  comes from other apps' reports (seerrtv). Check on the TV that films and series land on their
+  page; Plex offers no link that starts playback.
