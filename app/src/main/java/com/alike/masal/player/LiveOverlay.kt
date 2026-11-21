@@ -103,7 +103,7 @@ fun LiveOverlay(state: LiveState, onPick: (name: String, list: List<Channel>, in
 
 /** Indeterminate loading bar: an amber segment sliding along a faint track. */
 @Composable
-private fun LoadingBar(modifier: Modifier) {
+internal fun LoadingBar(modifier: Modifier) {
     val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "loading")
     val x by t.animateFloat(
         -0.3f, 1f,

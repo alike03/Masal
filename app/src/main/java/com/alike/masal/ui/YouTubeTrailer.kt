@@ -32,6 +32,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.focusable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.layout
+import kotlin.math.roundToInt
 
 /** What a trailer player reports. */
 enum class TrailerState { Loading, Playing, Paused, Ended, Failed }
@@ -52,13 +55,21 @@ interface Trailer {
  */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlexTrailer(context: Context, url: String, private val onState: (TrailerState) -> Unit) : Trailer {
+    private var firstFrame = false
     private val player = com.alike.masal.player.buildPlayer(context).apply {
         setMediaItem(androidx.media3.common.MediaItem.fromUri(url))
         addListener(object : androidx.media3.common.Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == androidx.media3.common.Player.STATE_ENDED) onState(TrailerState.Ended)
             }
-            override fun onIsPlayingChanged(isPlaying: Boolean) = onState(if (isPlaying) TrailerState.Playing else TrailerState.Paused)
+            // Playing only once the first frame is on screen, so the loading bar stays until then.
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (!isPlaying) onState(TrailerState.Paused) else if (firstFrame) onState(TrailerState.Playing)
+            }
+            override fun onRenderedFirstFrame() {
+                firstFrame = true
+                if (isPlaying) onState(TrailerState.Playing)
+            }
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 Log.i("MasalTrailer", "plex trailer error ${error.errorCodeName}")
                 onState(TrailerState.Failed)
@@ -198,18 +209,28 @@ fun TrailerView(trailer: Trailer?, modifier: Modifier = Modifier) {
 
 /**
  * The trailer in its own full-screen window (seerr.md): over the whole screen, side rail strip
- * included, and outside the page's drawing. OK or play/pause pauses and plays; Down or Back
- * hide it ([onHide]) and show the page's details.
+ * included, and outside the page's drawing. [slide] is 1 when it fills the screen and 0 when it has
+ * slid up out of view (read in placement, so the slide does not recompose). Black with the loading
+ * bar until the picture starts ([loading]). OK or play/pause pauses and plays; Down or Back hide it
+ * ([onHide]) and show the page's details.
  */
 @Composable
-fun TrailerWindow(trailer: Trailer?, onHide: () -> Unit) {
+fun TrailerWindow(trailer: Trailer?, loading: Boolean, slide: () -> Float, onHide: () -> Unit) {
     Dialog(onHide, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        (androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider)
-            ?.window?.setDimAmount(0f)
+        (androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.let {
+            it.setDimAmount(0f)
+            // The slide is the animation: no platform fade or zoom on top of it.
+            it.setWindowAnimations(0)
+        }
         val focus = remember { FocusRequester() }
         LaunchedEffect(Unit) { delay(50); runCatching { focus.requestFocus() } }
         Box(
-            Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black).focusRequester(focus)
+            Modifier.fillMaxSize()
+                .layout { m, c ->
+                    val p = m.measure(c)
+                    layout(p.width, p.height) { p.place(0, ((slide() - 1f) * p.height).roundToInt()) }
+                }
+                .background(androidx.compose.ui.graphics.Color.Black).focusRequester(focus)
                 .onPreviewKeyEvent { e ->
                     when (e.key) {
                         Key.DirectionCenter, Key.Enter, Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause -> {
@@ -221,6 +242,10 @@ fun TrailerWindow(trailer: Trailer?, onHide: () -> Unit) {
                     }
                 }
                 .focusable(),
-        ) { TrailerView(trailer, Modifier.fillMaxSize()) }
+        ) {
+            TrailerView(trailer, Modifier.fillMaxSize())
+            // Infinite animation: only on the device (tests have no video and would never go idle).
+            if (loading && VideoPreviews.enabled) com.alike.masal.player.LoadingBar(Modifier.align(Alignment.BottomCenter))
+        }
     }
 }

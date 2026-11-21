@@ -39,7 +39,9 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
 
 ### Seerr title page
 - Same layout as Masal's detail page: backdrop, poster, title, year, runtime or seasons,
-  genres, summary, cast row (`people.md`), and the status badge.
+  genres, summary, cast row (`people.md`), and the status badge. A title still to come shows
+  its release day instead of the year ("Out on 12 December 2026"); the badge then says "Soon"
+  and the request line "Coming soon, requested on ...".
 - Button by status:
   - Not requested: "Request".
   - Requested / Processing: the state and the request date, no button.
@@ -51,7 +53,9 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
   requested are marked and cannot be picked. "All missing seasons" is preselected; OK toggles
   a season, "Request" sends them (`mediaType tv`, `seasons`).
 - The trailer starts as soon as the page opens, in its own full-screen window over everything
-  (also the side rail's strip). Source, in this order:
+  (also the side rail's strip). The window opens at once, black with the loading bar at the
+  bottom, until the trailer's first frame is on screen; when it turns out there is no trailer
+  (or the page fails to load), it closes without animation and the page shows. Source, in this order:
   1. Plex's online trailer: Plex's catalogue (`metadata.provider.plex.tv`, account token) finds
      the title by `tmdb://<id>` (`library/metadata/matches?type=1|2&guid=`), then its first
      trailer extra, an MP4 address played in Masal's own player. Also for titles not in the
@@ -60,9 +64,10 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
      (`youtube.com/embed/<id>`) in a WebView, nothing drawn over it. Also when Plex's trailer
      fails to play.
   There is no trailer button.
-  OK or play/pause pauses and plays. Down or Back hide it (paused) and show the page as usual,
-  from its top; Up from the buttons brings it back and it plays on. Back on the page leaves it.
-  When the trailer ends, only the page stays. Masal's own previews stop meanwhile. Not inside
+  OK or play/pause pauses and plays. Down or Back hide it (paused): the trailer slides up out of
+  view while the page slides in from below (450 ms, like scrolling down), from its top; Up from
+  the buttons slides it back and it plays on. Back on the page leaves it. When the trailer ends,
+  it slides away the same way and only the page stays. Masal's own previews stop meanwhile. Not inside
   the player.
 - YouTube requires the app's identity as the Referer: the embed page is requested with
   `Referer: https://<application id>`. YouTube's rules: at least 200 x 200, no overlays on the

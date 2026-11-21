@@ -5,6 +5,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +38,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +49,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
+import kotlin.math.roundToInt
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -436,6 +442,9 @@ private fun BiographyOverlay(name: String, text: String, onClose: () -> Unit) {
 
 // ---- Seerr title page ----
 
+/** How long the trailer takes to slide up out of view or back (seerr.md). */
+private const val TrailerSlideMs = 450
+
 /** A title outside Plex (or not yet fully in it), from Seerr, with "Request" (seerr.md). */
 @Composable
 fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile: String?, actions: PeopleActions) {
@@ -460,17 +469,34 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
     var picking by remember { mutableStateOf(false) }
     var sending by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
-    // The trailer starts with the page in its own full-screen window (seerr.md); Down or Back hide
-    // it (paused) and show the details, Up from the buttons brings it back.
-    var trailerOn by remember { mutableStateOf(false) }
-    var trailerShown by remember { mutableStateOf(false) }
+    // The trailer starts with the page in its own full-screen window (seerr.md): where trailers are
+    // offered the window opens at once, black with the loading bar, until the trailer plays or it is
+    // known there is none. Down or Back slide it up (paused) and the details in from below; Up from
+    // the buttons brings it back.
+    val offersTrailer = actions.onTrailer != null
+    var trailerOn by remember { mutableStateOf(offersTrailer) }
+    var trailerShown by remember { mutableStateOf(offersTrailer) }
     var trailer by remember { mutableStateOf<Trailer?>(null) }
+    var trailerStarted by remember { mutableStateOf(false) }
     var trailerFailed by remember { mutableStateOf(false) }
+    // 1: the trailer fills the screen, 0: the details; read in placement only.
+    val slide = remember { Animatable(if (offersTrailer) 1f else 0f) }
+    var snapNext by remember { mutableStateOf(false) }
+    val windowUp by remember { derivedStateOf { slide.value > 0f } }
+    LaunchedEffect(trailerShown) {
+        val from = slide.value
+        val to = if (trailerShown) 1f else 0f
+        if (snapNext) { snapNext = false; slide.snapTo(to) }
+        else slide.animateTo(to, tween(TrailerSlideMs, easing = FastOutSlowInEasing))
+        if (!trailerShown && from > 0f) focus.focusDefault()
+    }
     fun showVideo() { trailerShown = true; trailer?.play() }
-    fun showDetails() { trailer?.pause(); trailerShown = false; scope.launch { delay(120); focus.focusDefault() } }
-    fun stopTrailer() {
+    fun showDetails() { trailer?.pause(); trailerShown = false }
+    /** Ends the trailer; [snap]: without the slide (no trailer found, nothing to see yet). */
+    fun stopTrailer(snap: Boolean = false) {
         trailer?.destroy(); trailer = null
-        if (trailerOn) { trailerOn = false; trailerShown = false; scope.launch { delay(120); focus.focusDefault() } }
+        trailerOn = false
+        if (trailerShown) { snapNext = snap; trailerShown = false }
     }
     DisposableEffect(Unit) { onDispose { trailer?.destroy() } }
     /** YouTube's player, when Plex has no trailer of its own or Plex's does not play. */
@@ -479,6 +505,7 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
         showVideo()
         if (VideoPreviews.enabled) trailer = YouTubeTrailer(context, key) { st ->
             when (st) {
+                TrailerState.Playing -> trailerStarted = true
                 TrailerState.Ended -> stopTrailer()
                 TrailerState.Failed -> { stopTrailer(); trailerFailed = true; message = context.getString(R.string.seerr_trailer_failed) }
                 else -> {}
@@ -493,6 +520,7 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
         showVideo()
         if (VideoPreviews.enabled) trailer = PlexTrailer(context, plexUrl) { st ->
             when (st) {
+                TrailerState.Playing -> trailerStarted = true
                 TrailerState.Ended -> stopTrailer()
                 TrailerState.Failed -> { trailer?.destroy(); trailer = null; if (youTube != null) startYouTube(youTube) else stopTrailer() }
                 else -> {}
@@ -523,13 +551,19 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
     // Starts once per page (not inside the player, where actions.onTrailer is null): Plex's online
     // trailer when Plex has one for the TMDB id, else the YouTube trailer Seerr names.
     var autoStarted by remember { mutableStateOf(false) }
-    LaunchedEffect(d != null) {
-        if (d == null || autoStarted || actions.onTrailer == null) return@LaunchedEffect
+    LaunchedEffect(d != null, failed != null) {
+        if (autoStarted || !offersTrailer) return@LaunchedEffect
+        if (d == null) { if (failed != null) stopTrailer(snap = true); return@LaunchedEffect }
         autoStarted = true
         val plexUrl = if (Graph.plex.configured) withContext(Dispatchers.IO) { Graph.plex.onlineTrailer(tmdbId, mediaType) } else null
-        if (plexUrl != null || d.trailer != null) startTrailer(plexUrl, d.trailer)
+        if (plexUrl != null || d.trailer != null) startTrailer(plexUrl, d.trailer) else stopTrailer(snap = true)
     }
 
+    // The details slide in from below as the trailer slides up.
+    val belowTrailer = Modifier.layout { m, c ->
+        val p = m.measure(c)
+        layout(p.width, p.height) { p.place(0, (slide.value * p.height).roundToInt()) }
+    }
     Box(Modifier.fillMaxSize().onPreviewKeyEvent { e ->
         if (!trailerOn) return@onPreviewKeyEvent false
         when (e.key) {
@@ -538,11 +572,11 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
         }
     }) {
         when {
-            d == null && failed == null -> Text(stringResource(R.string.browse_loading), color = TextDim, modifier = Modifier.align(Alignment.Center))
+            d == null && failed == null -> Text(stringResource(R.string.browse_loading), color = TextDim, modifier = belowTrailer.align(Alignment.Center))
             d == null -> Text(stringResource(R.string.browse_load_failed, failed.orEmpty()), color = Accent, modifier = Modifier.align(Alignment.Center))
             else -> LazyColumn(
                 state = rememberLazyListState(),
-                modifier = Modifier.fillMaxSize(),
+                modifier = belowTrailer.fillMaxSize(),
                 contentPadding = PaddingValues(top = 40.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
@@ -561,9 +595,12 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
                             val length = if (mediaType == "tv") d.seasons.size.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.seerr_seasons_count, it, it) }
                                 else d.runtime?.let { formatDuration(it * 60_000L) }
                             Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text(listOfNotNull(d.title.year?.toString(), length, d.genres.take(3).joinToString(", ").ifBlank { null }).joinToString("   "),
+                                // Still to come: the release day instead of the year.
+                                val released = futureRelease(d.title.date)?.let { stringResource(R.string.seerr_release_on, longDate(it.toString()).orEmpty()) }
+                                    ?: d.title.year?.toString()
+                                Text(listOfNotNull(released, length, d.genres.take(3).joinToString(", ").ifBlank { null }).joinToString("   "),
                                     color = TextDim, fontSize = 13.sp, maxLines = 1)
-                                StatusBadge(d.title.status, Modifier.padding(start = 10.dp), d.title.date)
+                                StatusBadge(d.title.status, Modifier.padding(start = 10.dp))
                             }
                             d.title.overview?.let {
                                 Text(it, color = TextMain.copy(alpha = 0.9f), fontSize = 14.sp, lineHeight = 19.sp, maxLines = 5,
@@ -590,7 +627,7 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
             }
         }
         if (picking && d != null) SeasonPicker(d.seasons, sending, onCancel = { picking = false }, onRequest = { send(it) })
-        if (trailerOn && trailerShown) TrailerWindow(trailer) { showDetails() }
+        if (trailerShown || windowUp) TrailerWindow(trailer, loading = !trailerStarted, slide = { slide.value }) { showDetails() }
     }
 }
 
@@ -623,8 +660,8 @@ private fun RequestActions(
     if (pending && !canRequest) {
         val requested = d.requestedAt?.let { longDate(it) }
         val text = if (d.title.status == SeerrStatus.Processing) {
-            val state = futureRelease(d.title.date)?.let { stringResource(R.string.seerr_release_on, longDate(it.toString()).orEmpty()) }
-                ?: stringResource(R.string.seerr_status_processing)
+            // The release day is in the line under the title.
+            val state = stringResource(R.string.seerr_status_processing)
             requested?.let { stringResource(R.string.seerr_requested_on, state, it) } ?: state
         } else requested?.let { stringResource(R.string.seerr_requested_on_only, it) } ?: stringResource(R.string.seerr_status_requested)
         Text(text,
