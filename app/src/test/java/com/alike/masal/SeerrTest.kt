@@ -97,6 +97,44 @@ class SeerrTest {
     }
 
     @Test
+    fun plexOnlineTrailerByTmdbId() {
+        val meta = MockWebServer()
+        val seen = mutableListOf<RecordedRequest>()
+        meta.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                synchronized(seen) { seen += request }
+                fun json(s: String) = MockResponse().setHeader("Content-Type", "application/json").setBody(s)
+                val path = request.path.orEmpty()
+                return when {
+                    path.startsWith("/library/metadata/matches") && "tmdb%3A%2F%2F101" in path ->
+                        json("""{"MediaContainer":{"Metadata":[{"ratingKey":"abc","title":"Testfilm"}]}}""")
+                    path.startsWith("/library/metadata/matches") -> json("""{"MediaContainer":{}}""")
+                    path == "/library/metadata/abc/extras" -> json("""{"MediaContainer":{"Metadata":[
+                        {"title":"Behind","subtype":"behindTheScenes","Media":[{"Part":[{"key":"https://cdn.example/bts.mp4"}]}]},
+                        {"title":"Trailer","subtype":"trailer","Media":[{"Part":[{"key":"https://cdn.example/trailer.mp4"}]}]}]}}""")
+                    else -> MockResponse().setResponseCode(404)
+                }
+            }
+        }
+        meta.start()
+        try {
+            settings.plexToken = "account-token"
+            val plex = PlexClient(OkHttpClient(), settings).also { it.metadataBase = meta.url("/").toString().trimEnd('/') }
+            assertEquals("https://cdn.example/trailer.mp4", plex.onlineTrailer(101, "movie"))
+            assertEquals("type 1 for films", true, seen.first().path!!.contains("type=1"))
+            assertEquals("account-token", seen.first().getHeader("X-Plex-Token"))
+            assertNull(plex.onlineTrailer(999, "tv"))
+            assertTrue(seen.last().path!!.contains("type=2"))
+            // Kept for the session: no second lookup.
+            val before = seen.size
+            plex.onlineTrailer(101, "movie"); plex.onlineTrailer(999, "tv")
+            assertEquals(before, seen.size)
+        } finally {
+            meta.shutdown(); settings.plexToken = ""
+        }
+    }
+
+    @Test
     fun trailerBeforeTeaser() {
         assertEquals("trailer01", seerr.details("movie", 101).trailer)
         assertNull(seerr.details("movie", 102).trailer)

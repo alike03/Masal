@@ -346,6 +346,43 @@ class PlexClient(private val http: OkHttpClient, private val settings: Settings,
         return found?.takeIf { it.partKey != null }
     }
 
+    /** Plex's metadata service (Plex's online catalogue, also for titles not in the library); tests point it elsewhere. */
+    @Volatile internal var metadataBase = "https://metadata.provider.plex.tv"
+    private val onlineTrailers = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /**
+     * The address of Plex's online trailer for a TMDB title (seerr.md), also when it is not in the
+     * library: Plex's catalogue entry by `tmdb://<id>`, then its first trailer extra. Asked with the
+     * account's token; null without one. Found and "none" are kept for the session, failures not.
+     */
+    fun onlineTrailer(tmdbId: Int, mediaType: String): String? {
+        val token = settings.plexToken.takeIf { it.isNotBlank() } ?: return null
+        val cacheKey = "$mediaType:$tmdbId"
+        onlineTrailers[cacheKey]?.let { return it.ifEmpty { null } }
+        fun json(url: String): JSONObject {
+            val req = Request.Builder().url(url).plexHeaders(token).build()
+            http.newCall(req).execute().use { r ->
+                if (!r.isSuccessful) error("Plex metadata HTTP ${r.code}")
+                return JSONObject(r.body!!.string()).getJSONObject("MediaContainer")
+            }
+        }
+        val found = runCatching {
+            val type = if (mediaType == "tv") 2 else 1
+            val match = json("$metadataBase/library/metadata/matches?type=$type&guid=" + Uri.encode("tmdb://$tmdbId"))
+                .optJSONArray("Metadata")?.optJSONObject(0)?.optString("ratingKey")?.takeIf { it.isNotBlank() }
+                ?: return@runCatching ""
+            val arr = json("$metadataBase/library/metadata/${Uri.encode(match)}/extras").optJSONArray("Metadata") ?: return@runCatching ""
+            val extras = (0 until arr.length()).map { arr.getJSONObject(it) }
+            val trailer = extras.firstOrNull { it.optString("subtype") == "trailer" || it.optInt("extraType") == 1 } ?: return@runCatching ""
+            val part = trailer.optJSONArray("Media")?.optJSONObject(0)?.optJSONArray("Part")?.optJSONObject(0)
+                ?.optString("key")?.takeIf { it.isNotBlank() } ?: return@runCatching ""
+            if (part.startsWith("http")) part else metadataBase + part + (if ('?' in part) "&" else "?") + "X-Plex-Token=" + token
+        }.onFailure { android.util.Log.w("MasalBg", "online trailer $cacheKey: ${it.message}") }.getOrNull() ?: return null
+        android.util.Log.i("MasalBg", "online trailer $cacheKey: ${if (found.isEmpty()) "none" else "found"}")
+        onlineTrailers[cacheKey] = found
+        return found.ifEmpty { null }
+    }
+
     /** Reports playback progress so Plex keeps "continue watching" in sync. */
     fun timeline(item: PlexItem, state: String, timeMs: Long, durationMs: Long) {
         val q = "/:/timeline?ratingKey=${item.ratingKey}&key=${Uri.encode("/library/metadata/${item.ratingKey}")}" +

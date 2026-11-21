@@ -50,9 +50,16 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
 - Series: "Request" opens a list of seasons with their state; seasons already in Plex or
   requested are marked and cannot be picked. "All missing seasons" is preselected; OK toggles
   a season, "Request" sends them (`mediaType tv`, `seasons`).
-- When TMDB has a trailer (else a teaser), it starts as soon as the page opens, in its own
-  full-screen window over everything (also the side rail's strip): YouTube's own embed page
-  (`youtube.com/embed/<id>`) in a WebView, nothing drawn over it. There is no trailer button.
+- The trailer starts as soon as the page opens, in its own full-screen window over everything
+  (also the side rail's strip). Source, in this order:
+  1. Plex's online trailer: Plex's catalogue (`metadata.provider.plex.tv`, account token) finds
+     the title by `tmdb://<id>` (`library/metadata/matches?type=1|2&guid=`), then its first
+     trailer extra, an MP4 address played in Masal's own player. Also for titles not in the
+     library; kept for the session.
+  2. Else the YouTube trailer (a trailer, else a teaser) Seerr names: YouTube's own embed page
+     (`youtube.com/embed/<id>`) in a WebView, nothing drawn over it. Also when Plex's trailer
+     fails to play.
+  There is no trailer button.
   OK or play/pause pauses and plays. Down or Back hide it (paused) and show the page as usual,
   from its top; Up from the buttons brings it back and it plays on. Back on the page leaves it.
   When the trailer ends, only the page stays. Masal's own previews stop meanwhile. Not inside
@@ -95,9 +102,9 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
 - On Home a Seerr row looks like a Plex row, with "Seerr" in small dim letters next to its
   title (like a profile's name on its rows): posters with the status badge from `people.md`
   ("In Plex", "Requested" / "Processing", none). The info block shows title, year and the
-  two-line summary; the background is the title's backdrop. A title in Plex plays its Plex
-  trailer after the focus rests 2.5 s, like the Plex rows; other titles have no preview (Seerr's
-  trailers are YouTube links, which Masal cannot play itself).
+  two-line summary; the background is the title's backdrop. After the focus rests 2.5 s the
+  trailer plays behind, like the Plex rows: the library's for a title in Plex, else Plex's
+  online trailer (see "Seerr title page"); without one only the backdrop.
 - OK: a film in Plex starts playing (resuming where it was left), a series in Plex opens
   Masal's detail page, any other title the Seerr title page ("Request"). Requests go out as the
   main account's Seerr user.
@@ -136,8 +143,9 @@ state), `person/<id>`, `person/<id>/combined_credits` (each title with `mediaInf
 4 partly available, 5 available, 6 deleted. Checked against Seerr 3.5.2's API description.
 
 ## Open points
-- Embedded trailer on the TV: sound plays but the picture stayed black inside the page; the
-  separate window is the next try. Not yet known: whether ads appear before trailers, memory
+- YouTube's embedded player on the TV: sound plays but the picture stayed black inside the
+  page; now only the fallback, in a separate window. Not yet known whether Plex's online
+  trailers need Plex Pass. Not yet known: whether ads appear before trailers, memory
   while it plays.
 - Seerr's Plex Watchlist slider is left out for now: it is per Seerr user, and whether
   `X-API-User` selects whose watchlist is returned is not checked yet.

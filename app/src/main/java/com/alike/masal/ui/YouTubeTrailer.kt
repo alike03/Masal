@@ -33,8 +33,58 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.focusable
 
-/** What the embedded YouTube player reports. */
+/** What a trailer player reports. */
 enum class TrailerState { Loading, Playing, Paused, Ended, Failed }
+
+/** A trailer on the Seerr title page (seerr.md): Plex's online trailer, else YouTube's player. */
+interface Trailer {
+    /** The view that shows the picture. */
+    val view: android.view.View
+    fun toggle()
+    fun pause()
+    fun play()
+    fun destroy()
+}
+
+/**
+ * Plex's online trailer (an MP4 address from Plex's catalogue) in Masal's own player, in a
+ * PlayerView that keeps the picture's aspect.
+ */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+class PlexTrailer(context: Context, url: String, private val onState: (TrailerState) -> Unit) : Trailer {
+    private val player = com.alike.masal.player.buildPlayer(context).apply {
+        setMediaItem(androidx.media3.common.MediaItem.fromUri(url))
+        addListener(object : androidx.media3.common.Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) {
+                if (state == androidx.media3.common.Player.STATE_ENDED) onState(TrailerState.Ended)
+            }
+            override fun onIsPlayingChanged(isPlaying: Boolean) = onState(if (isPlaying) TrailerState.Playing else TrailerState.Paused)
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                Log.i("MasalTrailer", "plex trailer error ${error.errorCodeName}")
+                onState(TrailerState.Failed)
+            }
+        })
+        prepare()
+        playWhenReady = true
+    }
+
+    override val view: android.view.View = androidx.media3.ui.PlayerView(context).apply {
+        useController = false
+        setShutterBackgroundColor(Color.BLACK)
+        resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+        player = this@PlexTrailer.player
+        isFocusable = false
+    }
+
+    override fun toggle() { if (player.isPlaying) player.pause() else player.play() }
+    override fun pause() = player.pause()
+    override fun play() = player.play()
+    override fun destroy() {
+        (view.parent as? ViewGroup)?.removeView(view)
+        (view as androidx.media3.ui.PlayerView).player = null
+        player.release()
+    }
+}
 
 /**
  * YouTube's own embed page (`youtube.com/embed/<id>`) in a WebView, for Seerr trailers
@@ -44,13 +94,13 @@ enum class TrailerState { Loading, Playing, Paused, Ended, Failed }
  * messages are logged under tag `MasalTrailer` (no addresses with logins pass through here).
  */
 @SuppressLint("SetJavaScriptEnabled")
-class YouTubeTrailer(context: Context, videoId: String, private val onState: (TrailerState) -> Unit) {
+class YouTubeTrailer(context: Context, videoId: String, private val onState: (TrailerState) -> Unit) : Trailer {
     private val main = Handler(Looper.getMainLooper())
     // Not called `id`: inside WebView.apply that name is the view's own id (always -1).
     private val videoKey = videoId.filter { it.isLetterOrDigit() || it == '-' || it == '_' }
     private val referer = "https://" + context.packageName
 
-    val view: WebView = WebView(context).apply {
+    override val view: WebView = WebView(context).apply {
         // DevTools over ADB only when switched on with ADB itself: `setprop log.tag.MasalTrailer DEBUG`.
         if (Log.isLoggable(Tag, Log.DEBUG)) WebView.setWebContentsDebuggingEnabled(true)
         setBackgroundColor(Color.BLACK)
@@ -83,11 +133,11 @@ class YouTubeTrailer(context: Context, videoId: String, private val onState: (Tr
         )
     }
 
-    fun toggle() = view.evaluateJavascript("(function(){var v=document.querySelector('video');if(!v)return;if(v.paused)v.play();else v.pause();})()", null)
-    fun pause() = view.evaluateJavascript("(function(){var v=document.querySelector('video');if(v)v.pause();})()", null)
-    fun play() = view.evaluateJavascript("(function(){var v=document.querySelector('video');if(v)v.play();})()", null)
+    override fun toggle() = view.evaluateJavascript("(function(){var v=document.querySelector('video');if(!v)return;if(v.paused)v.play();else v.pause();})()", null)
+    override fun pause() = view.evaluateJavascript("(function(){var v=document.querySelector('video');if(v)v.pause();})()", null)
+    override fun play() = view.evaluateJavascript("(function(){var v=document.querySelector('video');if(v)v.play();})()", null)
 
-    fun destroy() {
+    override fun destroy() {
         (view.parent as? ViewGroup)?.removeView(view)
         view.destroy()
     }
@@ -137,7 +187,7 @@ if(tries>16){clearInterval(t);if(!hooked)Masal.error('no video');}},500);
 
 /** The trailer's WebView in this place. */
 @Composable
-fun TrailerView(trailer: YouTubeTrailer?, modifier: Modifier = Modifier) {
+fun TrailerView(trailer: Trailer?, modifier: Modifier = Modifier) {
     if (trailer == null) {
         // JVM tests and devices without previews: a black box where the player would be.
         Box(modifier.background(androidx.compose.ui.graphics.Color.Black))
@@ -152,7 +202,7 @@ fun TrailerView(trailer: YouTubeTrailer?, modifier: Modifier = Modifier) {
  * hide it ([onHide]) and show the page's details.
  */
 @Composable
-fun TrailerWindow(trailer: YouTubeTrailer?, onHide: () -> Unit) {
+fun TrailerWindow(trailer: Trailer?, onHide: () -> Unit) {
     Dialog(onHide, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         (androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider)
             ?.window?.setDimAmount(0f)

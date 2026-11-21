@@ -138,10 +138,16 @@ fun plexTrailer(key: String) = VideoSource("trailer:$key", 2_500, volume = 0.7f)
         ?.let { MediaItem.fromUri(Graph.plex.streamUrl(it)) to 0L }
 }
 
-/** Background of a Seerr title (seerr.md): its backdrop, and the Plex trailer when the title is in Plex. */
+/**
+ * Background of a Seerr title (seerr.md): its backdrop, then after 2.5 s its trailer: the library's
+ * when the title is in Plex, else Plex's online trailer for the TMDB id.
+ */
 fun seerrAmbient(t: com.alike.masal.data.SeerrTitle): Ambient {
     val inPlex = t.ratingKey?.takeIf { t.status == com.alike.masal.data.SeerrStatus.Available }
-    return Ambient("seerr:${t.mediaType}:${t.tmdbId}", t.backdrop, inPlex?.let { plexTrailer(it) })
+    val video = inPlex?.let { plexTrailer(it) } ?: VideoSource("trailer:tmdb:${t.mediaType}:${t.tmdbId}", 2_500, volume = 0.7f) {
+        withContext(Dispatchers.IO) { Graph.plex.onlineTrailer(t.tmdbId, t.mediaType) }?.let { MediaItem.fromUri(it) to 0L }
+    }
+    return Ambient("seerr:${t.mediaType}:${t.tmdbId}", t.backdrop, video)
 }
 
 /**

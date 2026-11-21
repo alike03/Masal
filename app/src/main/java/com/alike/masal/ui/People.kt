@@ -464,7 +464,7 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
     // it (paused) and show the details, Up from the buttons brings it back.
     var trailerOn by remember { mutableStateOf(false) }
     var trailerShown by remember { mutableStateOf(false) }
-    var trailer by remember { mutableStateOf<YouTubeTrailer?>(null) }
+    var trailer by remember { mutableStateOf<Trailer?>(null) }
     var trailerFailed by remember { mutableStateOf(false) }
     fun showVideo() { trailerShown = true; trailer?.play() }
     fun showDetails() { trailer?.pause(); trailerShown = false; scope.launch { delay(120); focus.focusDefault() } }
@@ -473,14 +473,28 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
         if (trailerOn) { trailerOn = false; trailerShown = false; scope.launch { delay(120); focus.focusDefault() } }
     }
     DisposableEffect(Unit) { onDispose { trailer?.destroy() } }
-    fun startTrailer(key: String) {
-        com.alike.masal.Playback.stopPreviews()
+    /** YouTube's player, when Plex has no trailer of its own or Plex's does not play. */
+    fun startYouTube(key: String) {
         trailerOn = true
         showVideo()
         if (VideoPreviews.enabled) trailer = YouTubeTrailer(context, key) { st ->
             when (st) {
                 TrailerState.Ended -> stopTrailer()
                 TrailerState.Failed -> { stopTrailer(); trailerFailed = true; message = context.getString(R.string.seerr_trailer_failed) }
+                else -> {}
+            }
+        }
+    }
+    /** Plex's online trailer first (Masal's own player), else YouTube's. */
+    fun startTrailer(plexUrl: String?, youTube: String?) {
+        com.alike.masal.Playback.stopPreviews()
+        if (plexUrl == null) { youTube?.let { startYouTube(it) }; return }
+        trailerOn = true
+        showVideo()
+        if (VideoPreviews.enabled) trailer = PlexTrailer(context, plexUrl) { st ->
+            when (st) {
+                TrailerState.Ended -> stopTrailer()
+                TrailerState.Failed -> { trailer?.destroy(); trailer = null; if (youTube != null) startYouTube(youTube) else stopTrailer() }
                 else -> {}
             }
         }
@@ -506,11 +520,14 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
         }
     }
 
-    // Starts once per page when Seerr names a trailer (not inside the player, where actions.onTrailer is null).
+    // Starts once per page (not inside the player, where actions.onTrailer is null): Plex's online
+    // trailer when Plex has one for the TMDB id, else the YouTube trailer Seerr names.
     var autoStarted by remember { mutableStateOf(false) }
-    LaunchedEffect(d?.trailer) {
-        val key = d?.trailer ?: return@LaunchedEffect
-        if (!autoStarted && actions.onTrailer != null) { autoStarted = true; startTrailer(key) }
+    LaunchedEffect(d != null) {
+        if (d == null || autoStarted || actions.onTrailer == null) return@LaunchedEffect
+        autoStarted = true
+        val plexUrl = if (Graph.plex.configured) withContext(Dispatchers.IO) { Graph.plex.onlineTrailer(tmdbId, mediaType) } else null
+        if (plexUrl != null || d.trailer != null) startTrailer(plexUrl, d.trailer)
     }
 
     Box(Modifier.fillMaxSize().onPreviewKeyEvent { e ->
