@@ -40,6 +40,8 @@ Enter Plex and IPTV logins with the phone or a computer instead of the remote.
   with Seerr first and stores them only when Seerr accepts the key ("Connected as <user>");
   a refused key or an unreachable Seerr says so. The key field never shows the stored key.
   "Remove Seerr" forgets address, key, user choices and the cache.
+  Below it "YouTube trailers": the trailer service's address (seerr.md). "Save trailer service"
+  checks it (`GET /health`) and stores it only when it answers; an empty address removes it.
 - Changes apply on the TV at once. The page shows the Masal favicon.
 ## Settings screen on the TV
 Two levels: a start page with six sections, each opening a page with that section's settings;

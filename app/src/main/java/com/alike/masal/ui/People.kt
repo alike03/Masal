@@ -104,8 +104,8 @@ class PeopleActions(
     /** Plays a film in Plex by its ratingKey and title; null where playing is not offered. */
     val onPlayPlex: ((String, String) -> Unit)? = null,
     /**
-     * Opens a YouTube trailer (video id) in a YouTube app, used when the embedded player is refused;
-     * null where trailers are not offered (inside the player).
+     * Opens a YouTube trailer (video id) in a YouTube app, used when it cannot play in Masal (no
+     * trailer service, or the service failed); null where trailers are not offered (inside the player).
      */
     val onTrailer: ((String) -> Unit)? = null,
 )
@@ -499,33 +499,40 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
         if (trailerShown) { snapNext = snap; trailerShown = false }
     }
     DisposableEffect(Unit) { onDispose { trailer?.destroy() } }
-    /** YouTube's player, when Plex has no trailer of its own or Plex's does not play. */
-    fun startYouTube(key: String) {
+    /** Plays [url] in Masal's own player ([hls]: a YouTube stream from the trailer service). */
+    fun playTrailer(url: String, hls: Boolean, onFail: () -> Unit) {
         trailerOn = true
         showVideo()
-        if (VideoPreviews.enabled) trailer = YouTubeTrailer(context, key) { st ->
+        if (VideoPreviews.enabled) trailer = VideoTrailer(context, url, hls) { st ->
             when (st) {
                 TrailerState.Playing -> trailerStarted = true
                 TrailerState.Ended -> stopTrailer()
-                TrailerState.Failed -> { stopTrailer(); trailerFailed = true; message = context.getString(R.string.seerr_trailer_failed) }
+                TrailerState.Failed -> { trailer?.destroy(); trailer = null; onFail() }
                 else -> {}
             }
         }
     }
-    /** Plex's online trailer first (Masal's own player), else YouTube's. */
+    /** No trailer to play here: the details, with "Open in YouTube" when Seerr names one. */
+    fun noTrailer(youTube: String?, failed: Boolean) {
+        stopTrailer(snap = !trailerStarted)
+        if (youTube != null) {
+            trailerFailed = true
+            if (failed) message = context.getString(R.string.seerr_trailer_failed)
+        }
+    }
+    /** The YouTube trailer Seerr names, through the household's trailer service (seerr.md). */
+    fun startYouTube(key: String) {
+        if (!Graph.trailers.configured) { noTrailer(key, failed = false); return }
+        scope.launch {
+            val url = withContext(Dispatchers.IO) { Graph.trailers.youTube(key) }
+            if (url == null) noTrailer(key, failed = true) else playTrailer(url, hls = true) { noTrailer(key, failed = true) }
+        }
+    }
+    /** Plex's online trailer first, else the YouTube trailer; both in Masal's own player. */
     fun startTrailer(plexUrl: String?, youTube: String?) {
         com.alike.masal.Playback.stopPreviews()
         if (plexUrl == null) { youTube?.let { startYouTube(it) }; return }
-        trailerOn = true
-        showVideo()
-        if (VideoPreviews.enabled) trailer = PlexTrailer(context, plexUrl) { st ->
-            when (st) {
-                TrailerState.Playing -> trailerStarted = true
-                TrailerState.Ended -> stopTrailer()
-                TrailerState.Failed -> { trailer?.destroy(); trailer = null; if (youTube != null) startYouTube(youTube) else stopTrailer() }
-                else -> {}
-            }
-        }
+        playTrailer(plexUrl, hls = false) { if (youTube != null) startYouTube(youTube) else stopTrailer() }
     }
     fun send(seasons: List<Int>) {
         if (sending) return
@@ -612,7 +619,7 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
                                 onCancel = { confirming = false },
                                 onOpen = { d.title.ratingKey?.let { actions.onPlexTitle(it, d.title.title) } },
                                 onPlay = actions.onPlayPlex?.takeIf { mediaType == "movie" }?.let { play -> { d.title.ratingKey?.let { play(it, d.title.title) } } },
-                                // Only when YouTube refused to play it here: open it in a YouTube app instead.
+                                // Only when the YouTube trailer cannot play here: open it in a YouTube app instead.
                                 trailerLabel = if (trailerFailed && d.trailer != null && actions.onTrailer != null)
                                     stringResource(R.string.seerr_trailer_external) else null,
                                 onTrailer = { d.trailer?.let { actions.onTrailer?.invoke(it) } })

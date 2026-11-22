@@ -51,7 +51,7 @@
     </plurals>
     <string name="seerr_no_youtube_app">YouTube fragmanları için uygulama yüklü değil</string>
     <string name="seerr_trailer_external">YouTube\'da aç</string>
-    <string name="seerr_trailer_failed">YouTube bu fragmana burada izin vermiyor.</string>
+    <string name="seerr_trailer_failed">Fragman yüklenemedi.</string>
     <string name="seerr_status_available">Mevcut</string>
     <string name="seerr_status_soon">Yakında</string>
     <string name="seerr_release_on">%1$s tarihinde çıkıyor</string>

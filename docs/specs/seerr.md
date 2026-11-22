@@ -18,6 +18,8 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
   setting says so. Cached pages are kept per language, so a change loads them anew. Plex's
   online trailers are asked for in this language too (`X-Plex-Language`), where Plex has a
   dubbed version; Seerr's YouTube trailer follows the title page's language.
+- Optional, on the setup page under Seerr: the address of the household's trailer service for
+  YouTube trailers (see "Trailer service" below).
 - Like all logins, the key stays in the app's private storage, is excluded from backup and is
   never logged or shown again; the setup page shows only that a key is set.
 - The TV's Settings shows Seerr as "Connected as <user>" or "Not set up", with "Clear cache"
@@ -62,28 +64,27 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
      the title by `tmdb://<id>` (`library/metadata/matches?type=1|2&guid=`), then its first
      trailer extra, an MP4 address played in Masal's own player. Also for titles not in the
      library; kept for the session.
-  2. Else the YouTube trailer (a trailer, else a teaser) Seerr names: YouTube's own embed page
-     (`youtube.com/embed/<id>`) in a WebView, nothing drawn over it. Also when Plex's trailer
-     fails to play. A script that runs before YouTube's player reports AV1 as unsupported (the
-     Shield has no AV1 decoder), so the player picks VP9 or H.264, both decoded by the hardware;
-     the stream types it opens are logged ("source ..."). The trailer window is transparent behind
-     the WebView, which paints its own black, so a video placed below the window's surface stays
-     visible.
-  There is no trailer button.
+  2. Else the YouTube trailer (a trailer, else a teaser) Seerr names, through the trailer service
+     (below): its HLS stream in Masal's own player, like Plex's. Also when Plex's trailer fails
+     to play.
+  Without a trailer service, or when it or the stream fails, the window closes and the page
+  shows the button "Open in YouTube" (on a failure also "The trailer could not be loaded."); it
+  opens the video in the first installed of TizenTube, SmartTube, YouTube for Android TV, else
+  in whatever opens YouTube links. There is no other trailer button.
   OK or play/pause pauses and plays. Down or Back hide it (paused): the trailer slides up out of
   view while the page slides in from below (450 ms, like scrolling down), from its top; Up from
   the buttons slides it back and it plays on. Back on the page leaves it. When the trailer ends,
   it slides away the same way and only the page stays. Masal's own previews stop meanwhile. Not inside
   the player.
-- YouTube requires the app's identity as the Referer: the embed page is requested with
-  `Referer: https://<application id>`. YouTube's rules: at least 200 x 200, no overlays on the
-  player, autoplay only while it is visible. Player events, the page's console messages and,
-  every 2 s for 30 s, the video's size and decoded and dropped frames are logged under tag
-  `MasalTrailer`. `adb shell setprop log.tag.MasalTrailer DEBUG` allows DevTools on the page.
-- If YouTube refuses the video here (the owner does not allow embedding, or another player
-  error), the page shows the details, a short message and the button "Open in YouTube": it opens the video
-  in the first installed of TizenTube, SmartTube, YouTube for Android TV, else in whatever opens
-  YouTube links.
+- Trailer service: a small service run by the household outside this repository (not part of
+  Masal). `GET <address>/trailer?v=<11-character video id>` answers
+  `{"hls": "<HLS playlist>", ...}` or an error with `{"error": "..."}`; `GET <address>/health`
+  answers 200. Masal sends only valid video ids and keeps a stream address for 50 minutes (they
+  expire). The stream addresses are bound to the internet address that asked for them, so the
+  service must reach the internet through the same connection as the TV. The playlist holds
+  H.264 and VP9 up to 4K with sound; Masal's player picks by the connection. Lookups and player
+  errors are logged under tag `MasalTrailer` (no addresses). This bypasses YouTube's player,
+  against YouTube's terms of use; the household chose it knowingly (2026-11-22).
 - Seerr's defaults decide server, quality profile and folder; 4K is not offered.
 - After sending: a short message "Requested" (or Seerr's error text, e.g. quota reached) and
   the badge changes at once.
@@ -143,7 +144,11 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
   opens the Seerr page.
 - A custom keyword slider made in Seerr appears in Settings with its own title.
 - JVM tests with a mock Seerr: auth check, search mapping and de-duplication against Plex,
-  request bodies for film and seasons, `X-API-User` per profile, error text passed on.
+  request bodies for film and seasons, `X-API-User` per profile, error text passed on; the
+  trailer service (stream address, unknown video, invalid id not sent, kept for the session) and
+  the title page asking it for the YouTube trailer when Plex has none.
+- A title without Plex trailer and with the trailer service set: the YouTube trailer plays full
+  screen with picture; without the service the page shows "Open in YouTube".
 
 ## Seerr calls
 `/api/v1` with header `X-Api-Key`; `X-API-User` on requests. `auth/me`, `user` (users with
@@ -154,10 +159,10 @@ state), `person/<id>`, `person/<id>/combined_credits` (each title with `mediaInf
 4 partly available, 5 available, 6 deleted. Checked against Seerr 3.5.2's API description.
 
 ## Open points
-- YouTube's embedded player on the TV: sound plays and YouTube's controls show, but the picture
-  stayed black, also in its own window and with H.264 decoded by the Shield's hardware
-  (2026-11-22), so it is not the codec. Suspected cause: the WebView shows the video below the
-  window's surface, hidden by the window's black; the transparent window is not yet checked. Not yet known whether Plex's online
+- YouTube's embedded player (WebView) was dropped: on the Shield (Android 11, WebView 157) sound
+  played and YouTube's controls showed, but the picture stayed black, with H.264 and VP9 decoded
+  by the hardware at full rate and no own video layer in SurfaceFlinger (2026-11-22). Not yet
+  checked on the TV: the trailer service's streams in Masal's player. Not yet known whether Plex's online
   trailers need Plex Pass. Not yet known: whether ads appear before trailers, memory
   while it plays.
 - Seerr's Plex Watchlist slider is left out for now: it is per Seerr user, and whether

@@ -81,7 +81,7 @@ class PeopleScreensTest {
     }
 
     @After
-    fun stop() { server.shutdown(); Graph.settings.clearSeerr(); Graph.seerr.cache.clear() }
+    fun stop() { server.shutdown(); Graph.settings.clearSeerr(); Graph.settings.trailerService = ""; Graph.seerr.cache.clear() }
 
     private fun waitFor(text: String) {
         runCatching { rule.waitUntil(5_000) { rule.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty() } }
@@ -153,10 +153,12 @@ class PeopleScreensTest {
         val played = mutableListOf<String>()
         val withPlay = PeopleActions(actions.onPerson, actions.onSeerrTitle, actions.onPlexTitle, onPlayPlex = { rk, _ -> played += rk },
             onTrailer = { played += "yt:$it" })
+        Graph.settings.trailerService = server.url("/").toString()
         show { SeerrTitleScreen("movie", 101, false, null, withPlay) }
         rule.waitUntil(5_000) { synchronized(requests) { requests.any { it.path?.startsWith("/api/v1/movie/101") == true } } }
-        // The trailer starts with the page in its own full-screen window (a black box without video
-        // in tests); Down hides it and shows the details.
+        // No Plex trailer: the YouTube one through the trailer service, in Masal's own player in its
+        // own full-screen window (a black box without video in tests); Down hides it and shows the details.
+        rule.waitUntil(5_000) { synchronized(requests) { requests.any { it.path == "/trailer?v=trailer01xx" } } }
         rule.mainClock.advanceTimeBy(500)
         rule.waitForIdle()
         rule.onAllNodes(isRoot()).assertCountEquals(2)

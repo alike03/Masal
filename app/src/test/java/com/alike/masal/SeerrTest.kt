@@ -135,8 +135,26 @@ class SeerrTest {
     }
 
     @Test
+    fun trailerServiceGivesTheStream() {
+        val trailers = com.alike.masal.data.TrailerService(OkHttpClient(), settings)
+        assertNull("not set up", trailers.youTube("trailer01xx"))
+        settings.trailerService = server.url("/").toString()
+        try {
+            assertTrue(trailers.check(settings.trailerService).isSuccess)
+            assertEquals("https://stream.example/index.m3u8", trailers.youTube("trailer01xx"))
+            assertNull("unknown video", trailers.youTube("missing0000"))
+            val before = requests.size
+            assertNull("not a video id: not sent", trailers.youTube("../x"))
+            trailers.youTube("trailer01xx")
+            assertEquals("kept, not asked again", before, requests.size)
+        } finally {
+            settings.trailerService = ""
+        }
+    }
+
+    @Test
     fun trailerBeforeTeaser() {
-        assertEquals("trailer01", seerr.details("movie", 101).trailer)
+        assertEquals("trailer01xx", seerr.details("movie", 101).trailer)
         assertNull(seerr.details("movie", 102).trailer)
     }
 
@@ -288,6 +306,11 @@ object MockSeerr {
     fun dispatcher(log: MutableList<RecordedRequest>) = object : Dispatcher() {
         override fun dispatch(request: RecordedRequest): MockResponse {
             synchronized(log) { log += request }
+            // The trailer service (no key): one known video id.
+            if (request.path.orEmpty().startsWith("/trailer")) return if (request.path == "/trailer?v=trailer01xx")
+                MockResponse().setHeader("Content-Type", "application/json").setBody("""{"hls":"https://stream.example/index.m3u8"}""")
+                else MockResponse().setResponseCode(404).setBody("""{"error":"not found"}""")
+            if (request.path == "/health") return MockResponse().setBody("ok")
             if (request.getHeader("X-Api-Key") != "test-key") return MockResponse().setResponseCode(401).setBody("""{"message":"Unauthorized"}""")
             val path = request.path.orEmpty().substringBefore('?')
             fun json(s: String) = MockResponse().setHeader("Content-Type", "application/json").setBody(s)
@@ -330,7 +353,7 @@ object MockSeerr {
                         "crew":[{"id":503,"name":"Dana Director","job":"Producer"},{"id":503,"name":"Dana Director","job":"Director"},{"id":504,"name":"Sam Sound","job":"Sound"}]}}""")
                 path == "/api/v1/movie/101" -> json("""{"id":101,"title":"Testfilm","releaseDate":"2019-05-01","runtime":125,"posterPath":"/p101.jpg",
                     "overview":"A fictitious film.","genres":[{"name":"Comedy"}],"mediaInfo":{"status":5,"ratingKey":"7"},
-                    "relatedVideos":[{"site":"YouTube","key":"teaser01","type":"Teaser"},{"site":"YouTube","key":"trailer01","type":"Trailer"}],
+                    "relatedVideos":[{"site":"YouTube","key":"teaser01","type":"Teaser"},{"site":"YouTube","key":"trailer01xx","type":"Trailer"}],
                     "credits":{"cast":[{"id":501,"name":"Tess Tester","character":"Rick","order":0}],"crew":[{"id":501,"name":"Tess Tester","job":"Director"}]}}""")
                 path == "/api/v1/movie/102" -> json("""{"id":102,"title":"Zweiter Testfilm","releaseDate":"2024-01-01","runtime":95,"posterPath":"/p102.jpg",
                     "overview":"Another fictitious film.","genres":[],"credits":{"cast":[],"crew":[]}}""")

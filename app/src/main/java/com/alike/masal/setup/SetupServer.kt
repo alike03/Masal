@@ -165,6 +165,18 @@ ${error?.let { "<p class=\"err\" role=\"alert\">${esc(it)}</p>" }.orEmpty()}
             com.alike.masal.Graph.seerr.cache.clear()
             str(R.string.setup_seerr_removed) to false
         }
+        // Trailer service (seerr.md): checked before it is stored; an empty address removes it.
+        "trailer_service" -> {
+            val url = p["url"].orEmpty().trim().trimEnd('/')
+            val text = if (url.isBlank()) {
+                settings.trailerService = ""
+                str(R.string.setup_trailer_removed)
+            } else com.alike.masal.Graph.trailers.check(url).fold(
+                { settings.trailerService = url; str(R.string.setup_trailer_saved) },
+                { str(R.string.setup_trailer_failed, it.message.orEmpty()) },
+            )
+            text to false
+        }
         "rows" -> {
             // Unchecked boxes are not sent: every row listed on the page comes along as "all".
             val listed = all["all"].orEmpty().toSet()
@@ -250,6 +262,12 @@ ${error?.let { "<p class=\"err\" role=\"alert\">${esc(it)}</p>" }.orEmpty()}
 <div class="actions"><button class="btn">${t(R.string.setup_seerr_save)}</button></div>
 </form>${if (seerrSet) """
 <form method="post" action="$base/"><input type="hidden" name="action" value="seerr_remove"><div class="actions"><button class="btn ghost">${t(R.string.setup_seerr_remove)}</button></div></form>""" else ""}
+<h3>${t(R.string.setup_trailer_title)}</h3>
+<p class="muted">${t(R.string.setup_trailer_lead)}</p>
+<form method="post" action="$base/" class="fields"><input type="hidden" name="action" value="trailer_service">
+<div class="field"><label for="trailer-url">${t(R.string.setup_trailer_url)}</label><input type="url" id="trailer-url" name="url" value="${esc(settings.trailerService)}" placeholder="http://server:8791" autocapitalize="off" autocorrect="off"></div>
+<div class="actions"><button class="btn">${t(R.string.setup_trailer_save)}</button></div>
+</form>
 </section>"""
         // Home row: pick one of the loaded categories. A saved category that is not (yet) in the list
         // stays selectable, so loading sources late or a renamed category never clears the setting.
@@ -317,6 +335,7 @@ main{max-width:560px;margin:0 auto;padding-block:28px 72px;padding-left:max(16px
 .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px}
 .head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 h2{font-size:18px;font-weight:700;margin:0}
+h3{font-size:16px;font-weight:700;margin:22px 0 0}
 .muted,.empty{color:var(--dim);margin:0;font-size:15px}
 .list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .list li{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}

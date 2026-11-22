@@ -51,7 +51,7 @@
     </plurals>
     <string name="seerr_no_youtube_app">No app for YouTube trailers is installed</string>
     <string name="seerr_trailer_external">Open in YouTube</string>
-    <string name="seerr_trailer_failed">YouTube does not allow this trailer here.</string>
+    <string name="seerr_trailer_failed">The trailer could not be loaded.</string>
     <string name="seerr_status_available">Available</string>
     <string name="seerr_status_soon">Soon</string>
     <string name="seerr_release_on">Out on %1$s</string>
