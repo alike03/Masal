@@ -68,11 +68,19 @@ class SetupServer(
     }
 
     /**
-     * Not signed in: a PIN from the form or from the QR code's address (`/?pin=`) signs the device
-     * in and sets the cookie; otherwise the PIN page. The PIN never stays in the address bar.
+     * Not signed in: a PIN from the form signs the device in and sets the cookie; otherwise the PIN
+     * page. The QR code's address (`/?pin=`) opens the PIN page with the PIN filled in: signing in
+     * from the page itself keeps the cookie, which a phone drops when the QR scanner's app opened
+     * the address (SameSite=Strict). The PIN never stays in the address bar.
      */
     private fun signIn(session: IHTTPSession): Response {
         val pin = session.parameters["pin"]?.firstOrNull()
+        if (session.method != Method.POST) {
+            val qrPin = pin?.filter { it.isDigit() }?.take(6)?.takeIf { it.length == 6 }
+            return newFixedLengthResponse(Response.Status.OK, "text/html; charset=utf-8", signInPage(null, qrPin)).apply {
+                addHeader("Cache-Control", "no-store")
+            }
+        }
         val error = when (val r = pin?.let { auth.login(it) }) {
             null -> null
             is SetupAuth.Result.Ok -> return newFixedLengthResponse(Response.Status.REDIRECT_SEE_OTHER, "text/plain", "").apply {
@@ -87,7 +95,7 @@ class SetupServer(
         }
     }
 
-    private fun signInPage(error: String?): String {
+    private fun signInPage(error: String?, prefilled: String? = null): String {
         val r = texts(context)
         fun t(id: Int, vararg args: Any): String = esc(r.getString(id, *args))
         return """<!doctype html><html lang="${t(R.string.setup_lang_code)}"><head><meta charset="utf-8">
@@ -102,7 +110,8 @@ main{max-width:380px;margin:0 auto;padding:56px 16px;display:flex;flex-direction
 .top{display:flex;align-items:center;gap:12px}.top img{width:44px;height:44px}
 .word{font:700 28px/1 "Fraunces",Georgia,serif}
 p{margin:0;color:#a8a29a}.err{color:#e0a458}
-input{font:600 28px/1.2 "DM Sans",system-ui,sans-serif;letter-spacing:.3em;text-align:center;width:100%;padding:12px;
+input{font:600 28px/1.2 "DM Sans",system-ui,sans-serif;letter-spacing:.2em;text-align:center;box-sizing:border-box;
+display:block;width:100%;max-width:220px;margin:0 auto;padding:10px 12px 10px calc(12px + .2em);
 background:#1e1c1a;color:#f2eee8;border:1px solid #36322e;border-radius:10px}
 input:focus{outline:2px solid #e0a458;border-color:transparent}
 button{font:700 16px "DM Sans",system-ui,sans-serif;padding:12px;border:0;border-radius:999px;background:#e0a458;color:#1a1612;cursor:pointer}
@@ -112,8 +121,9 @@ button{font:700 16px "DM Sans",system-ui,sans-serif;padding:12px;border:0;border
 <p>${t(R.string.setup_login_lead)}</p>
 ${error?.let { "<p class=\"err\" role=\"alert\">${esc(it)}</p>" }.orEmpty()}
 <form method="post" action="/"><label for="pin" style="position:absolute;left:-9999px">${t(R.string.setup_pin_label)}</label>
-<input id="pin" name="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" autofocus required>
-<button style="width:100%;margin-top:14px">${t(R.string.setup_login_button)}</button></form>
+<input id="pin" name="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code"${if (prefilled != null) " value=\"$prefilled\"" else " autofocus"} required>
+<button style="width:100%;margin-top:14px"${if (prefilled != null) " autofocus" else ""}>${t(R.string.setup_login_button)}</button></form>
+${if (prefilled != null) "<script>history.replaceState(null,\"\",\"/\")</script>" else ""}
 </main></body></html>"""
     }
 

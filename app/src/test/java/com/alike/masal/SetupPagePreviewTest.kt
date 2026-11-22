@@ -11,6 +11,7 @@ import fi.iki.elonen.NanoHTTPD
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -61,8 +62,13 @@ class SetupPagePreviewTest {
             // Five wrong PINs: even the right one is refused for a minute.
             assertTrue("locked after five tries", "Too many attempts" in pin(settings.setupPin).use { it.body!!.string() })
             now += 61_000
-            // The QR code's address signs in and sets the cookie; the PIN does not stay in the address.
-            val signedIn = get(base + "?pin=" + settings.setupPin)
+            // The QR code's address opens the PIN page with the PIN filled in, without signing in.
+            val qr = get(base + "?pin=" + settings.setupPin)
+            assertEquals(200, qr.code)
+            assertNull("not signed in by the address", qr.header("Set-Cookie"))
+            assertTrue("PIN filled in", "value=\"${settings.setupPin}\"" in qr.use { it.body!!.string() })
+            // Signing in from the page sets the cookie; the PIN does not stay in the address.
+            val signedIn = pin(settings.setupPin)
             assertEquals(303, signedIn.code)
             assertEquals("/", signedIn.header("Location"))
             val setCookie = signedIn.header("Set-Cookie")!!

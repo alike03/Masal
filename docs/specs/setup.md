@@ -8,8 +8,10 @@ Enter Plex and IPTV logins with the phone or a computer instead of the remote.
   with the app, no background service; idle it is one thread waiting on the port, no measurable
   load). If Android has ended Masal, it is back as soon as Masal starts again.
 - Sign-in with a six-digit PIN, shown in Settings on the TV under the QR code. The QR code
-  carries the PIN (`/?pin=…`), so scanning signs in at once; the address bar then shows only
-  the address. A signed-in device keeps a cookie for a year (HttpOnly, SameSite=Strict); the
+  carries the PIN (`/?pin=…`): scanning opens the PIN page with the PIN filled in and the button
+  focused, so one tap signs in; the address bar then shows only the address. (Signing in by the
+  address itself lost the cookie when a QR scanner app opened it: a SameSite=Strict cookie is
+  not sent on a navigation coming from another app.) The PIN field is narrow and centred. A signed-in device keeps a cookie for a year (HttpOnly, SameSite=Strict); the
   TV keeps only a hash of it, at most 20 devices.
 - After 5 wrong PINs in a row every PIN is refused for a minute.
 - Settings, "Phone page", "PIN": OK makes a new PIN, which signs every device out.
@@ -91,7 +93,8 @@ one level up and puts the focus on the entry that was opened.
   never hardcode, log or print them.
 
 ## Checks
-- Scan the QR code, save Plex settings, Home shows Continue Watching.
+- Scan the QR code: the PIN page with the PIN filled in; "Sign in" opens the settings, a
+  reload keeps them open. Save Plex settings, Home shows Continue Watching.
 - Open the address on a computer: the PIN page; the PIN from the TV opens the settings, and
   they open without PIN after a reload. A wrong PIN five times: locked for a minute.
 - "PIN" in Settings: new PIN on the TV, the computer asks for it again.
