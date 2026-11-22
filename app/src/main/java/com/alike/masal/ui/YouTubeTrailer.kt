@@ -121,6 +121,10 @@ class YouTubeTrailer(context: Context, videoId: String, private val onState: (Tr
         settings.domStorageEnabled = true
         settings.mediaPlaybackRequiresUserGesture = false
         addJavascriptInterface(Bridge(), "Masal")
+        // H.264 only: the page otherwise picks AV1 or VP9, and the picture stayed black on the Shield.
+        if (androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DOCUMENT_START_SCRIPT)) {
+            androidx.webkit.WebViewCompat.addDocumentStartJavaScript(this, AvcOnly, setOf("https://www.youtube.com"))
+        } else Log.i(Tag, "no document start script, codec left to YouTube")
         webChromeClient = object : WebChromeClient() {
             override fun onConsoleMessage(m: ConsoleMessage): Boolean {
                 Log.i(Tag, "console ${m.messageLevel()}: ${m.message().take(300)}")
@@ -174,6 +178,22 @@ class YouTubeTrailer(context: Context, videoId: String, private val onState: (Tr
 
     private companion object {
         const val Tag = "MasalTrailer"
+
+        /**
+         * Runs before YouTube's player script: reports AV1, VP9 and VP8 as unsupported, so the
+         * player chooses H.264 (decoded by the hardware), and logs the stream types it opens.
+         */
+        const val AvcOnly = """(function(){
+var no=/av01|vp0?9|vp8/i;
+function log(m){try{Masal.stats(m);}catch(e){}}
+[window.MediaSource,window.ManagedMediaSource].forEach(function(M){if(!M)return;
+var s=M.isTypeSupported.bind(M);M.isTypeSupported=function(t){return no.test(t)?false:s(t);};
+var a=M.prototype.addSourceBuffer;M.prototype.addSourceBuffer=function(t){log('source '+t);return a.call(this,t);};});
+var c=HTMLMediaElement.prototype.canPlayType;HTMLMediaElement.prototype.canPlayType=function(t){return no.test(t)?'':c.call(this,t);};
+var mc=navigator.mediaCapabilities;if(mc&&mc.decodingInfo){var d=mc.decodingInfo.bind(mc);
+mc.decodingInfo=function(cfg){var t=cfg&&cfg.video&&cfg.video.contentType;
+return no.test(t||'')?Promise.resolve({supported:false,smooth:false,powerEfficient:false}):d(cfg);};}
+})();"""
 
         /**
          * Runs in the embed page: reports the video element's events, starts it, and reports YouTube's

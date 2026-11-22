@@ -64,7 +64,9 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
      library; kept for the session.
   2. Else the YouTube trailer (a trailer, else a teaser) Seerr names: YouTube's own embed page
      (`youtube.com/embed/<id>`) in a WebView, nothing drawn over it. Also when Plex's trailer
-     fails to play.
+     fails to play. A script that runs before YouTube's player reports AV1, VP9 and VP8 as
+     unsupported, so the player picks H.264 (up to 1080p, decoded by the hardware); the stream
+     types it opens are logged ("source ...").
   There is no trailer button.
   OK or play/pause pauses and plays. Down or Back hide it (paused): the trailer slides up out of
   view while the page slides in from below (450 ms, like scrolling down), from its top; Up from
@@ -150,8 +152,9 @@ state), `person/<id>`, `person/<id>/combined_credits` (each title with `mediaInf
 4 partly available, 5 available, 6 deleted. Checked against Seerr 3.5.2's API description.
 
 ## Open points
-- YouTube's embedded player on the TV: sound plays but the picture stayed black inside the
-  page; now only the fallback, in a separate window. Not yet known whether Plex's online
+- YouTube's embedded player on the TV: sound plays and YouTube's controls show, but the picture
+  stayed black, also in its own window. Suspected cause: the page chose AV1 (or VP9), which the
+  Shield's WebView does not show; H.264 only is not yet checked on the TV. Not yet known whether Plex's online
   trailers need Plex Pass. Not yet known: whether ads appear before trailers, memory
   while it plays.
 - Seerr's Plex Watchlist slider is left out for now: it is per Seerr user, and whether
