@@ -24,26 +24,49 @@ Enter Plex and IPTV logins with the phone or a computer instead of the remote.
   only asks for the server URL instead of losing the link.
 - Look: Masal's style (logo, "Masal" in Fraunces, DM Sans, amber on dark, cards). Logo and fonts are
   served by the TV itself, so the page loads nothing from the internet.
-- Language: a card at the top with a select (Device language, English, Deutsch, Türkçe), the same
-  choice as on the TV (`docs/specs/language.md`). The page and its notices switch at once; the TV
-  follows the next time Settings opens (the page cannot redraw the TV).
-- Live TV sources: list with type badge, name and host, Remove per source. "+ Add source" opens a
-  dialog: first the type (Xtream login or M3U playlist), then only that type's fields.
-  Several sources are possible.
-- Home live TV row: a select of "None" (hides the row), "Favourites" and the channel categories from
-  the loaded sources (in provider order) and the row title. A saved category that is not in the loaded list
-  stays selected and marked, so a late load never clears it.
-- Home rows: checkboxes for Plex's Home rows and every collection, grouped by library (so two
-  collections with the same name are told apart), folded per profile with its count, with "Save rows".
-  Same choice as on the TV. The Plex card names the added profiles; they are added on the TV.
-- Plex: status chip (Connected / Not connected) with the server host; the hint to use the code on
-  the TV at plex.tv/link; manual server URL and token folded away below.
-- Seerr (optional, seerr.md): status chip, then address and API key. "Save Seerr" checks both
-  with Seerr first and stores them only when Seerr accepts the key ("Connected as <user>");
-  a refused key or an unreachable Seerr says so. The key field never shows the stored key.
-  "Remove Seerr" forgets address, key, user choices and the cache.
-  Below it "YouTube trailers": the trailer service's address (seerr.md). "Save trailer service"
-  checks it (`GET /health`) and stores it only when it answers; an empty address removes it.
+- Structure: the same six sections as Settings on the TV, in its order and with its names: Home
+  screen, Live TV, Player, Accounts, Phone page, General. Each is a folded card showing its short
+  value (as the TV's start page: number of rows, sources, subtitle size and skip lengths,
+  accounts, the address, the language); a tap opens it, with the section's one-line description
+  first. After saving, the page reloads with that section open.
+- Home screen:
+  - Home rows: checkboxes for Plex's Home rows and every collection, grouped by library (so two
+    collections with the same name are told apart), folded per entry as on the TV ("Rows: <the
+    account>", "Rows: <profile>", "Rows: Seerr" with Seerr's Discover sliders) with its count,
+    and "Save rows". Same choice as on the TV.
+  - Order: Home's rows numbered in their order, each with ▲ and ▼ (the first cannot go up, the
+    last not down); a tap moves it by one place and stores it at once. "Reset order" (only with
+    an own order) goes back to the default (home.md).
+  - Live TV row: a select of "None" (hides the row), "Favourites" and the channel categories from
+    the loaded sources (in their order) and the row title. A saved category that is not in the
+    loaded list stays selected and marked, so a late load never clears it.
+- Live TV:
+  - Category order: the categories numbered in their order with ▲ and ▼ as above, "Back to the
+    provider's order" with an own order (live-tv.md).
+  - Sources: list with type badge, name and host, Remove per source. "+ Add source" opens a
+    dialog: first the type (Xtream login or M3U playlist), then only that type's fields. Several
+    sources are possible.
+- Player: the six settings of the TV's Player section as selects with the same choices
+  (player.md) and "Save player settings"; a value that is not offered is ignored.
+- Accounts:
+  - Plex: status chip (Connected / Not connected) with the server host; the hint to use the code
+    on the TV at plex.tv/link; manual server URL and token folded away below.
+  - Profiles: the profile names; they are added and removed on the TV (a note says so).
+  - Seerr (optional, seerr.md): status chip, then address and API key. "Save Seerr" checks both
+    with Seerr first and stores them only when Seerr accepts the key ("Connected as <user>");
+    a refused key or an unreachable Seerr says so. The key field never shows the stored key.
+    "Remove Seerr" forgets address, key, user choices and the cache. With Seerr set up, as on
+    the TV's Seerr page: the language, per profile the Seerr user focused first in "Who is
+    asking?" (automatic or a Seerr user; without Seerr's users only the language), "Save Seerr
+    settings", and "Clear cache".
+  - YouTube trailers: the trailer service's address (seerr.md). "Save trailer service" checks it
+    (`GET /health`) and stores it only when it answers; an empty address removes it.
+- Phone page: the page's address and "New PIN": a new PIN on the TV, every device signs in again,
+  this one too (it shows the PIN page next).
+- General: Language, a select (Device language, English, Deutsch, Türkçe), the same choice as on
+  the TV (`docs/specs/language.md`). The page and its notices switch at once; the TV follows the
+  next time Settings opens (the page cannot redraw the TV). "Android settings" exists only on
+  the TV.
 - Changes apply on the TV at once. The page shows the Masal favicon.
 ## Settings screen on the TV
 Two levels: a start page with six sections, each opening a page with that section's settings;
@@ -88,7 +111,8 @@ one level up and puts the focus on the entry that was opened.
 - General: "Language" (current choice) opens the list (Device language, English, Deutsch,
   Türkçe); OK picks and redraws the app in it. "Android settings" opens the device's own
   settings (network, display, apps; needed when Masal is the home screen).
-- Changes apply at once and are the same settings as on the phone page.
+- Changes apply at once and are the same settings as on the phone page, which has the same
+  sections.
 - Logins stay in the app's private storage, excluded from cloud backup and device transfer;
   never hardcode, log or print them.
 
@@ -102,6 +126,9 @@ one level up and puts the focus on the entry that was opened.
   again to the start page with the focus on the section.
 - Player section: subtitle colour Yellow, start a film: yellow subtitles.
 - On the TV, switch a collection on: it is checked on the phone page after a reload, and on Home.
+- Phone page: six folded sections in the TV's order; Player, subtitle size 125 %, save: the
+  Player section opens again with 125 %, the TV shows it. ▲ on a Home row: Home shows it one
+  place higher.
 - Pick Deutsch on the phone page: the page is German at once; reopen Settings on the TV: German.
 - Pick a category on the TV, Back: the setting is unchanged; OK: the live TV row shows it.
 - Move a category up in "Category order": the TV tab and the live player's list show it there.

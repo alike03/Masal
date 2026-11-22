@@ -43,7 +43,7 @@ import kotlinx.coroutines.withContext
 private const val LanguagePick = "#language"
 
 /** Languages Seerr (TMDB) can be asked for, by their own name. */
-private val SeerrLanguages = listOf("en" to "English", "de" to "Deutsch", "fr" to "Français", "it" to "Italiano", "es" to "Español", "tr" to "Türkçe")
+internal val SeerrLanguages = listOf("en" to "English", "de" to "Deutsch", "fr" to "Français", "it" to "Italiano", "es" to "Español", "tr" to "Türkçe")
 
 @Composable
 internal fun SeerrPage(pick: String?, onPick: (String?) -> Unit) {

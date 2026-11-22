@@ -45,8 +45,11 @@ class SetupPagePreviewTest {
         )
         var reloads = 0
         var now = 1_000_000L
+        val moves = mutableListOf<Pair<String?, Int>>()
         val server = SetupServer(ApplicationProvider.getApplicationContext(), settings, SetupAuth(settings) { now }, { reloads++ },
-            channelGroups = { groups }, homeRows = { rows })
+            channelGroups = { groups }, homeRows = { rows },
+            homeOrder = { listOf("deck" to "Continue Watching", "hub:recent" to "Recently Added") },
+            moveCategory = { name, delta -> moves += name to delta })
         server.start(NanoHTTPD.SOCKET_READ_TIMEOUT, true)
         val base = "http://127.0.0.1:$SETUP_PORT/"
         val http = OkHttpClient.Builder().followRedirects(false).build()
@@ -81,6 +84,27 @@ class SetupPagePreviewTest {
             assertTrue("no full user name on the page", "demo-user" !in html)
             assertTrue("saved category is preselected", Regex("<option value=\"\\[XX] News HD\" selected>").containsMatchIn(html))
             assertTrue("collections grouped by library", "<legend>Movies</legend>" in html && "<legend>Shows</legend>" in html)
+            // The TV's six sections, in its order, all folded until one is opened.
+            val ids = Regex("id=\"s-([a-z]+)\"").findAll(html).map { it.groupValues[1] }.toList()
+            assertEquals(listOf("home", "live", "player", "accounts", "phone", "general"), ids)
+            assertTrue("folded", "class=\"section card\" id=\"s-home\" open" !in html)
+            fun post(vararg fields: Pair<String, String>) = http.newCall(Request.Builder().url(base).header("Cookie", cookie)
+                .post(okhttp3.FormBody.Builder().apply { fields.forEach { add(it.first, it.second) } }.build()).build()).execute()
+            // Player settings: stored, and the section stays open after saving.
+            val saved = post("action" to "player", "size" to "125", "colour" to "yellow", "back" to "15", "forward" to "999")
+            assertTrue("back in the player section", saved.header("Location")!!.endsWith("&open=player"))
+            saved.close()
+            assertEquals(125, settings.subtitleSize)
+            assertEquals(15, settings.skipBackSeconds)
+            assertEquals("a value not offered is ignored", 30, settings.skipForwardSeconds)
+            assertTrue("opened section", "id=\"s-player\" open" in get("$base?open=player", cookie).use { it.body!!.string() })
+            // Orders: a category moves through the view model, a Home row into the stored order.
+            post("action" to "cat_move", "move" to "down:[XX] Kids").close()
+            assertEquals(listOf<Pair<String?, Int>>("[XX] Kids" to 1), moves)
+            post("action" to "home_move", "move" to "up:hub:recent").close()
+            assertEquals(listOf("hub:recent", "deck"), settings.homeOrder.value)
+            post("action" to "home_order_reset").close()
+            assertTrue(settings.homeOrder.value.isEmpty())
 
             // Save rows: Recently Added off (unchecked), the second Example Saga on, the first stays on.
             val form = okhttp3.FormBody.Builder().add("action", "rows")

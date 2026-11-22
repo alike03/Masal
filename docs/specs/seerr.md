@@ -29,7 +29,7 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
 - Requests go out with Seerr's API key and the header `X-API-User`, so Seerr files them under a
   Seerr user (quota, notifications and "requested by" as for that user).
 - "Request" first asks "Who is asking?": Seerr's users (`GET /user`), the request goes out as
-  the one picked. Focused first is the profile's own Seerr user: the one set in Settings, Seerr
+  the one picked. Focused first is the profile's own Seerr user: the one set in Settings, Seerr (or on the phone page)
   for the profile the page belongs to (a title or person opened from a profile's row, otherwise
   the main account), by default the Seerr user linked to the same Plex account (Seerr's Plex
   users). Back or "Cancel" leaves without requesting. When Seerr's users cannot be loaded the

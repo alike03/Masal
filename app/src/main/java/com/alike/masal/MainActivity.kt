@@ -154,7 +154,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // The phone setup page runs while Masal runs (setup.md); it reads this activity's data.
         com.alike.masal.setup.SetupHost.channelGroups = { vm.categoryNames() }
-        com.alike.masal.setup.SetupHost.homeRows = { vm.homeRowOptions.value }
+        // Plex's rows and Seerr's Discover rows, as the TV's Settings offers them (seerr.md).
+        com.alike.masal.setup.SetupHost.homeRows = {
+            vm.homeRowOptions.value + com.alike.masal.data.HomeRows.seerrOptions(vm.seerrSliders.value, ::seerrRowTitle)
+        }
+        com.alike.masal.setup.SetupHost.homeOrder = { com.alike.masal.setup.homeOrderEntries(vm, Graph.settings.homeOrder.value) }
+        com.alike.masal.setup.SetupHost.moveCategory = { name, delta ->
+            if (name == null) vm.setCategoryOrder(emptyList()) else vm.moveCategory(name, delta)
+        }
         com.alike.masal.setup.SetupHost.start(this)
         registerReceiver(screenOff, android.content.IntentFilter(Intent.ACTION_SCREEN_OFF))
         setContent {

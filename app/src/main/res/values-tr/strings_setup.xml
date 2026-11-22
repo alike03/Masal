@@ -41,7 +41,7 @@
     <string name="setup_lang_code">tr</string>
     <string name="setup_page_title">Masal kurulumu</string>
     <string name="setup_subtitle">Kurulum</string>
-    <string name="setup_lead">Değişiklikler TV\'ye hemen ulaşır. Bu sayfa yalnızca TV\'de Ayarlar açıkken çalışır.</string>
+    <string name="setup_lead">TV\'deki ayarların aynısı, aynı bölümlerde. Değişiklikler TV\'ye hemen ulaşır.</string>
     <string name="setup_not_found">Bulunamadı</string>
     <string name="setup_address_hidden">(adres gizli)</string>
     <string name="setup_language_lead">TV\'deki ve bu sayfadaki metinler.</string>
@@ -72,7 +72,6 @@
     <string name="setup_groups_empty">Henüz kanal yüklenmedi. Önce bir kaynak ekle, sonra bu sayfayı yeniden aç.</string>
     <string name="setup_groups_count">Kaynaklarından %1$d kategori.</string>
     <string name="setup_add_source_button">+ Kaynak ekle</string>
-    <string name="setup_home_row_heading">Ana Sayfa canlı TV satırı</string>
     <string name="setup_home_row_lead">Kaynaklarından bir kanal kategorisi, Ana Sayfa\'da satır olarak gösterilir.</string>
     <string name="setup_row_title_placeholder">Canlı TV</string>
     <string name="setup_save_row">Satırı kaydet</string>
@@ -121,14 +120,13 @@
     <string name="settings_profile_remove">Kaldır</string>
     <string name="settings_profile_wrong_pin">Yanlış PIN.</string>
     <string name="settings_profile_pin_note">Üyenin Plex PIN\'i. Bir kez giriş için kullanılır ve saklanmaz.</string>
-    <string name="setup_plex_profiles">Profiller: %1$s. TV\'deki Ayarlar\'dan eklenir veya kaldırılır.</string>
     <string name="settings_home_rows_count">%2$d satırdan %1$d açık</string>
     <string name="settings_rows_main_account">Hesabın</string>
     <!-- Seerr (seerr.md) -->
     <string name="settings_seerr_connected">%1$s olarak bağlı</string>
     <string name="settings_seerr_not_set">Kurulmadı</string>
     <string name="settings_seerr_setup_note">Kurulmadı. Seerr adresini ve API anahtarını telefon sayfasında gir (soldaki QR kodu).</string>
-    <string name="settings_seerr_note">Masal\'dan gelen istekler, her profil için seçilen Seerr kullanıcısı adına gönderilir. Adres ve anahtar telefon sayfasında değiştirilir.</string>
+    <string name="settings_seerr_note">\"İste\" önce kimin istediğini sorar; aşağıda her profilin Seerr kullanıcısı önceden seçilidir. Adres ve anahtar telefon sayfasında değiştirilir.</string>
     <string name="settings_seerr_request_as">İstekler şu adına</string>
     <string name="settings_seerr_auto">Otomatik (anahtarın kullanıcısı)</string>
     <string name="settings_seerr_auto_user">Otomatik: %1$s</string>
@@ -193,4 +191,17 @@
     <string name="setup_trailer_saved">Fragman servisi kaydedildi</string>
     <string name="setup_trailer_removed">Fragman servisi kaldırıldı</string>
     <string name="setup_trailer_failed">Fragman servisine ulaşılamıyor: %1$s</string>
+    <string name="setup_move_up">%1$s yukarı</string>
+    <string name="setup_move_down">%1$s aşağı</string>
+    <string name="setup_save_player">Oynatıcı ayarlarını kaydet</string>
+    <string name="setup_save_seerr_prefs">Seerr ayarlarını kaydet</string>
+    <string name="setup_profiles_on_tv">Profiller TV\'de, Hesaplar, Profiller altında eklenir ve kaldırılır.</string>
+    <string name="setup_new_pin">Yeni PIN</string>
+    <string name="setup_new_pin_hint">TV\'de yeni bir PIN oluşturur; tüm telefonlar ve bilgisayarlar, bu cihaz da, yeniden giriş yapar.</string>
+    <string name="setup_new_pin_done">Yeni PIN oluşturuldu</string>
+    <string name="setup_saved_order">Sıralama kaydedildi</string>
+    <string name="setup_saved_player">Oynatıcı ayarları kaydedildi</string>
+    <string name="setup_saved_seerr_prefs">Seerr ayarları kaydedildi</string>
+    <string name="setup_section_phone_about">Bu sayfa: adresi ve cihazların giriş yaptığı PIN.</string>
+    <string name="setup_section_general_about">TV\'nin ve bu sayfanın dili.</string>
 </resources>

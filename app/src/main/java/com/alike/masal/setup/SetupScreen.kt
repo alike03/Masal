@@ -523,12 +523,12 @@ private fun SettingsList(title: String, content: androidx.compose.foundation.laz
 }
 
 /** One player setting (player.md): label, shown value, choices and how a choice is stored. */
-private class PlayerEntry(
+internal class PlayerEntry(
     val key: String, val label: Int, val value: String, val current: String,
     val choices: List<Pair<String, String>>, val store: (String) -> Unit,
 )
 
-private fun playerEntries(context: Context, s: com.alike.masal.data.Settings): List<PlayerEntry> {
+internal fun playerEntries(context: Context, s: com.alike.masal.data.Settings): List<PlayerEntry> {
     val ps = com.alike.masal.player.PlayerSettings
     fun pct(v: Int) = context.getString(R.string.player_percent, v)
     fun sec(v: Int) = context.getString(R.string.player_seconds, v)
@@ -550,10 +550,10 @@ private fun playerEntries(context: Context, s: com.alike.masal.data.Settings): L
 }
 
 /** Settings entry of the Seerr rows; Plex profile ids are numbers, so it cannot clash. */
-private const val SeerrRowsKey = "seerr"
+internal const val SeerrRowsKey = "seerr"
 
 /** Which Home rows entry an option belongs to: "" the main account, a profile id, or the Seerr rows. */
-private fun rowsKey(o: HomeRowOption) = o.profile ?: if (o.group == HomeRows.SeerrGroup) SeerrRowsKey else ""
+internal fun rowsKey(o: HomeRowOption) = o.profile ?: if (o.group == HomeRows.SeerrGroup) SeerrRowsKey else ""
 
 /**
  * Every row now on Home with its name, in Home's order (home.md, "Row order"): what the Order
@@ -569,20 +569,22 @@ private fun homeRowEntries(vm: MasalViewModel, stored: List<String>): List<Pair<
     val seerrRows by vm.seerrRows.collectAsState()
     val channels by vm.channels.collectAsState()
     val homeVersion by Graph.settings.homeVersion.collectAsState()
-    val appsName = stringResource(R.string.common_apps)
-    val continueName = stringResource(R.string.home_continue_watching)
-    val recentName = stringResource(R.string.home_recently_added)
+    return remember(apps, onDeck, profileDecks, hubs, recent, seerrRows, channels, homeVersion, stored) { homeOrderEntries(vm, stored) }
+}
+
+/** [homeRowEntries] outside Compose (the phone page): the view model's current values. */
+internal fun homeOrderEntries(vm: MasalViewModel, stored: List<String>): List<Pair<String, String>> {
     fun named(title: String, owner: String?) = if (owner.isNullOrBlank()) title else "$title ($owner)"
-    val all = remember(apps, onDeck, profileDecks, hubs, recent, seerrRows, channels, homeVersion) {
-        buildList {
-            if (apps.isNotEmpty()) add(HomeRows.AppsRow to appsName)
-            if (onDeck.isNotEmpty()) add(HomeRows.DeckRow to continueName)
-            profileDecks.forEach { add("hub:${it.id}" to named(it.title, it.owner)) }
-            if (Graph.settings.homeLiveGroup.isNotBlank() && channels.isNotEmpty()) add(HomeRows.LiveRow to Graph.settings.homeLiveTitle)
-            hubs.ifEmpty { if (recent.isNotEmpty()) listOf(com.alike.masal.data.PlexHub("recent", recentName, recent)) else emptyList() }
-                .forEach { add("hub:${it.id}" to named(it.title, it.owner)) }
-            seerrRows.forEach { add(it.id to named(it.title, HomeRows.SeerrGroup)) }
-        }
+    val all = buildList {
+        if (vm.apps.value.isNotEmpty()) add(HomeRows.AppsRow to com.alike.masal.data.Language.text(R.string.common_apps))
+        if (vm.onDeck.value.isNotEmpty()) add(HomeRows.DeckRow to com.alike.masal.data.Language.text(R.string.home_continue_watching))
+        vm.profileDecks.value.forEach { add("hub:${it.id}" to named(it.title, it.owner)) }
+        if (Graph.settings.homeLiveGroup.isNotBlank() && vm.channels.value.isNotEmpty()) add(HomeRows.LiveRow to Graph.settings.homeLiveTitle)
+        val recent = vm.recentlyAdded.value
+        vm.homeHubs.value.ifEmpty {
+            if (recent.isNotEmpty()) listOf(com.alike.masal.data.PlexHub("recent", com.alike.masal.data.Language.text(R.string.home_recently_added), recent)) else emptyList()
+        }.forEach { add("hub:${it.id}" to named(it.title, it.owner)) }
+        vm.seerrRows.value.forEach { add(it.id to named(it.title, HomeRows.SeerrGroup)) }
     }
     val names = all.toMap()
     return HomeRows.ordered(all.map { it.first }, stored).map { it to names.getValue(it) }

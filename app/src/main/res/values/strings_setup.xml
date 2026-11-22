@@ -41,7 +41,7 @@
     <string name="setup_lang_code">en</string>
     <string name="setup_page_title">Masal setup</string>
     <string name="setup_subtitle">Setup</string>
-    <string name="setup_lead">Changes reach the TV at once. This page works only while Settings is open on the TV.</string>
+    <string name="setup_lead">The same settings as on the TV, in the same sections. Changes reach the TV at once.</string>
     <string name="setup_not_found">Not found</string>
     <string name="setup_address_hidden">(address hidden)</string>
     <string name="setup_language_lead">Texts on the TV and on this page.</string>
@@ -72,7 +72,6 @@
     <string name="setup_groups_empty">No channels loaded yet. Add a source first, then reopen this page.</string>
     <string name="setup_groups_count">%1$d categories from your sources.</string>
     <string name="setup_add_source_button">+ Add source</string>
-    <string name="setup_home_row_heading">Home live TV row</string>
     <string name="setup_home_row_lead">One channel category from your sources, shown as a row on Home.</string>
     <string name="setup_row_title_placeholder">Live TV</string>
     <string name="setup_save_row">Save row</string>
@@ -121,14 +120,13 @@
     <string name="settings_profile_remove">Remove</string>
     <string name="settings_profile_wrong_pin">Wrong PIN.</string>
     <string name="settings_profile_pin_note">The member\'s Plex PIN. It is used once to sign in and is not stored.</string>
-    <string name="setup_plex_profiles">Profiles: %1$s. Add or remove them in Settings on the TV.</string>
     <string name="settings_home_rows_count">%1$d of %2$d on</string>
     <string name="settings_rows_main_account">Your account</string>
     <!-- Seerr (seerr.md) -->
     <string name="settings_seerr_connected">Connected as %1$s</string>
     <string name="settings_seerr_not_set">Not set up</string>
     <string name="settings_seerr_setup_note">Not set up. Enter Seerr\'s address and API key on the phone page (QR code on the left).</string>
-    <string name="settings_seerr_note">Requests from Masal go out as the Seerr user chosen per profile. Address and key are changed on the phone page.</string>
+    <string name="settings_seerr_note">\"Request\" first asks who is asking; each profile\'s Seerr user below is focused first. Address and key are changed on the phone page.</string>
     <string name="settings_seerr_request_as">Requests as</string>
     <string name="settings_seerr_auto">Automatic (the key\'s user)</string>
     <string name="settings_seerr_auto_user">Automatic: %1$s</string>
@@ -193,4 +191,17 @@
     <string name="setup_trailer_saved">Trailer service saved</string>
     <string name="setup_trailer_removed">Trailer service removed</string>
     <string name="setup_trailer_failed">Trailer service not reachable: %1$s</string>
+    <string name="setup_move_up">Move %1$s up</string>
+    <string name="setup_move_down">Move %1$s down</string>
+    <string name="setup_save_player">Save player settings</string>
+    <string name="setup_save_seerr_prefs">Save Seerr settings</string>
+    <string name="setup_profiles_on_tv">Profiles are added and removed on the TV, under Accounts, Profiles.</string>
+    <string name="setup_new_pin">New PIN</string>
+    <string name="setup_new_pin_hint">Makes a new PIN on the TV; every phone and computer signs in again, this one too.</string>
+    <string name="setup_new_pin_done">New PIN made</string>
+    <string name="setup_saved_order">Order saved</string>
+    <string name="setup_saved_player">Player settings saved</string>
+    <string name="setup_saved_seerr_prefs">Seerr settings saved</string>
+    <string name="setup_section_phone_about">This page: its address and the PIN that signs devices in.</string>
+    <string name="setup_section_general_about">The language of the TV and of this page.</string>
 </resources>

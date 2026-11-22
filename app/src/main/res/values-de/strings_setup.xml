@@ -41,7 +41,7 @@
     <string name="setup_lang_code">de</string>
     <string name="setup_page_title">Masal einrichten</string>
     <string name="setup_subtitle">Einrichtung</string>
-    <string name="setup_lead">Änderungen kommen sofort auf dem TV an. Diese Seite funktioniert nur, solange die Einstellungen auf dem TV offen sind.</string>
+    <string name="setup_lead">Die gleichen Einstellungen wie auf dem TV, in den gleichen Bereichen. Änderungen kommen sofort auf dem TV an.</string>
     <string name="setup_not_found">Nicht gefunden</string>
     <string name="setup_address_hidden">(Adresse verborgen)</string>
     <string name="setup_language_lead">Texte auf dem TV und auf dieser Seite.</string>
@@ -72,7 +72,6 @@
     <string name="setup_groups_empty">Noch keine Sender geladen. Füge zuerst eine Quelle hinzu und öffne diese Seite dann neu.</string>
     <string name="setup_groups_count">%1$d Kategorien aus deinen Quellen.</string>
     <string name="setup_add_source_button">+ Quelle hinzufügen</string>
-    <string name="setup_home_row_heading">Live-TV-Zeile auf der Startseite</string>
     <string name="setup_home_row_lead">Eine Senderkategorie aus deinen Quellen, als Zeile auf der Startseite angezeigt.</string>
     <string name="setup_row_title_placeholder">Live-TV</string>
     <string name="setup_save_row">Zeile speichern</string>
@@ -121,14 +120,13 @@
     <string name="settings_profile_remove">Entfernen</string>
     <string name="settings_profile_wrong_pin">Falsche PIN.</string>
     <string name="settings_profile_pin_note">Die Plex-PIN des Mitglieds. Sie wird einmal zum Anmelden verwendet und nicht gespeichert.</string>
-    <string name="setup_plex_profiles">Profile: %1$s. Hinzufügen und entfernen in den Einstellungen auf dem TV.</string>
     <string name="settings_home_rows_count">%1$d von %2$d an</string>
     <string name="settings_rows_main_account">Dein Konto</string>
     <!-- Seerr (seerr.md) -->
     <string name="settings_seerr_connected">Verbunden als %1$s</string>
     <string name="settings_seerr_not_set">Nicht eingerichtet</string>
     <string name="settings_seerr_setup_note">Nicht eingerichtet. Adresse und API-Schlüssel von Seerr auf der Handy-Seite eingeben (QR-Code links).</string>
-    <string name="settings_seerr_note">Anfragen aus Masal gehen als der Seerr-Benutzer raus, der pro Profil gewählt ist. Adresse und Schlüssel werden auf der Handy-Seite geändert.</string>
+    <string name="settings_seerr_note">«Anfragen» fragt zuerst, wer anfragt; der Seerr-Benutzer des Profils unten ist dabei vorausgewählt. Adresse und Schlüssel werden auf der Handy-Seite geändert.</string>
     <string name="settings_seerr_request_as">Anfragen als</string>
     <string name="settings_seerr_auto">Automatisch (Benutzer des Schlüssels)</string>
     <string name="settings_seerr_auto_user">Automatisch: %1$s</string>
@@ -193,4 +191,17 @@
     <string name="setup_trailer_saved">Trailer-Dienst gespeichert</string>
     <string name="setup_trailer_removed">Trailer-Dienst entfernt</string>
     <string name="setup_trailer_failed">Trailer-Dienst nicht erreichbar: %1$s</string>
+    <string name="setup_move_up">%1$s nach oben</string>
+    <string name="setup_move_down">%1$s nach unten</string>
+    <string name="setup_save_player">Player-Einstellungen speichern</string>
+    <string name="setup_save_seerr_prefs">Seerr-Einstellungen speichern</string>
+    <string name="setup_profiles_on_tv">Profile werden auf dem TV hinzugefügt und entfernt, unter Konten, Profile.</string>
+    <string name="setup_new_pin">Neue PIN</string>
+    <string name="setup_new_pin_hint">Erstellt auf dem TV eine neue PIN; alle Handys und Computer melden sich neu an, auch dieses Gerät.</string>
+    <string name="setup_new_pin_done">Neue PIN erstellt</string>
+    <string name="setup_saved_order">Reihenfolge gespeichert</string>
+    <string name="setup_saved_player">Player-Einstellungen gespeichert</string>
+    <string name="setup_saved_seerr_prefs">Seerr-Einstellungen gespeichert</string>
+    <string name="setup_section_phone_about">Diese Seite: ihre Adresse und die PIN, mit der sich Geräte anmelden.</string>
+    <string name="setup_section_general_about">Die Sprache des TVs und dieser Seite.</string>
 </resources>
