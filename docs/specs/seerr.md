@@ -28,11 +28,12 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
 ### Who requests
 - Requests go out with Seerr's API key and the header `X-API-User`, so Seerr files them under a
   Seerr user (quota, notifications and "requested by" as for that user).
-- Per Masal profile a Seerr user: by default the Seerr user linked to the same Plex account
-  (Seerr's Plex users), else the key's own user. Settings, Seerr lists each profile with its
-  Seerr user; OK picks another one from Seerr's users.
-- Which profile requests: the one the page belongs to (a title or person opened from a
-  profile's row), otherwise the main account.
+- "Request" first asks "Who is asking?": Seerr's users (`GET /user`), the request goes out as
+  the one picked. Focused first is the profile's own Seerr user: the one set in Settings, Seerr
+  for the profile the page belongs to (a title or person opened from a profile's row, otherwise
+  the main account), by default the Seerr user linked to the same Plex account (Seerr's Plex
+  users). Back or "Cancel" leaves without requesting. When Seerr's users cannot be loaded the
+  list says so and only "Cancel" is left.
 
 ### Search
 - Search (`search.md`) gets two rows from Seerr after the existing ones: "Not in your library"
@@ -51,11 +52,11 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
   - Requested / Processing: the state and the request date, no button.
   - In Plex: "Open" goes to Masal's detail page; for a film "Play" comes first and starts it
     (resuming). Inside the player there is no "Play" (it would leave the current title).
-- Film: "Request" asks once ("Request <title>?" Request / Cancel) and sends
-  `POST /api/v1/request` with `mediaType movie` and the TMDB id.
-- Series: "Request" opens a list of seasons with their state; seasons already in Plex or
-  requested are marked and cannot be picked. "All missing seasons" is preselected; OK toggles
-  a season, "Request" sends them (`mediaType tv`, `seasons`).
+- Film: "Request", then OK on a person sends `POST /api/v1/request` with `mediaType movie` and
+  the TMDB id; there is no further question.
+- Series: "Request", then OK on a person opens a list of seasons with their state; seasons
+  already in Plex or requested are marked and cannot be picked. "All missing seasons" is
+  preselected; OK toggles a season, "Request" sends them (`mediaType tv`, `seasons`).
 - The trailer starts as soon as the page opens, in its own full-screen window over everything
   (also the side rail's strip). The window opens at once, black with the loading bar at the
   bottom, until the trailer's first frame is on screen; when it turns out there is no trailer
@@ -128,6 +129,7 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
 
 ## Remote keys
 - Seerr title page: Down from the top to the button row, then the cast row; Back leaves.
+- "Who is asking?": Up/Down move, OK picks, Back cancels without requesting.
 - Season list: Up/Down move, OK toggles, Back cancels without requesting.
 
 ## Checks
@@ -135,7 +137,8 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
   Seerr user.
 - Search a film not in the library: it appears under "Not in your library"; Request, then
   Seerr shows the request under the right user.
-- Request from a page opened in a profile's row: Seerr shows it as that profile's user.
+- "Request" on a page opened in a profile's row: "Who is asking?" focuses that profile's Seerr
+  user; picking another person, Seerr shows the request as that person.
 - Series with season 1 in Plex: season 1 is marked and cannot be picked, the others are
   preselected.
 - Seerr not reachable: search shows the Plex results and no Seerr rows, no error box.

@@ -123,14 +123,21 @@ class PeopleScreensTest {
         waitFor("A fictitious series.")
         rule.onRoot().captureRoboImage("$shots/03-seerr-series.png")
         press("Request")
+        // First who asks (Seerr's users), then the seasons.
+        waitFor("Who is asking?")
+        waitFor("Tester Kind")
+        rule.onRoot().captureRoboImage("$shots/04a-who.png")
+        press("Tester Kind")
         waitFor("Request seasons")
         rule.onRoot().captureRoboImage("$shots/04-seasons.png")
         // Season 1 is in Plex, season 2 requested: only season 3 is left and preselected.
         press("Request 1 season")
         rule.waitUntil(5_000) { synchronized(requests) { requests.any { it.path == "/api/v1/request" } } }
         rule.waitForIdle()
-        val body = JSONObject(requests.last { it.path == "/api/v1/request" }.body.readUtf8())
+        val request = requests.last { it.path == "/api/v1/request" }
+        val body = JSONObject(request.body.readUtf8())
         assertEquals("[3]", body.getJSONArray("seasons").toString())
+        assertEquals("as the person picked", "12", request.getHeader("X-API-User"))
         rule.onRoot().captureRoboImage("$shots/05-requested.png")
     }
 
@@ -139,12 +146,16 @@ class PeopleScreensTest {
         show { SeerrTitleScreen("movie", 102, true, null, actions) }
         waitFor("Another fictitious film.")
         press("Request")
-        waitFor("Request Zweiter Testfilm?")
-        rule.onRoot().captureRoboImage("$shots/06-film-confirm.png")
-        press("Request")
+        // Picking who asks sends a film's request at once.
+        waitFor("Who is asking?")
+        waitFor("Other")
+        rule.onRoot().captureRoboImage("$shots/06-film-who.png")
+        press("Other")
         rule.waitUntil(5_000) { synchronized(requests) { requests.any { it.path == "/api/v1/request" } } }
         rule.waitForIdle()
-        assertEquals(102, JSONObject(requests.last { it.path == "/api/v1/request" }.body.readUtf8()).getInt("mediaId"))
+        val request = requests.last { it.path == "/api/v1/request" }
+        assertEquals(102, JSONObject(request.body.readUtf8()).getInt("mediaId"))
+        assertEquals("as the person picked", "11", request.getHeader("X-API-User"))
     }
 
     @OptIn(ExperimentalTestApi::class)

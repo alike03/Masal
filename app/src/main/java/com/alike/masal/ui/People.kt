@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -87,6 +88,7 @@ import com.alike.masal.data.SeerrPerson
 import com.alike.masal.data.SeerrSeason
 import com.alike.masal.data.SeerrStatus
 import com.alike.masal.data.SeerrTitle
+import com.alike.masal.data.SeerrUser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -465,7 +467,9 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var confirming by remember { mutableStateOf(false) }
+    // "Request": first who asks (a Seerr user), then for a series the seasons (seerr.md).
+    var choosingUser by remember { mutableStateOf(false) }
+    var requestUser by remember { mutableStateOf<SeerrUser?>(null) }
     var picking by remember { mutableStateOf(false) }
     var sending by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -534,14 +538,14 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
         if (plexUrl == null) { youTube?.let { startYouTube(it) }; return }
         playTrailer(plexUrl, hls = false) { if (youTube != null) startYouTube(youTube) else stopTrailer() }
     }
-    fun send(seasons: List<Int>) {
+    fun send(seasons: List<Int>, user: SeerrUser?) {
         if (sending) return
         sending = true; message = null
         scope.launch {
             val r = withContext(Dispatchers.IO) {
-                runCatching { seerr.request(mediaType, tmdbId, seasons, seerr.userFor(profile)) }
+                runCatching { seerr.request(mediaType, tmdbId, seasons, user?.id ?: seerr.userFor(profile)) }
             }
-            sending = false; confirming = false; picking = false
+            sending = false; choosingUser = false; picking = false
             message = r.fold({ context.getString(R.string.seerr_requested) }, { context.getString(R.string.seerr_request_failed, it.message.orEmpty()) })
             if (r.isSuccess) {
                 // Shown at once; Seerr's own state follows with the reload.
@@ -590,7 +594,7 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
                 item(key = "header") {
                     // Up from the buttons brings the trailer back.
                     Row(Modifier.fillMaxWidth().padding(horizontal = EdgePadding).onPreviewKeyEvent { e ->
-                        if (!trailerOn || e.key != Key.DirectionUp || picking || confirming) return@onPreviewKeyEvent false
+                        if (!trailerOn || e.key != Key.DirectionUp || picking || choosingUser) return@onPreviewKeyEvent false
                         if (e.type == KeyEventType.KeyDown) showVideo()
                         true
                     }) {
@@ -613,10 +617,8 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
                                 Text(it, color = TextMain.copy(alpha = 0.9f), fontSize = 14.sp, lineHeight = 19.sp, maxLines = 5,
                                     overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 10.dp))
                             }
-                            RequestActions(d, mediaType, confirming, sending, focus.modifier("action"),
-                                onRequest = { if (mediaType == "tv") picking = true else confirming = true },
-                                onConfirm = { send(emptyList()) },
-                                onCancel = { confirming = false },
+                            RequestActions(d, mediaType, focus.modifier("action"),
+                                onRequest = { choosingUser = true },
                                 onOpen = { d.title.ratingKey?.let { actions.onPlexTitle(it, d.title.title) } },
                                 onPlay = actions.onPlayPlex?.takeIf { mediaType == "movie" }?.let { play -> { d.title.ratingKey?.let { play(it, d.title.title) } } },
                                 // Only when the YouTube trailer cannot play here: open it in a YouTube app instead.
@@ -633,7 +635,11 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
                 item(key = "end") { Spacer(Modifier.height(26.dp)) }
             }
         }
-        if (picking && d != null) SeasonPicker(d.seasons, sending, onCancel = { picking = false }, onRequest = { send(it) })
+        if (choosingUser && d != null) UserPicker(profile, sending, onCancel = { choosingUser = false }) { user ->
+            // A film is sent at once; a series asks for the seasons next.
+            if (mediaType == "tv") { requestUser = user; choosingUser = false; picking = true } else send(emptyList(), user)
+        }
+        if (picking && d != null) SeasonPicker(d.seasons, sending, onCancel = { picking = false }, onRequest = { send(it, requestUser) })
         if (trailerShown || windowUp) TrailerWindow(trailer, loading = !trailerStarted, slide = { slide.value }) { showDetails() }
     }
 }
@@ -644,8 +650,8 @@ private fun requestable(d: SeerrDetails, mediaType: String) =
 
 @Composable
 private fun RequestActions(
-    d: SeerrDetails, mediaType: String, confirming: Boolean, sending: Boolean, firstModifier: Modifier,
-    onRequest: () -> Unit, onConfirm: () -> Unit, onCancel: () -> Unit, onOpen: () -> Unit,
+    d: SeerrDetails, mediaType: String, firstModifier: Modifier,
+    onRequest: () -> Unit, onOpen: () -> Unit,
     /** Plays a film in Plex; null where playing is not offered (series, inside the player). */
     onPlay: (() -> Unit)? = null,
     /** The trailer button's text ("Trailer", "Open in YouTube"); null without a trailer. */
@@ -654,15 +660,6 @@ private fun RequestActions(
 ) {
     val canRequest = requestable(d, mediaType)
     val canOpen = d.title.status == SeerrStatus.Available && d.title.ratingKey != null
-    if (confirming) {
-        Text(stringResource(R.string.seerr_request_confirm, d.title.title), color = TextMain, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(top = 16.dp))
-        Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            MasalButton(stringResource(if (sending) R.string.seerr_sending else R.string.seerr_request), onConfirm, firstModifier)
-            MasalButton(stringResource(R.string.seerr_cancel), onCancel, primary = false)
-        }
-        return
-    }
     val pending = d.title.status == SeerrStatus.Requested || d.title.status == SeerrStatus.Processing
     if (pending && !canRequest) {
         val requested = d.requestedAt?.let { longDate(it) }
@@ -723,6 +720,67 @@ private fun SeasonPicker(seasons: List<SeerrSeason>, sending: Boolean, onCancel:
                 MasalButton(label, { if (picked.isNotEmpty()) onRequest(picked.sorted()) },
                     if (seasons.none { it.status == SeerrStatus.None }) Modifier.focusRequester(first) else Modifier)
                 MasalButton(stringResource(R.string.seerr_cancel), onCancel, primary = false)
+            }
+        }
+    }
+}
+
+/**
+ * "Who is asking?": Seerr's users (seerr.md); the profile's own Seerr user is focused first. OK on
+ * one picks it; Back cancels.
+ */
+@Composable
+private fun UserPicker(profile: String?, sending: Boolean, onCancel: () -> Unit, onPick: (SeerrUser) -> Unit) {
+    BackHandler(onBack = onCancel)
+    var users by remember { mutableStateOf<List<SeerrUser>?>(null) }
+    var preferred by remember { mutableStateOf<Int?>(null) }
+    var failed by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) { runCatching { Graph.seerr.users() to Graph.seerr.userFor(profile) } }
+            .onSuccess { (list, own) -> preferred = own; users = list }
+            .onFailure { failed = it.message.orEmpty() }
+    }
+    val first = remember { FocusRequester() }
+    val cancel = remember { FocusRequester() }
+    val list = users
+    LaunchedEffect(list, failed) {
+        if (list == null && failed == null) return@LaunchedEffect
+        delay(60)
+        runCatching { if (list.isNullOrEmpty()) cancel.requestFocus() else first.requestFocus() }
+    }
+    Box(Modifier.fillMaxSize().background(Bg.copy(alpha = 0.94f)), contentAlignment = Alignment.CenterStart) {
+        Column(Modifier.padding(start = EdgePadding + 40.dp).width(520.dp)) {
+            Text(stringResource(R.string.seerr_who_title), color = TextMain, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.seerr_who_note), color = TextDim, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp, bottom = 10.dp))
+            when {
+                failed != null -> Text(stringResource(R.string.seerr_who_failed, failed.orEmpty()), color = Accent, fontSize = 14.sp)
+                list == null -> Text(stringResource(R.string.browse_loading), color = TextDim, fontSize = 14.sp)
+                list.isEmpty() -> Text(stringResource(R.string.seerr_who_none), color = TextDim, fontSize = 14.sp)
+                else -> {
+                    val focusIndex = list.indexOfFirst { it.id == preferred }.coerceAtLeast(0)
+                    LazyColumn(Modifier.heightIn(max = 300.dp), verticalArrangement = Arrangement.spacedBy(4.dp),
+                        state = rememberLazyListState(initialFirstVisibleItemIndex = focusIndex)) {
+                        itemsIndexed(list, key = { _, u -> u.id }) { i, u ->
+                            Surface(
+                                onClick = { if (!sending) onPick(u) },
+                                modifier = Modifier.fillMaxWidth().then(if (i == focusIndex) Modifier.focusRequester(first) else Modifier),
+                                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(10.dp)),
+                                colors = ClickableSurfaceDefaults.colors(containerColor = Panel, contentColor = TextMain,
+                                    focusedContainerColor = TextMain, focusedContentColor = OnAccent),
+                                scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f),
+                            ) {
+                                Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Text(u.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f))
+                                    if (sending && i == focusIndex) Text(stringResource(R.string.seerr_sending), fontSize = 13.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Row(Modifier.padding(top = 16.dp)) {
+                MasalButton(stringResource(R.string.seerr_cancel), onCancel, Modifier.focusRequester(cancel), primary = false)
             }
         }
     }

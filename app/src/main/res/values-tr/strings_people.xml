@@ -27,7 +27,6 @@
     <string name="seerr_status_requested">İstendi</string>
     <string name="seerr_status_processing">Yakında</string>
     <string name="seerr_request">İste</string>
-    <string name="seerr_request_confirm">%1$s istensin mi?</string>
     <string name="seerr_cancel">Vazgeç</string>
     <string name="seerr_sending">Gönderiliyor…</string>
     <string name="seerr_requested">İstendi</string>
@@ -56,4 +55,8 @@
     <string name="seerr_status_soon">Yakında</string>
     <string name="seerr_release_on">%1$s tarihinde çıkıyor</string>
     <string name="seerr_requested_on_only">İstek tarihi: %1$s</string>
+    <string name="seerr_who_title">Kim istiyor?</string>
+    <string name="seerr_who_note">İstek Seerr\'e bu kişi adına gider.</string>
+    <string name="seerr_who_failed">Seerr kullanıcıları yüklenemedi: %1$s</string>
+    <string name="seerr_who_none">Seerr\'de kullanıcı yok.</string>
 </resources>

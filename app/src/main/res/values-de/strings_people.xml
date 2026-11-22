@@ -27,7 +27,6 @@
     <string name="seerr_status_requested">Angefragt</string>
     <string name="seerr_status_processing">Bald verfügbar</string>
     <string name="seerr_request">Anfragen</string>
-    <string name="seerr_request_confirm">%1$s anfragen?</string>
     <string name="seerr_cancel">Abbrechen</string>
     <string name="seerr_sending">Wird gesendet…</string>
     <string name="seerr_requested">Angefragt</string>
@@ -56,4 +55,8 @@
     <string name="seerr_status_soon">Bald</string>
     <string name="seerr_release_on">Erscheint am %1$s</string>
     <string name="seerr_requested_on_only">Angefragt am %1$s</string>
+    <string name="seerr_who_title">Wer fragt an?</string>
+    <string name="seerr_who_note">Die Anfrage geht in Seerr unter dieser Person ein.</string>
+    <string name="seerr_who_failed">Die Seerr-Benutzer konnten nicht geladen werden: %1$s</string>
+    <string name="seerr_who_none">Seerr hat keine Benutzer.</string>
 </resources>

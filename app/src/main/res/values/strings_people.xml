@@ -27,7 +27,6 @@
     <string name="seerr_status_requested">Requested</string>
     <string name="seerr_status_processing">Coming soon</string>
     <string name="seerr_request">Request</string>
-    <string name="seerr_request_confirm">Request %1$s?</string>
     <string name="seerr_cancel">Cancel</string>
     <string name="seerr_sending">Sending…</string>
     <string name="seerr_requested">Requested</string>
@@ -56,4 +55,8 @@
     <string name="seerr_status_soon">Soon</string>
     <string name="seerr_release_on">Out on %1$s</string>
     <string name="seerr_requested_on_only">Requested on %1$s</string>
+    <string name="seerr_who_title">Who is asking?</string>
+    <string name="seerr_who_note">The request goes to Seerr as this person.</string>
+    <string name="seerr_who_failed">Seerr\'s users could not be loaded: %1$s</string>
+    <string name="seerr_who_none">Seerr has no users.</string>
 </resources>
