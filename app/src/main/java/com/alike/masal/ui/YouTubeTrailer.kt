@@ -121,9 +121,9 @@ class YouTubeTrailer(context: Context, videoId: String, private val onState: (Tr
         settings.domStorageEnabled = true
         settings.mediaPlaybackRequiresUserGesture = false
         addJavascriptInterface(Bridge(), "Masal")
-        // H.264 only: the page otherwise picks AV1 or VP9, and the picture stayed black on the Shield.
+        // No AV1: the Shield has no AV1 decoder; VP9 and H.264 are decoded by its hardware.
         if (androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DOCUMENT_START_SCRIPT)) {
-            androidx.webkit.WebViewCompat.addDocumentStartJavaScript(this, AvcOnly, setOf("https://www.youtube.com"))
+            androidx.webkit.WebViewCompat.addDocumentStartJavaScript(this, NoAv1, setOf("https://www.youtube.com"))
         } else Log.i(Tag, "no document start script, codec left to YouTube")
         webChromeClient = object : WebChromeClient() {
             override fun onConsoleMessage(m: ConsoleMessage): Boolean {
@@ -180,11 +180,11 @@ class YouTubeTrailer(context: Context, videoId: String, private val onState: (Tr
         const val Tag = "MasalTrailer"
 
         /**
-         * Runs before YouTube's player script: reports AV1, VP9 and VP8 as unsupported, so the
-         * player chooses H.264 (decoded by the hardware), and logs the stream types it opens.
+         * Runs before YouTube's player script: reports AV1 as unsupported, so the player chooses
+         * VP9 or H.264 (both decoded by the hardware), and logs the stream types it opens.
          */
-        const val AvcOnly = """(function(){
-var no=/av01|vp0?9|vp8/i;
+        const val NoAv1 = """(function(){
+var no=/av01/i;
 function log(m){try{Masal.stats(m);}catch(e){}}
 [window.MediaSource,window.ManagedMediaSource].forEach(function(M){if(!M)return;
 var s=M.isTypeSupported.bind(M);M.isTypeSupported=function(t){return no.test(t)?false:s(t);};
@@ -204,8 +204,8 @@ var hooked=false;
 function hook(){var v=document.querySelector('video');if(!v||hooked)return !!v;hooked=true;
 ['playing','pause','ended'].forEach(function(e){v.addEventListener(e,function(){Masal.state(e);});});
 var p=v.play();if(p&&p.catch)p.catch(function(err){Masal.state('blocked:'+err);});
-var n=0;var st=setInterval(function(){n++;if(n>15){clearInterval(st);return;}var q=v.getVideoPlaybackQuality?v.getVideoPlaybackQuality():{};
-Masal.stats('t='+v.currentTime.toFixed(1)+' size='+v.videoWidth+'x'+v.videoHeight+' frames='+q.totalVideoFrames+' dropped='+q.droppedVideoFrames+' paused='+v.paused+' ready='+v.readyState);},2000);
+var n=0;var st=setInterval(function(){n++;if(n>15){clearInterval(st);return;}var vs=document.querySelectorAll('video');var w=vs[vs.length-1];if(!w)return;var q=w.getVideoPlaybackQuality?w.getVideoPlaybackQuality():{};
+Masal.stats('t='+w.currentTime.toFixed(1)+' size='+w.videoWidth+'x'+w.videoHeight+' frames='+q.totalVideoFrames+' dropped='+q.droppedVideoFrames+' paused='+w.paused+' ready='+w.readyState+' of '+vs.length);},2000);
 return true;}
 var tries=0;var t=setInterval(function(){tries++;
 var err=document.querySelector('.ytp-error');
@@ -241,6 +241,10 @@ fun TrailerWindow(trailer: Trailer?, loading: Boolean, slide: () -> Float, onHid
             it.setDimAmount(0f)
             // The slide is the animation: no platform fade or zoom on top of it.
             it.setWindowAnimations(0)
+            // A transparent window: the WebView may show the video below its own surface (as a
+            // SurfaceView does), visible only where nothing in this window is drawn over it.
+            it.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
+            it.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
         }
         val focus = remember { FocusRequester() }
         LaunchedEffect(Unit) { delay(50); runCatching { focus.requestFocus() } }
@@ -250,7 +254,9 @@ fun TrailerWindow(trailer: Trailer?, loading: Boolean, slide: () -> Float, onHid
                     val p = m.measure(c)
                     layout(p.width, p.height) { p.place(0, ((slide() - 1f) * p.height).roundToInt()) }
                 }
-                .background(androidx.compose.ui.graphics.Color.Black).focusRequester(focus)
+                // No black behind YouTube's WebView (it paints its own black around the video).
+                .then(if (trailer is YouTubeTrailer) Modifier else Modifier.background(androidx.compose.ui.graphics.Color.Black))
+                .focusRequester(focus)
                 .onPreviewKeyEvent { e ->
                     when (e.key) {
                         Key.DirectionCenter, Key.Enter, Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause -> {

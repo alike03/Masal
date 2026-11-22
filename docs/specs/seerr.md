@@ -64,9 +64,11 @@ supplies the person data and title status for `people.md`, so Masal needs no TMD
      library; kept for the session.
   2. Else the YouTube trailer (a trailer, else a teaser) Seerr names: YouTube's own embed page
      (`youtube.com/embed/<id>`) in a WebView, nothing drawn over it. Also when Plex's trailer
-     fails to play. A script that runs before YouTube's player reports AV1, VP9 and VP8 as
-     unsupported, so the player picks H.264 (up to 1080p, decoded by the hardware); the stream
-     types it opens are logged ("source ...").
+     fails to play. A script that runs before YouTube's player reports AV1 as unsupported (the
+     Shield has no AV1 decoder), so the player picks VP9 or H.264, both decoded by the hardware;
+     the stream types it opens are logged ("source ..."). The trailer window is transparent behind
+     the WebView, which paints its own black, so a video placed below the window's surface stays
+     visible.
   There is no trailer button.
   OK or play/pause pauses and plays. Down or Back hide it (paused): the trailer slides up out of
   view while the page slides in from below (450 ms, like scrolling down), from its top; Up from
@@ -153,8 +155,9 @@ state), `person/<id>`, `person/<id>/combined_credits` (each title with `mediaInf
 
 ## Open points
 - YouTube's embedded player on the TV: sound plays and YouTube's controls show, but the picture
-  stayed black, also in its own window. Suspected cause: the page chose AV1 (or VP9), which the
-  Shield's WebView does not show; H.264 only is not yet checked on the TV. Not yet known whether Plex's online
+  stayed black, also in its own window and with H.264 decoded by the Shield's hardware
+  (2026-11-22), so it is not the codec. Suspected cause: the WebView shows the video below the
+  window's surface, hidden by the window's black; the transparent window is not yet checked. Not yet known whether Plex's online
   trailers need Plex Pass. Not yet known: whether ads appear before trailers, memory
   while it plays.
 - Seerr's Plex Watchlist slider is left out for now: it is per Seerr user, and whether
