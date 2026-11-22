@@ -161,8 +161,8 @@ state), `person/<id>`, `person/<id>/combined_credits` (each title with `mediaInf
 ## Open points
 - YouTube's embedded player (WebView) was dropped: on the Shield (Android 11, WebView 157) sound
   played and YouTube's controls showed, but the picture stayed black, with H.264 and VP9 decoded
-  by the hardware at full rate and no own video layer in SurfaceFlinger (2026-11-22). Not yet
-  checked on the TV: the trailer service's streams in Masal's player. Not yet known whether Plex's online
+  by the hardware at full rate and no own video layer in SurfaceFlinger (2026-11-22). The trailer
+  service's streams play with picture in Masal's player on the TV (2026-11-22). Not yet known whether Plex's online
   trailers need Plex Pass. Not yet known: whether ads appear before trailers, memory
   while it plays.
 - Seerr's Plex Watchlist slider is left out for now: it is per Seerr user, and whether
