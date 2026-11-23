@@ -109,4 +109,4 @@ Masal is an independent project and is not affiliated with or endorsed by Plex, 
 
 The code is released under the [GNU General Public License v3.0 or later](LICENSE). Versions up to and including commit `8fbed54` were released under the MIT License. The bundled fonts keep their own SIL Open Font License (see [`licenses/`](licenses/)).
 
-Masal uses [NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor) (GPL-3.0) to play YouTube trailers in its own player. This bypasses YouTube's own player and is not in line with YouTube's Terms of Service; Masal is not affiliated with or endorsed by YouTube or Google.
+Masal uses [NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor) (GPL-3.0) to play YouTube trailers in its own player.
