@@ -29,7 +29,7 @@ The release pipeline publishes each version's section as its GitHub release note
 - "Open in Plex" lands on the title's page in the Plex app.
 
 ### Removed
-- YouTube's embedded player: on the Shield it played sound but showed only a black picture.
+- YouTube's embedded player: on some Android TV devices it played sound but showed only a black picture.
 - The setting for an own trailer service; Masal finds YouTube streams itself.
 
 ## [1.4.0] - 2026-11-20
