@@ -6,6 +6,9 @@ The release pipeline publishes each version's section as its GitHub release note
 
 ## [Unreleased]
 
+### Fixed
+- Person page: Back closes the full biography ("More") again, and the focus returns to "More".
+
 ## [1.5.0] - 2026-11-23
 
 ### Added

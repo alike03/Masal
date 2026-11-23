@@ -317,6 +317,9 @@ fun PersonScreen(person: CastMember, autoFocus: Boolean, profile: String?, actio
     ReportAmbient(Ambient("person:${person.tmdbId ?: person.name}", backdrop?.backdrop))
 
     var showBio by remember { mutableStateOf(false) }
+    var bioClosed by remember { mutableStateOf(0) }
+    // Closing the biography puts the focus back on "More" (its saved key).
+    LaunchedEffect(bioClosed) { if (bioClosed > 0) { delay(40); focus.restore() } }
     val name = details?.name ?: person.name
     val status = when {
         titles == null && failed == null -> stringResource(R.string.browse_loading)
@@ -354,7 +357,7 @@ fun PersonScreen(person: CastMember, autoFocus: Boolean, profile: String?, actio
                 }
             }
         }
-        if (showBio) BiographyOverlay(name, details?.biography.orEmpty()) { showBio = false }
+        if (showBio) BiographyOverlay(name, details?.biography.orEmpty()) { showBio = false; bioClosed++ }
     }
 }
 
@@ -425,6 +428,8 @@ private fun BiographyOverlay(name: String, text: String, onClose: () -> Unit) {
             Modifier.width(640.dp).padding(vertical = 40.dp)
                 .focusRequester(box)
                 .onPreviewKeyEvent { e ->
+                    // Back must reach Android (and the BackHandler above): swallowing its press loses it.
+                    if (e.key == Key.Back) return@onPreviewKeyEvent false
                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent e.key in setOf(Key.DirectionUp, Key.DirectionDown)
                     when (e.key) {
                         Key.DirectionDown -> { scope.launch { scroll.animateScrollBy(160f) }; true }

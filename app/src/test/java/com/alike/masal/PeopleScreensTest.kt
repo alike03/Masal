@@ -14,7 +14,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -60,7 +60,7 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34], qualifiers = "w960dp-h540dp-land-xhdpi")
 class PeopleScreensTest {
     @get:Rule
-    val rule = createComposeRule()
+    val rule = createAndroidComposeRule<androidx.activity.ComponentActivity>()
     private val server = MockWebServer()
     private val requests = mutableListOf<RecordedRequest>()
     private val shots = "build/people-shots"
@@ -116,9 +116,29 @@ class PeopleScreensTest {
         press("Testfilm")
         press("Zweiter Testfilm")
         assertEquals(listOf("plex:7", "seerr:Zweiter Testfilm"), opened)
+        rule.mainClock.advanceTimeBy(600) // the page has put the focus on its first card
+        rule.waitForIdle()
+        // As with the remote: "More" has the focus when OK opens the biography.
+        rule.onAllNodes(hasClickAction() and hasAnyDescendant(hasText("More")), useUnmergedTree = true)[0]
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+        rule.waitForIdle()
         press("More")
         rule.waitForIdle()
         rule.onRoot().captureRoboImage("$shots/02-biography.png")
+        // Back closes the biography (the remote's key through the activity, as on the TV).
+        val bio = "is a fictitious actor"
+        assertTrue(rule.onAllNodes(hasText(bio, substring = true)).fetchSemanticsNodes().size > 1)
+        rule.mainClock.advanceTimeBy(200) // the biography takes the focus, as on the TV
+        rule.waitForIdle()
+        rule.onAllNodes(isFocused()).assertCountEquals(1)
+        rule.onAllNodes(isFocused() and hasAnyDescendant(hasText(bio, substring = true))).assertCountEquals(1)
+        rule.activity.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_BACK))
+        rule.activity.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_BACK))
+        rule.waitForIdle()
+        assertEquals("biography closed", 1, rule.onAllNodes(hasText(bio, substring = true)).fetchSemanticsNodes().size)
+        rule.mainClock.advanceTimeBy(200)
+        rule.waitForIdle()
+        rule.onAllNodes(isFocused() and hasAnyDescendant(hasText("More")), useUnmergedTree = true).assertCountEquals(1)
     }
 
     @Test

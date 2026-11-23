@@ -64,7 +64,8 @@ and series: the ones in the library to play, the others to request through Seerr
 - Player, controls shown: Down from the buttons opens the cast row on its first person, Left/Right
   move, OK opens the person, Up or Back close the row and return to the buttons.
 - Person page: Down from the top to the filter, then the grid; OK on "More" shows the full
-  biography, Back closes it; Back leaves the page.
+  biography, Up/Down scroll it, OK or Back close it and the focus is back on "More"; Back
+  leaves the page.
 
 ## Checks
 - Show the controls (playing or paused): the chevron shows; Down opens the row on the first
