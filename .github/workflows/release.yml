@@ -46,6 +46,21 @@ jobs:
           printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
           echo "MASAL_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
+      # Release notes: the version's section of CHANGELOG.md (a dry run checks "Unreleased").
+      # A tag without its section fails here, before anything is built.
+      - name: Release notes from CHANGELOG.md
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then section="${GITHUB_REF_NAME#v}"; else section="Unreleased"; fi
+          awk -v s="$section" '
+            index($0, "## [" s "]") == 1 { on = 1; next }
+            on && (/^## \[/ || /^\[[^]]+\]: /) { exit }
+            on { print }
+          ' CHANGELOG.md | sed -e '/./,$!d' > "$RUNNER_TEMP/notes.md"
+          if [[ "$section" != "Unreleased" ]] && ! grep -q '[^[:space:]]' "$RUNNER_TEMP/notes.md"; then
+            echo "::error::CHANGELOG.md has no entries under '## [$section]'"; exit 1
+          fi
+          cat "$RUNNER_TEMP/notes.md"
+
       - name: Build signed APK
         env:
           MASAL_KEYSTORE_PASSWORD: ${{ secrets.MASAL_KEYSTORE_PASSWORD }}
@@ -76,4 +91,4 @@ jobs:
         run: |
           prerelease=""
           [[ "$VERSION" == *-* ]] && prerelease="--prerelease"
-          gh release create "$GITHUB_REF_NAME" "$APK" --title "Masal $VERSION" --generate-notes --verify-tag $prerelease
+          gh release create "$GITHUB_REF_NAME" "$APK" --title "Masal $VERSION" --notes-file "$RUNNER_TEMP/notes.md" --generate-notes --verify-tag $prerelease
