@@ -237,10 +237,6 @@ class Settings(context: Context) {
         get() = prefs.getString("seerr_language", "") ?: ""
         set(v) = prefs.edit().putString("seerr_language", v).apply()
 
-    /** Address of the household's trailer service for YouTube trailers (seerr.md); "" = none. */
-    var trailerService: String
-        get() = prefs.getString("trailer_service", "") ?: ""
-        set(v) = prefs.edit().putString("trailer_service", v.trim().trimEnd('/')).apply()
 
     /** Seerr user chosen per profile ("" = main account) as id and name; missing: matched by name. */
     var seerrUsers: Map<String, Pair<Int, String>>

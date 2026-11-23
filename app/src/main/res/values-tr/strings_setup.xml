@@ -184,13 +184,6 @@
     <string name="settings_seerr_language">Dil</string>
     <string name="settings_seerr_language_app">Uygulama dili</string>
     <string name="settings_seerr_language_note">Seerr\'den başlıklar, açıklamalar ve afişler. Popüler ve yakında çıkacak satırlar her zaman Seerr\'deki kullanıcının dilinde gelir (Seerr, Ayarlar, Kullanıcılar).</string>
-    <string name="setup_trailer_title">YouTube fragmanları</string>
-    <string name="setup_trailer_lead">İsteğe bağlı: YouTube fragmanlarının Masal\'da oynaması için kendi fragman servisinin adresi. Yoksa Masal \"YouTube\'da aç\" seçeneğini sunar.</string>
-    <string name="setup_trailer_url">Fragman servisi adresi</string>
-    <string name="setup_trailer_save">Fragman servisini kaydet</string>
-    <string name="setup_trailer_saved">Fragman servisi kaydedildi</string>
-    <string name="setup_trailer_removed">Fragman servisi kaldırıldı</string>
-    <string name="setup_trailer_failed">Fragman servisine ulaşılamıyor: %1$s</string>
     <string name="setup_move_up">%1$s yukarı</string>
     <string name="setup_move_down">%1$s aşağı</string>
     <string name="setup_save_player">Oynatıcı ayarlarını kaydet</string>

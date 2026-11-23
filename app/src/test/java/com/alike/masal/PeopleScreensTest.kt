@@ -25,6 +25,7 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.printToLog
 import androidx.compose.ui.test.printToString
+import com.alike.masal.data.TrailerService
 import com.alike.masal.data.CastMember
 import com.alike.masal.data.PlexItem
 import com.alike.masal.data.SeerrTitle
@@ -64,6 +65,8 @@ class PeopleScreensTest {
     private val requests = mutableListOf<RecordedRequest>()
     private val shots = "build/people-shots"
     private val opened = mutableListOf<String>()
+    /** YouTube video ids Masal looked up a stream for; tests never reach YouTube. */
+    private val youTube = mutableListOf<String>()
     private val actions = PeopleActions(
         onPerson = { opened += "person:" + it.name },
         onSeerrTitle = { opened += "seerr:" + it.title },
@@ -78,10 +81,11 @@ class PeopleScreensTest {
         Graph.settings.seerrUrl = server.url("/").toString()
         Graph.settings.seerrKey = "test-key"
         Graph.seerr.cache.clear()
+        Graph.trailers = TrailerService { synchronized(youTube) { youTube += it }; null }
     }
 
     @After
-    fun stop() { server.shutdown(); Graph.settings.clearSeerr(); Graph.settings.trailerService = ""; Graph.seerr.cache.clear() }
+    fun stop() { server.shutdown(); Graph.settings.clearSeerr(); Graph.seerr.cache.clear() }
 
     private fun waitFor(text: String) {
         runCatching { rule.waitUntil(5_000) { rule.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty() } }
@@ -164,12 +168,12 @@ class PeopleScreensTest {
         val played = mutableListOf<String>()
         val withPlay = PeopleActions(actions.onPerson, actions.onSeerrTitle, actions.onPlexTitle, onPlayPlex = { rk, _ -> played += rk },
             onTrailer = { played += "yt:$it" })
-        Graph.settings.trailerService = server.url("/").toString()
+        Graph.trailers = TrailerService { synchronized(youTube) { youTube += it }; "https://stream.example/index.m3u8" }
         show { SeerrTitleScreen("movie", 101, false, null, withPlay) }
         rule.waitUntil(5_000) { synchronized(requests) { requests.any { it.path?.startsWith("/api/v1/movie/101") == true } } }
-        // No Plex trailer: the YouTube one through the trailer service, in Masal's own player in its
+        // No Plex trailer: the YouTube one, its stream found by Masal, in Masal's own player in its
         // own full-screen window (a black box without video in tests); Down hides it and shows the details.
-        rule.waitUntil(5_000) { synchronized(requests) { requests.any { it.path == "/trailer?v=trailer01xx" } } }
+        rule.waitUntil(5_000) { synchronized(youTube) { "trailer01xx" in youTube } }
         rule.mainClock.advanceTimeBy(500)
         rule.waitForIdle()
         rule.onAllNodes(isRoot()).assertCountEquals(2)

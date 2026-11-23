@@ -59,8 +59,6 @@ Enter Plex and IPTV logins with the phone or a computer instead of the remote.
     the TV's Seerr page: the language, per profile the Seerr user focused first in "Who is
     asking?" (automatic or a Seerr user; without Seerr's users only the language), "Save Seerr
     settings", and "Clear cache".
-  - YouTube trailers: the trailer service's address (seerr.md). "Save trailer service" checks it
-    (`GET /health`) and stores it only when it answers; an empty address removes it.
 - Phone page: the page's address and "New PIN": a new PIN on the TV, every device signs in again,
   this one too (it shows the PIN page next).
 - General: Language, a select (Device language, English, Deutsch, Türkçe), the same choice as on

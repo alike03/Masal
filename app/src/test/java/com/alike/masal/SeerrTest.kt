@@ -135,21 +135,22 @@ class SeerrTest {
     }
 
     @Test
-    fun trailerServiceGivesTheStream() {
-        val trailers = com.alike.masal.data.TrailerService(OkHttpClient(), settings)
-        assertNull("not set up", trailers.youTube("trailer01xx"))
-        settings.trailerService = server.url("/").toString()
-        try {
-            assertTrue(trailers.check(settings.trailerService).isSuccess)
-            assertEquals("https://stream.example/index.m3u8", trailers.youTube("trailer01xx"))
-            assertNull("unknown video", trailers.youTube("missing0000"))
-            val before = requests.size
-            assertNull("not a video id: not sent", trailers.youTube("../x"))
-            trailers.youTube("trailer01xx")
-            assertEquals("kept, not asked again", before, requests.size)
-        } finally {
-            settings.trailerService = ""
+    fun youTubeStreamIsKeptAndChecked() {
+        val asked = mutableListOf<String>()
+        val trailers = com.alike.masal.data.TrailerService { id ->
+            asked += id
+            when (id) {
+                "trailer01xx" -> "https://stream.example/index.m3u8"
+                "plainhttp00" -> "http://stream.example/index.m3u8"
+                else -> null
+            }
         }
+        assertEquals("https://stream.example/index.m3u8", trailers.youTube("trailer01xx"))
+        assertNull("unknown video", trailers.youTube("missing0000"))
+        assertNull("only https streams", trailers.youTube("plainhttp00"))
+        assertNull("not a video id: not looked up", trailers.youTube("../x"))
+        trailers.youTube("trailer01xx")
+        assertEquals("kept, not asked again", listOf("trailer01xx", "missing0000", "plainhttp00"), asked)
     }
 
     @Test
@@ -306,11 +307,6 @@ object MockSeerr {
     fun dispatcher(log: MutableList<RecordedRequest>) = object : Dispatcher() {
         override fun dispatch(request: RecordedRequest): MockResponse {
             synchronized(log) { log += request }
-            // The trailer service (no key): one known video id.
-            if (request.path.orEmpty().startsWith("/trailer")) return if (request.path == "/trailer?v=trailer01xx")
-                MockResponse().setHeader("Content-Type", "application/json").setBody("""{"hls":"https://stream.example/index.m3u8"}""")
-                else MockResponse().setResponseCode(404).setBody("""{"error":"not found"}""")
-            if (request.path == "/health") return MockResponse().setBody("ok")
             if (request.getHeader("X-Api-Key") != "test-key") return MockResponse().setResponseCode(401).setBody("""{"message":"Unauthorized"}""")
             val path = request.path.orEmpty().substringBefore('?')
             fun json(s: String) = MockResponse().setHeader("Content-Type", "application/json").setBody(s)

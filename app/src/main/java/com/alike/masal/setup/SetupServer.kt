@@ -182,18 +182,6 @@ ${if (prefilled != null) "<script>history.replaceState(null,\"\",\"/\")</script>
             com.alike.masal.Graph.seerr.cache.clear()
             str(R.string.setup_seerr_removed) to false
         }
-        // Trailer service (seerr.md): checked before it is stored; an empty address removes it.
-        "trailer_service" -> {
-            val url = p["url"].orEmpty().trim().trimEnd('/')
-            val text = if (url.isBlank()) {
-                settings.trailerService = ""
-                str(R.string.setup_trailer_removed)
-            } else com.alike.masal.Graph.trailers.check(url).fold(
-                { settings.trailerService = url; str(R.string.setup_trailer_saved) },
-                { str(R.string.setup_trailer_failed, it.message.orEmpty()) },
-            )
-            text to false
-        }
         "home_move", "cat_move" -> {
             // "up:<id>" or "down:<id>", from the button pressed.
             val move = p["move"].orEmpty()
@@ -286,7 +274,7 @@ ${if (prefilled != null) "<script>history.replaceState(null,\"\",\"/\")</script>
         "rows", "home", "home_move", "home_order_reset" -> "home"
         "cat_move", "cat_reset", "delete", "add_m3u", "add_xtream" -> "live"
         "player" -> "player"
-        "plex", "seerr", "seerr_remove", "seerr_prefs", "seerr_cache", "trailer_service" -> "accounts"
+        "plex", "seerr", "seerr_remove", "seerr_prefs", "seerr_cache" -> "accounts"
         "language" -> "general"
         else -> null
     }
@@ -457,13 +445,7 @@ $plexDetail
 <div class="actions"><button class="btn">${t(R.string.setup_seerr_save)}</button></div>
 </form>${if (seerrSet) """
 <form method="post" action="$base/"><input type="hidden" name="action" value="seerr_remove"><div class="actions"><button class="btn ghost small">${t(R.string.setup_seerr_remove)}</button></div></form>""" else ""}
-$seerrPrefs
-<h3>${t(R.string.setup_trailer_title)}</h3>
-<p class="muted">${t(R.string.setup_trailer_lead)}</p>
-<form method="post" action="$base/" class="fields"><input type="hidden" name="action" value="trailer_service">
-<div class="field"><label for="trailer-url">${t(R.string.setup_trailer_url)}</label><input type="url" id="trailer-url" name="url" value="${esc(settings.trailerService)}" placeholder="http://server:8791" autocapitalize="off" autocorrect="off"></div>
-<div class="actions"><button class="btn">${t(R.string.setup_trailer_save)}</button></div>
-</form>"""
+$seerrPrefs"""
 
         // ---- Phone page ----
         val address = "http://${localIp()}:$SETUP_PORT"

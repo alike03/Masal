@@ -56,7 +56,7 @@ object Graph {
         profileClients.clear()
         iptv = IptvRepository(http, settings, app.cacheDir)
         seerr = com.alike.masal.data.SeerrClient(http, settings, com.alike.masal.data.SeerrCache(java.io.File(app.cacheDir, "seerr")))
-        trailers = com.alike.masal.data.TrailerService(http, settings)
+        trailers = com.alike.masal.data.TrailerService(http)
     }
 }
 

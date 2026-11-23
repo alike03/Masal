@@ -16,6 +16,7 @@ Masal runs as a normal app next to the system launcher, or as the device's home 
 - **Live TV** from Xtream logins or M3U playlists with an XMLTV guide; channel switching with all four arrow keys. On Home a channel plays in the picture frame and zooms to full screen without reconnecting.
 - **Plex player** with Plex-style controls, "Ends at" time, subtitle and audio selection, and online subtitle search through your Plex server; choices are saved to Plex. Subtitle look and skip lengths are adjustable.
 - **Trailers** play in the background after resting on a title, when Plex has one.
+- **Seerr** (optional): find and request films and series that are not in your library, as the person asking. Their trailers play in Masal's own player, from Plex or from YouTube.
 - **Apps page** to pin and order the apps shown on Home.
 - **Setup from the phone**: a QR code on the TV opens a setup page in the phone's browser for Plex and IPTV logins. Logins stay on the TV.
 - **English, German and Turkish**, or the TV's own language.
@@ -106,4 +107,6 @@ Masal is an independent project and is not affiliated with or endorsed by Plex, 
 
 ## License
 
-The code is released under the [MIT License](LICENSE). The bundled fonts keep their own SIL Open Font License (see [`licenses/`](licenses/)).
+The code is released under the [GNU General Public License v3.0 or later](LICENSE). Versions up to and including commit `8fbed54` were released under the MIT License. The bundled fonts keep their own SIL Open Font License (see [`licenses/`](licenses/)).
+
+Masal uses [NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor) (GPL-3.0) to play YouTube trailers in its own player. This bypasses YouTube's own player and is not in line with YouTube's Terms of Service; Masal is not affiliated with or endorsed by YouTube or Google.

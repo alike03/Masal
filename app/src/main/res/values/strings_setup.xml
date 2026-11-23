@@ -184,13 +184,6 @@
     <string name="settings_seerr_language">Language</string>
     <string name="settings_seerr_language_app">App language</string>
     <string name="settings_seerr_language_note">Titles, summaries and posters from Seerr. Popular and upcoming rows always come in the language of your user in Seerr (Seerr, Settings, Users).</string>
-    <string name="setup_trailer_title">YouTube trailers</string>
-    <string name="setup_trailer_lead">Optional: the address of your own trailer service, so YouTube trailers play in Masal. Without it, Masal offers "Open in YouTube".</string>
-    <string name="setup_trailer_url">Trailer service address</string>
-    <string name="setup_trailer_save">Save trailer service</string>
-    <string name="setup_trailer_saved">Trailer service saved</string>
-    <string name="setup_trailer_removed">Trailer service removed</string>
-    <string name="setup_trailer_failed">Trailer service not reachable: %1$s</string>
     <string name="setup_move_up">Move %1$s up</string>
     <string name="setup_move_down">Move %1$s down</string>
     <string name="setup_save_player">Save player settings</string>

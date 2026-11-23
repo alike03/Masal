@@ -106,8 +106,8 @@ class PeopleActions(
     /** Plays a film in Plex by its ratingKey and title; null where playing is not offered. */
     val onPlayPlex: ((String, String) -> Unit)? = null,
     /**
-     * Opens a YouTube trailer (video id) in a YouTube app, used when it cannot play in Masal (no
-     * trailer service, or the service failed); null where trailers are not offered (inside the player).
+     * Opens a YouTube trailer (video id) in a YouTube app, used when it cannot play in Masal (its
+     * stream was not found or failed); null where trailers are not offered (inside the player).
      */
     val onTrailer: ((String) -> Unit)? = null,
 )
@@ -503,7 +503,7 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
         if (trailerShown) { snapNext = snap; trailerShown = false }
     }
     DisposableEffect(Unit) { onDispose { trailer?.destroy() } }
-    /** Plays [url] in Masal's own player ([hls]: a YouTube stream from the trailer service). */
+    /** Plays [url] in Masal's own player ([hls]: a YouTube stream). */
     fun playTrailer(url: String, hls: Boolean, onFail: () -> Unit) {
         trailerOn = true
         showVideo()
@@ -524,9 +524,8 @@ fun SeerrTitleScreen(mediaType: String, tmdbId: Int, autoFocus: Boolean, profile
             if (failed) message = context.getString(R.string.seerr_trailer_failed)
         }
     }
-    /** The YouTube trailer Seerr names, through the household's trailer service (seerr.md). */
+    /** The YouTube trailer Seerr names, its stream found by Masal itself (seerr.md). */
     fun startYouTube(key: String) {
-        if (!Graph.trailers.configured) { noTrailer(key, failed = false); return }
         scope.launch {
             val url = withContext(Dispatchers.IO) { Graph.trailers.youTube(key) }
             if (url == null) noTrailer(key, failed = true) else playTrailer(url, hls = true) { noTrailer(key, failed = true) }

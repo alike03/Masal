@@ -184,13 +184,6 @@
     <string name="settings_seerr_language">Sprache</string>
     <string name="settings_seerr_language_app">App-Sprache</string>
     <string name="settings_seerr_language_note">Titel, Beschreibungen und Poster aus Seerr. Beliebte und kommende Titel kommen immer in der Sprache deines Benutzers in Seerr (Seerr, Einstellungen, Benutzer).</string>
-    <string name="setup_trailer_title">YouTube-Trailer</string>
-    <string name="setup_trailer_lead">Optional: die Adresse deines eigenen Trailer-Dienstes, damit YouTube-Trailer in Masal laufen. Ohne ihn bietet Masal «In YouTube öffnen» an.</string>
-    <string name="setup_trailer_url">Adresse des Trailer-Dienstes</string>
-    <string name="setup_trailer_save">Trailer-Dienst speichern</string>
-    <string name="setup_trailer_saved">Trailer-Dienst gespeichert</string>
-    <string name="setup_trailer_removed">Trailer-Dienst entfernt</string>
-    <string name="setup_trailer_failed">Trailer-Dienst nicht erreichbar: %1$s</string>
     <string name="setup_move_up">%1$s nach oben</string>
     <string name="setup_move_down">%1$s nach unten</string>
     <string name="setup_save_player">Player-Einstellungen speichern</string>
