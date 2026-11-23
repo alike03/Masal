@@ -23,6 +23,19 @@ fun git(vararg args: String): String? = runCatching {
 /** Release signing key; only present on the release pipeline and on machines that have it. */
 val releaseKeystore: File? = setting("MASAL_KEYSTORE_FILE")?.let { rootProject.file(it) }?.takeIf { it.exists() }
 
+// Robolectric 4.14.1's Android 14 (sdk 34, the tests' level) and 15 (targetSdk) jars for the
+// tests, fetched by Gradle (see testOptions).
+// One configuration per jar: Gradle would keep only the newer of two versions in one.
+val robolectricSdk = listOf("14-robolectric-10818077-i7", "15-robolectric-12650502-i7").map { version ->
+    configurations.detachedConfiguration(dependencies.create("org.robolectric:android-all-instrumented:$version"))
+        .apply { isTransitive = false }
+}
+val robolectricDir = layout.buildDirectory.dir("robolectric-sdk")
+val robolectricJars = tasks.register<Sync>("robolectricJars") {
+    from(robolectricSdk)
+    into(robolectricDir)
+}
+
 android {
     namespace = "com.alike.masal"
     compileSdk = 35
@@ -73,6 +86,11 @@ android {
                 it.maxHeapSize = "2g"
                 // Local values for tests (e.g. MASAL_TEST_HOME_GROUP) come from the gitignored .env.
                 dotEnv.forEach { (k, v) -> it.environment(k, v) }
+                // Robolectric's Android jars come through Gradle (robolectricSdk below), not its own
+                // downloader, which GitHub's runners failed to reach Maven Central with.
+                it.dependsOn(robolectricJars)
+                it.systemProperty("robolectric.offline", "true")
+                it.systemProperty("robolectric.dependency.dir", robolectricDir.get().asFile.path)
             }
         }
     }
