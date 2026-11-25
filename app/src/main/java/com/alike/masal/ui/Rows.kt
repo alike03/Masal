@@ -82,6 +82,8 @@ fun rememberRowsState(): RowsState =
 val RowPosterWidth = 112.dp
 val PosterRowHeight = 228.dp
 val BannerRowHeight = 168.dp
+/** Live TV cards carry a second line under the name (the programme): a little taller than banners. */
+val ChannelRowHeight = 186.dp
 
 /**
  * Plex-style rows, opening like an accordion: the focused row sits at the top with its header

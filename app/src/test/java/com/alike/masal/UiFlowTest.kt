@@ -188,6 +188,35 @@ class UiFlowTest {
         }
     }
 
+    /** The live TV row has room for the programme line under the channel name (it was cut off). */
+    @Test
+    fun liveRowShowsProgramme() {
+        Graph.settings.setHomeOrder(listOf("tv", "apps"))
+        try {
+            val vm = seed()
+            rule.runOnUiThread {
+                vm.channels.value = vm.channels.value.map { if ("Testgruppe" in it.group) it.copy(epgId = "epg:${it.key}") else it }
+                vm.epg.value = vm.channels.value.mapNotNull { it.epgId }.associateWith {
+                    listOf(com.alike.masal.data.Programme(0, Long.MAX_VALUE / 2, "Testsendung am Mittag", null))
+                }
+            }
+            rule.mainClock.advanceTimeBy(1_000)
+            rule.waitForIdle()
+            expectFocus("Home starts on the live row", "Testkanal")
+            val lines = rule.onAllNodesWithText("Testsendung am Mittag", useUnmergedTree = true).fetchSemanticsNodes()
+            assertTrue("the programme line is there", lines.isNotEmpty())
+            shot("home-live-row")
+            // The card's line, not the header's above the rows: the lowest one on screen. A row too
+            // low gives it less height than one line needs, and its text layout says so.
+            val line = lines.maxBy { it.boundsInRoot.top }
+            val layout = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+            line.config[androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult].action?.invoke(layout)
+            assertTrue("programme line has its full height", layout.isNotEmpty() && !layout.first().didOverflowHeight)
+        } finally {
+            Graph.settings.setHomeOrder(emptyList())
+        }
+    }
+
     /** The Home live TV row can show the favourite channels instead of a category. */
     @Test
     fun favouritesRow() {

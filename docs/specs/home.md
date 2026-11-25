@@ -17,7 +17,8 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
      both set on the setup page (`Settings.homeLiveGroup` / `homeLiveTitle`, title defaults to
      "Live TV"); hidden while no category is set. Favourites show in channel list order and follow
      every change of a favourite. The category is matched without accents and provider prefix such as
-     "[XX] ". No category subtitle under the cards.
+     "[XX] ". No category subtitle under the cards; under each channel name the current programme,
+     one full line (the row is a little taller than the Apps row for it).
   5. Plex rows, chosen in Settings (see "Home rows" below). A collection row says next to its
      title whether it holds movies or TV shows ("Movies" / "TV shows"). Without hubs (older servers):
      one "Recently Added" row. Then each profile's other rows, named after the profile.

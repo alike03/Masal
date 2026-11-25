@@ -236,7 +236,7 @@ fun HomeScreen(
                 }
             })
         }
-        if (tvRow.isNotEmpty()) add(RowSpec("tv", BannerRowHeight) {
+        if (tvRow.isNotEmpty()) add(RowSpec("tv", ChannelRowHeight) {
             Column {
                 RowTitle(Graph.settings.homeLiveTitle)
                 LazyRow(

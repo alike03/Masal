@@ -6,6 +6,9 @@ The release pipeline publishes each version's section as its GitHub release note
 
 ## [Unreleased]
 
+### Fixed
+- Home, live TV row: the current programme under each channel name is no longer cut off.
+
 ## [1.5.1] - 2026-11-25
 
 ### Changed
