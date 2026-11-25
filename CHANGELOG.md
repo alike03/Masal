@@ -6,7 +6,12 @@ The release pipeline publishes each version's section as its GitHub release note
 
 ## [Unreleased]
 
+### Changed
+- Phone setup page: a new Plex server address or Seerr address needs its token or API key entered again, so a stored login is never sent to another server.
+
 ### Fixed
+- The Plex token and the Seerr API key are no longer passed on when a server redirects to another address.
+- The phone setup page refuses oversized requests and limits parallel connections, so a device on the network cannot crash Masal through it.
 - Person page: Back closes the full biography ("More") again, and the focus returns to "More".
 
 ## [1.5.0] - 2026-11-23

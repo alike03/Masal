@@ -21,8 +21,8 @@ import java.io.File
 
 /**
  * Serves the setup page with fictitious settings and saves it as build/setup-preview.html,
- * to look at the page without a TV. Also checks the PIN sign-in and that saved sources never
- * show their login.
+ * to look at the page without a TV. Also checks the PIN sign-in, that saved sources never
+ * show their login, that stored secrets stay with their address and that large bodies are refused.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -118,6 +118,29 @@ class SetupPagePreviewTest {
             // Without the cookie a form is not applied.
             http.newCall(Request.Builder().url(base).post(okhttp3.FormBody.Builder().add("action", "delete").add("id", "a1").build()).build()).execute().close()
             assertEquals(2, settings.sources.size)
+            // Stored secrets go only to the stored address: a new Plex or Seerr address needs them again.
+            settings.plexToken = "stored-token"
+            post("action" to "plex", "url" to "http://elsewhere.example:32400").close()
+            assertEquals("Plex token kept for its own server", "http://plex-server:32400", settings.plexUrl)
+            post("action" to "plex", "url" to "http://PLEX-server:32400/").close()
+            assertEquals("same server, other spelling", "http://PLEX-server:32400", settings.plexUrl)
+            post("action" to "plex", "url" to "http://elsewhere.example:32400", "token" to "new-token").close()
+            assertEquals("http://elsewhere.example:32400", settings.plexUrl)
+            assertEquals("new-token", settings.plexToken)
+            settings.seerrUrl = "http://seerr.example:5055"
+            settings.seerrKey = "stored-key"
+            post("action" to "seerr", "url" to "http://elsewhere.example:5055").close()
+            assertEquals("Seerr key not sent to a new address", "http://seerr.example:5055", settings.seerrUrl)
+            // Large bodies are refused before they are read; before signing in only a PIN fits.
+            // (Only the headers are sent: the server answers without waiting for the body.)
+            fun announce(length: Int, cookieHeader: String = "") = java.net.Socket("127.0.0.1", SETUP_PORT).use { socket ->
+                socket.soTimeout = 5_000
+                socket.getOutputStream().write(("POST / HTTP/1.1\r\nHost: 127.0.0.1\r\n$cookieHeader" +
+                    "Content-Type: application/x-www-form-urlencoded\r\nContent-Length: $length\r\n\r\n").toByteArray())
+                socket.getInputStream().bufferedReader().readLine()
+            }
+            assertTrue("large sign-in refused", announce(5_000).contains(" 413 "))
+            assertTrue("large form refused", announce(300_000, "Cookie: $cookie\r\n").contains(" 413 "))
             // A new PIN signs every device out.
             settings.renewSetupPin()
             assertTrue("signed out after a new PIN", "name=\"pin\"" in get(base, cookie).use { it.body!!.string() })

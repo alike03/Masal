@@ -51,6 +51,7 @@ object Graph {
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .followRedirects(true)
+            .addNetworkInterceptor(::dropSecretsOnRedirect)
             .build()
         plex = PlexClient(http, settings)
         profileClients.clear()
@@ -114,3 +115,20 @@ object Playback {
     fun takeBack(sourceKey: String?): androidx.media3.exoplayer.ExoPlayer? =
         handedBack?.takeIf { it.first == sourceKey }?.second?.also { handedBack = null }
 }
+
+/**
+ * Network interceptor: OkHttp removes only `Authorization` when a redirect leads elsewhere. The
+ * Plex token and the Seerr key go only to the host (and scheme) they were sent to, never to a
+ * redirect's target.
+ */
+fun dropSecretsOnRedirect(chain: okhttp3.Interceptor.Chain): okhttp3.Response {
+    val request = chain.request()
+    val first = chain.call().request().url
+    val url = request.url
+    if (url.host == first.host && url.scheme == first.scheme) return chain.proceed(request)
+    val clean = request.newBuilder()
+    for (name in SecretHeaders) clean.removeHeader(name)
+    return chain.proceed(clean.build())
+}
+
+private val SecretHeaders = listOf("X-Plex-Token", "X-Api-Key", "X-API-User")

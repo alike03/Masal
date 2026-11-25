@@ -50,6 +50,7 @@
     <string name="setup_saved_home_row">Ana Sayfa satırı kaydedildi.</string>
     <string name="setup_saved_home_rows">Ana Sayfa satırları kaydedildi.</string>
     <string name="setup_saved_plex">Plex ayarları kaydedildi.</string>
+    <string name="setup_plex_token_needed">Yeni sunucu adresi için token da gerekli; ya da Plex\'i TV\'deki kodla yeniden bağla.</string>
     <string name="setup_m3u_url_missing">Liste URL\'si eksik.</string>
     <string name="setup_m3u_default_name">Liste</string>
     <string name="setup_m3u_added">Liste eklendi.</string>

@@ -18,6 +18,12 @@ Enter Plex and IPTV logins with the phone or a computer instead of the remote.
 - Logo, favicon and fonts are served without sign-in; everything else needs it, forms included.
 - The page is plain HTTP on the home network: someone on the same network could read the PIN
   or the cookie in transit. Logins are still never shown on the page.
+- Stored secrets stay with their address: saving a new Plex server address with the token field
+  empty is refused ("A new server address needs the token too, or link Plex again with the code
+  on the TV"), unless no address was stored yet (the link found no server). Seerr uses the stored
+  key only for the stored address; a new address needs the key again.
+- Request limits: a body over 4 KB before signing in (only the PIN fits) or 256 KB after is
+  refused (413) before it is read; at most 16 connections at a time, further ones are closed.
 - Saved sources show only the server host (and two letters of an Xtream user name), never the
   full playlist address, which often contains the login.
 - Plex link: the token is saved as soon as plex.tv confirms the code; a failing server lookup

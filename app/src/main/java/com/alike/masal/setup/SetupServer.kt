@@ -46,6 +46,8 @@ class SetupServer(
     private val moveCategory: (String?, Int) -> Unit = { _, _ -> },
 ) : NanoHTTPD(SETUP_PORT) {
 
+    init { setAsyncRunner(BoundedRunner()) }
+
     override fun serve(session: IHTTPSession): Response {
         val base = ""
         assets[session.uri.removePrefix("/")]?.let { (mime, bytes) ->
@@ -55,8 +57,17 @@ class SetupServer(
         if (session.uri != "/") {
             return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain; charset=utf-8", str(R.string.setup_not_found))
         }
-        if (session.method == Method.POST) session.parseBody(HashMap())
-        if (!auth.valid(session.cookies.read(SetupAuth.Cookie))) return signIn(session)
+        val signedIn = auth.valid(session.cookies.read(SetupAuth.Cookie))
+        if (session.method == Method.POST) {
+            // The body is read into memory: only small forms, and only a PIN before signing in.
+            val length = session.headers["content-length"]?.toLongOrNull() ?: 0L
+            if (length > if (signedIn) MaxBody else MaxSignInBody) {
+                // The unread body would follow as the next request: close the connection.
+                return newFixedLengthResponse(Response.Status.PAYLOAD_TOO_LARGE, "text/plain", "").apply { closeConnection(true) }
+            }
+            session.parseBody(HashMap())
+        }
+        if (!signedIn) return signIn(session)
         var notice: String? = null
         if (session.method == Method.POST) {
             val p = session.parameters.mapValues { it.value.firstOrNull().orEmpty().trim() }
@@ -162,7 +173,8 @@ ${if (prefilled != null) "<script>history.replaceState(null,\"\",\"/\")</script>
         // Seerr (seerr.md): checked before it is stored; changes nothing that needs a reload.
         "seerr" -> {
             val url = p["url"].orEmpty().ifBlank { settings.seerrUrl }
-            val key = p["key"].orEmpty().ifBlank { settings.seerrKey }
+            // The stored key goes only to the stored address: a new address needs the key again.
+            val key = p["key"].orEmpty().ifBlank { if (sameAddress(url, settings.seerrUrl)) settings.seerrKey else "" }
             when {
                 url.isBlank() || key.isBlank() -> str(R.string.setup_seerr_missing)
                 else -> runCatching { com.alike.masal.Graph.seerr.me(url, key) }.fold(
@@ -226,9 +238,19 @@ ${if (prefilled != null) "<script>history.replaceState(null,\"\",\"/\")</script>
 
     private fun handleData(p: Map<String, String>): String = when (p["action"]) {
         "plex" -> {
-            if (p["url"].orEmpty().isNotBlank()) settings.plexUrl = p["url"]!!
-            if (p["token"].orEmpty().isNotBlank()) settings.plexToken = p["token"]!!
-            str(R.string.setup_saved_plex)
+            val url = p["url"].orEmpty()
+            val token = p["token"].orEmpty()
+            // The stored token goes only to the stored server: a new address needs the token again
+            // (or a new link). Without a stored address (the link found no server) the URL is free.
+            if (url.isNotBlank() && token.isBlank() && settings.plexToken.isNotBlank() &&
+                settings.plexUrl.isNotBlank() && !sameAddress(url, settings.plexUrl)
+            ) {
+                str(R.string.setup_plex_token_needed)
+            } else {
+                if (url.isNotBlank()) settings.plexUrl = url
+                if (token.isNotBlank()) settings.plexToken = token
+                str(R.string.setup_saved_plex)
+            }
         }
         "add_m3u" -> {
             if (p["url"].isNullOrBlank()) str(R.string.setup_m3u_url_missing)
@@ -621,7 +643,27 @@ $sectionHtml
 </body></html>"""
     }
 
+    /**
+     * Runs each connection on its own thread as NanoHTTPD does, but at most [MaxConnections] at a
+     * time: further ones are closed at once, so a device on the network cannot pile up threads.
+     */
+    private class BoundedRunner : DefaultAsyncRunner() {
+        override fun exec(code: ClientHandler) {
+            if (running.size >= MaxConnections) code.close() else super.exec(code)
+        }
+    }
+
     companion object {
+        /** Largest form the page accepts when signed in (Home rows send one field per row), in bytes. */
+        const val MaxBody = 256 * 1024L
+        /** Largest request body before signing in: only the PIN. */
+        const val MaxSignInBody = 4 * 1024L
+        const val MaxConnections = 16
+
+        /** Whether two server addresses are the same, ignoring case, spaces and a trailing slash. */
+        fun sameAddress(a: String, b: String): Boolean =
+            a.trim().trimEnd('/').equals(b.trim().trimEnd('/'), ignoreCase = true)
+
         /**
          * [context] in the language stored in the preferences ("": the device's language). Unlike
          * the activity's own context it follows a change made on the phone page at once.

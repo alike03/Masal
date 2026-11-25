@@ -50,6 +50,7 @@
     <string name="setup_saved_home_row">Zeile auf der Startseite gespeichert.</string>
     <string name="setup_saved_home_rows">Zeilen auf der Startseite gespeichert.</string>
     <string name="setup_saved_plex">Plex-Einstellungen gespeichert.</string>
+    <string name="setup_plex_token_needed">Eine neue Serveradresse braucht auch den Token, oder Plex mit dem Code auf dem TV neu verknüpfen.</string>
     <string name="setup_m3u_url_missing">Die Playlist-URL fehlt.</string>
     <string name="setup_m3u_default_name">Playlist</string>
     <string name="setup_m3u_added">Playlist hinzugefügt.</string>

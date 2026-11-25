@@ -31,6 +31,8 @@ Kotlin, Compose for TV (`androidx.tv:tv-material`), Media3 ExoPlayer, OkHttp, Co
 - `LiveOverlayTest`: the live player's info banner (with and without guide) and channel list, fictitious channels. Shots: `.../live-shots/`.
 - `GermanScreensTest` / `TurkishScreensTest` (`LocaleScreensTest.kt`): Home and Settings with the device in German and Turkish. Shots: `.../locale-shots/`. UI tests stay offline: `Backdrops.base` and `Graph.plex.accountBase` point at a closed port.
 - `AmbientSeamTest`: the colour fill meets the picture frame without a line (pixel columns at the frame edge).
+- `SetupPagePreviewTest`: the phone setup page with fictitious settings (PIN sign-in and lockout, no logins on the page, stored Plex token and Seerr key kept for their own address, large bodies refused); saves `build/setup-preview.html`.
+- `RedirectSecretsTest`: a redirect to another host gets no Plex token, Seerr key or Seerr user (plain JVM test).
 - `XtreamParseTest`: the Xtream channel list read as a stream (numbers, strings and nulls mixed, unknown fields skipped).
 - `CategoryOrderTest`: the user's channel category order over the provider's list (plain JVM test).
 - `HomeOrderTest`: Home's row order over the rows present (new rows after their default neighbour, rows switched off keep their place; plain JVM test).

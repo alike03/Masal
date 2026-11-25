@@ -50,6 +50,7 @@
     <string name="setup_saved_home_row">Home row saved.</string>
     <string name="setup_saved_home_rows">Home rows saved.</string>
     <string name="setup_saved_plex">Plex settings saved.</string>
+    <string name="setup_plex_token_needed">A new server address needs the token too, or link Plex again with the code on the TV.</string>
     <string name="setup_m3u_url_missing">Playlist URL is missing.</string>
     <string name="setup_m3u_default_name">Playlist</string>
     <string name="setup_m3u_added">Playlist added.</string>
