@@ -38,6 +38,7 @@ object M3u {
         var attrs: Map<String, String>? = null
         var name = ""
         var extGroup: String? = null
+        val other by lazy { Language.text(R.string.tv_other) } // once, not per channel
         for (raw in lines) {
             val line = raw.trim()
             when {
@@ -57,7 +58,7 @@ object M3u {
                         key = "$sourceId|$display",
                         name = display,
                         logo = a["tvg-logo"]?.takeIf { it.isNotBlank() },
-                        group = a["group-title"]?.takeIf { it.isNotBlank() } ?: extGroup ?: Language.text(R.string.tv_other),
+                        group = a["group-title"]?.takeIf { it.isNotBlank() } ?: extGroup ?: other,
                         url = line,
                         epgId = a["tvg-id"]?.takeIf { it.isNotBlank() },
                     )

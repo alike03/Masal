@@ -61,7 +61,11 @@ android {
     }
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8: smaller and faster code, which matters most for the cold start as the home screen.
+            // Names are kept (proguard-rules.pro), so stack traces stay readable.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release")
         }
     }

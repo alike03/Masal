@@ -8,6 +8,8 @@ The release pipeline publishes each version's section as its GitHub release note
 
 ### Changed
 - Phone setup page: a new Plex server address or Seerr address needs its token or API key entered again, so a stored login is never sent to another server.
+- The app's code is now optimised and shrunk: the download is less than half the size.
+- Home previews use less memory, and a paused film left in the background no longer keeps updating its position.
 
 ### Fixed
 - The Plex token and the Seerr API key are no longer passed on when a server redirects to another address.

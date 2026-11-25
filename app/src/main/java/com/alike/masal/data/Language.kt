@@ -45,7 +45,10 @@ object Language {
 
     private var app: Context? = null
 
-    fun init(context: Context) { app = context.applicationContext }
+    /** The wrapped context [text] uses, with the language code it was made for. */
+    @Volatile private var textContext: Pair<String, Context>? = null
+
+    fun init(context: Context) { app = context.applicationContext; textContext = null }
 
     /** Language for Plex requests from code without a context ("en" before [init]). */
     fun tag(): String = app?.let { tag(it) } ?: "en"
@@ -53,6 +56,10 @@ object Language {
     /** A text outside the UI (status and error lines from loading), in the current language. */
     fun text(@StringRes id: Int, vararg args: Any): String {
         val c = app ?: error("Language.init not called")
-        return wrap(c).getString(id, *args)
+        // Wrapping makes a new configuration context: once per language, not per text (parsers
+        // call this for every item).
+        val code = stored(c)
+        val wrapped = textContext?.takeIf { it.first == code }?.second ?: wrap(c).also { textContext = code to it }
+        return wrapped.getString(id, *args)
     }
 }

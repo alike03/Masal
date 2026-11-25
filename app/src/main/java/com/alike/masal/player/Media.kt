@@ -28,8 +28,15 @@ val mediaAudio: AudioAttributes =
 /** Most a player may buffer ahead, in bytes (Java heap). */
 const val MAX_BUFFER_BYTES = 100 * 1024 * 1024
 
+/** Most a Home preview may buffer: it runs next to Home's images and may last for hours. */
+const val PREVIEW_BUFFER_BYTES = 32 * 1024 * 1024
+
+/**
+ * [preview]: a Home preview (or a live channel continued from one): at most 30 s and
+ * [PREVIEW_BUFFER_BYTES] ahead, and it starts after a second of picture like live.
+ */
 @OptIn(UnstableApi::class)
-fun buildPlayer(context: Context, live: Boolean = false, audioFocus: Boolean = true): ExoPlayer {
+fun buildPlayer(context: Context, live: Boolean = false, audioFocus: Boolean = true, preview: Boolean = false): ExoPlayer {
     val http = DefaultHttpDataSource.Factory()
         .setUserAgent(USER_AGENT)
         .setAllowCrossProtocolRedirects(true)
@@ -42,8 +49,15 @@ fun buildPlayer(context: Context, live: Boolean = false, audioFocus: Boolean = t
         .setAudioAttributes(mediaAudio, /* handleAudioFocus = */ audioFocus)
     // The buffer lives on the Java heap. Media3's default allows about 144 MB, which a high-bitrate
     // film fills, leaving Masal almost no room under its 192 MB limit: capped at 100 MB.
-    val load = DefaultLoadControl.Builder().setTargetBufferBytes(MAX_BUFFER_BYTES)
-    if (live) {
+    val load = DefaultLoadControl.Builder().setTargetBufferBytes(if (preview) PREVIEW_BUFFER_BYTES else MAX_BUFFER_BYTES)
+    if (preview) {
+        load.setBufferDurationsMs(
+            /* minBufferMs = */ 15_000,
+            /* maxBufferMs = */ 30_000,
+            /* bufferForPlaybackMs = */ 1_000,
+            DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS,
+        )
+    } else if (live) {
         load.setBufferDurationsMs(
             DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
             DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,

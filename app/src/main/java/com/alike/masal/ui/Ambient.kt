@@ -410,7 +410,7 @@ private class PreviewPlayer(private val context: android.content.Context, privat
     private var attached = false
 
     /** The player, built on first use and attached to the surface. */
-    fun obtain(): ExoPlayer = player ?: buildPlayer(context).also {
+    fun obtain(): ExoPlayer = player ?: buildPlayer(context, preview = true).also {
         it.addListener(listener); it.addListener(cropper)
         player = it
         attached = false

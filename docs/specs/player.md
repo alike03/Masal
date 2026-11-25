@@ -39,6 +39,9 @@ Play Plex films and episodes with Plex-style controls, subtitles and audio choic
 - Buffers at most 100 MB ahead (Media3 allows about 144 MB by default, which a high-bitrate film
   fills and which leaves Masal almost no memory); on a fast home network that is still several
   seconds even for a 4K remux.
+- Home previews buffer at most 30 s and 32 MB and start after about 1 s, as they run next to
+  Home's pictures; a live channel continued full screen from its preview keeps these limits.
+- The position on the seek bar is updated only while the player is on screen.
 
 ## Remote keys
 - Controls hidden: OK, Up or Down show them; Left/Right skip back / forward (settings) and show the seek bar.

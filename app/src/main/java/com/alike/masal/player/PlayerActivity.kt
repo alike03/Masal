@@ -990,6 +990,7 @@ class PlayerActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         handler.removeCallbacks(progressTick)
+        handler.removeCallbacks(tickPosition) // no position updates while nobody sees them
         handler.removeCallbacks(retryTune)
         handler.removeCallbacks(tune)
         if (live) releasePending()
@@ -1007,6 +1008,8 @@ class PlayerActivity : ComponentActivity() {
         if (!live) {
             player.play()
             handler.postDelayed(progressTick, 10_000)
+            handler.removeCallbacks(tickPosition)
+            handler.post(tickPosition)
         }
     }
 
