@@ -6,6 +6,8 @@ The release pipeline publishes each version's section as its GitHub release note
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-11-25
+
 ### Changed
 - Phone setup page: a new Plex server address or Seerr address needs its token or API key entered again, so a stored login is never sent to another server.
 - The app's code is now optimised and shrunk: the download is less than half the size.
@@ -95,7 +97,8 @@ The release pipeline publishes each version's section as its GitHub release note
 ### Added
 - First release: Home with Plex rows, IPTV live TV and pinned apps, Plex player, setup page on the phone, signed releases on GitHub.
 
-[Unreleased]: https://github.com/alike03/Masal/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/alike03/Masal/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/alike03/Masal/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/alike03/Masal/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/alike03/Masal/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/alike03/Masal/compare/v1.2.0...v1.3.0
