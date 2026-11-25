@@ -6,6 +6,8 @@ The release pipeline publishes each version's section as its GitHub release note
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-11-25
+
 ### Fixed
 - Home, live TV row: the current programme under each channel name is no longer cut off.
 
@@ -100,7 +102,8 @@ The release pipeline publishes each version's section as its GitHub release note
 ### Added
 - First release: Home with Plex rows, IPTV live TV and pinned apps, Plex player, setup page on the phone, signed releases on GitHub.
 
-[Unreleased]: https://github.com/alike03/Masal/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/alike03/Masal/compare/v1.5.2...HEAD
+[1.5.2]: https://github.com/alike03/Masal/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/alike03/Masal/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/alike03/Masal/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/alike03/Masal/compare/v1.3.0...v1.4.0
