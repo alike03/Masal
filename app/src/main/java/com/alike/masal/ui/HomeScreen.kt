@@ -172,10 +172,12 @@ fun HomeScreen(
         if (allApps.isNotEmpty()) add(RowSpec("apps", BannerRowHeight) {
             Column {
                 RowTitle(stringResource(if (moving != null) R.string.home_apps_moving else R.string.common_apps))
+                val rowState = androidx.compose.foundation.lazy.rememberLazyListState()
                 LazyRow(
+                    state = rowState,
                     contentPadding = PaddingValues(horizontal = EdgePadding, vertical = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    modifier = Modifier.onPreviewKeyEvent { e ->
+                    modifier = Modifier.noSliverAtStart(rowState).onPreviewKeyEvent { e ->
                         val m = moving ?: return@onPreviewKeyEvent false
                         when (e.key) {
                             Key.DirectionLeft, Key.DirectionRight -> {
@@ -239,7 +241,10 @@ fun HomeScreen(
         if (tvRow.isNotEmpty()) add(RowSpec("tv", ChannelRowHeight) {
             Column {
                 RowTitle(Graph.settings.homeLiveTitle)
+                val rowState = androidx.compose.foundation.lazy.rememberLazyListState()
                 LazyRow(
+                    state = rowState,
+                    modifier = Modifier.noSliverAtStart(rowState),
                     contentPadding = PaddingValues(horizontal = EdgePadding, vertical = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
@@ -389,7 +394,10 @@ fun PosterRow(title: String, kind: String? = null, owner: String? = null, conten
                 Text(label, color = TextDim, fontSize = 13.sp, maxLines = 1, modifier = Modifier.padding(start = 10.dp, bottom = 4.dp))
             }
         }
+        val state = androidx.compose.foundation.lazy.rememberLazyListState()
         LazyRow(
+            state = state,
+            modifier = Modifier.noSliverAtStart(state),
             contentPadding = PaddingValues(horizontal = EdgePadding, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             content = content,

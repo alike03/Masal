@@ -97,7 +97,9 @@ fun AppsScreen(vm: MasalViewModel, autoFocus: Boolean, startEditing: Boolean, on
                     Text(stringResource(R.string.appspage_on_home), color = TextMain, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
                 }
                 item(key = "homeRow", span = { GridItemSpan(maxLineSpan) }) {
+                    val rowState = androidx.compose.foundation.lazy.rememberLazyListState()
                     LazyRow(
+                        state = rowState,
                         // The row reaches the screen edges (past the grid's side padding), so scrolled
                         // and focused (enlarged) cards are not cut off at the grid's content edge.
                         contentPadding = PaddingValues(horizontal = EdgePadding, vertical = 10.dp),
@@ -107,7 +109,7 @@ fun AppsScreen(vm: MasalViewModel, autoFocus: Boolean, startEditing: Boolean, on
                             val row = measurable.measure(constraints.copy(
                                 minWidth = constraints.minWidth + 2 * extra, maxWidth = constraints.maxWidth + 2 * extra))
                             layout(constraints.maxWidth, row.height) { row.place(-extra, 0) }
-                        }.onPreviewKeyEvent { e ->
+                        }.noSliverAtStart(rowState).onPreviewKeyEvent { e ->
                             val m = moving ?: return@onPreviewKeyEvent false
                             when (e.key) {
                                 Key.DirectionLeft, Key.DirectionRight -> {

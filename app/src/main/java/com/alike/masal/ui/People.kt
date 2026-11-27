@@ -172,7 +172,10 @@ fun PersonCard(p: CastMember, onClick: () -> Unit, modifier: Modifier = Modifier
 fun CastRow(people: List<CastMember>, onPerson: (CastMember) -> Unit, itemModifier: (Int) -> Modifier = { Modifier }) {
     Column {
         RowTitle(stringResource(R.string.people_cast_crew))
+        val state = androidx.compose.foundation.lazy.rememberLazyListState()
         LazyRow(
+            state = state,
+            modifier = Modifier.noSliverAtStart(state),
             contentPadding = PaddingValues(horizontal = EdgePadding, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {

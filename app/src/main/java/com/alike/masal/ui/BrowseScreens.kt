@@ -592,7 +592,10 @@ fun DetailScreen(
                 }
                 if (isShow && seasons.isNotEmpty()) {
                     item(key = "seasons") {
+                        val rowState = androidx.compose.foundation.lazy.rememberLazyListState()
                         LazyRow(
+                            state = rowState,
+                            modifier = Modifier.noSliverAtStart(rowState),
                             contentPadding = PaddingValues(horizontal = EdgePadding),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
@@ -603,7 +606,10 @@ fun DetailScreen(
                         }
                     }
                     item(key = "episodes") {
+                        val rowState = androidx.compose.foundation.lazy.rememberLazyListState()
                         LazyRow(
+                            state = rowState,
+                            modifier = Modifier.noSliverAtStart(rowState),
                             contentPadding = PaddingValues(horizontal = EdgePadding, vertical = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(14.dp),
                         ) {

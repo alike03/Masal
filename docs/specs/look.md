@@ -56,6 +56,10 @@ text #F2EEE8, dim text #A8A29A. Focus frame on cards is amber.
 
 ## Motion
 - Rows and lazy lists move with a critically damped spring (no bounce, no lag on key repeat).
+- Card rows: Android TV pulls the focused card to 30 % of the row's width, which can leave the last
+  few dp of an earlier card at the row's left edge. A card showing less than a quarter of its width
+  there is not drawn, so no thin slit appears; a card cut further in stays visible as it is
+  (`noSliverAtStart`: Home rows, shelves, episodes and seasons, cast, the Apps page's Home row).
 - Info block follows focus after 90 ms; background after 150 ms, cross-fade 450 ms, colours glide.
   To another row both change at once (cut, see above).
 - Page switch from the menu after resting 150 ms; library tabs after 150 ms.
@@ -63,6 +67,7 @@ text #F2EEE8, dim text #A8A29A. Focus frame on cards is amber.
 
 ## Checks
 - Fast D-pad repeat along a row: the row follows smoothly and stops with the focus.
+- Moving right along a Home row: no thin strip of a card at the row's left edge.
 - Between two titles the background never flashes dark.
 - Flicking fast down through the Home rows: no picture of an earlier row appears.
 - Movies to TV in the menu: the movie picture is gone before the TV tab shows.

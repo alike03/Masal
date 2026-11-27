@@ -20,7 +20,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.getValue
@@ -166,6 +170,31 @@ fun NetImage(url: String?, description: String?, modifier: Modifier, scale: Cont
     )
 }
 
+/**
+ * TV rows pull the focused card to 30 % of the row's width (Compose's pivot scrolling), which can leave
+ * a few dp of an earlier card in the row's start padding: a thin slit at the left edge. Cards showing less
+ * than a quarter of their width at the start are not drawn; a card cut further in stays as it is.
+ * Reads the scroll position only while drawing.
+ */
+fun Modifier.noSliverAtStart(state: LazyListState): Modifier = drawWithContent {
+    val info = state.layoutInfo
+    val items = info.visibleItemsInfo
+    val shift = -info.viewportStartOffset // the start padding: item offsets count from the content start
+    val shown = items.firstOrNull { item ->
+        val x = item.offset + shift
+        minOf(x + item.size, size.width.toInt()) - maxOf(x, 0) >= item.size / 4
+    }
+    if (shown == null || shown === items.first() || layoutDirection == LayoutDirection.Rtl) {
+        drawContent()
+        return@drawWithContent
+    }
+    // Cut one spacing before the first card worth showing: its focus glow stays, the card before it goes.
+    val left = (shown.offset + shift - info.mainAxisItemSpacing + 1).coerceAtLeast(0).toFloat()
+    // Only the start: enlarged and glowing cards still reach past the row's top, bottom and end.
+    val far = 100_000f
+    clipRect(left = left, top = -far, right = size.width + far, bottom = size.height + far) { this@drawWithContent.drawContent() }
+}
+
 @Composable
 fun Shelf(title: String, content: LazyListScope.() -> Unit) {
     Column {
@@ -173,7 +202,10 @@ fun Shelf(title: String, content: LazyListScope.() -> Unit) {
             title, color = TextMain, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(start = EdgePadding, bottom = 2.dp),
         )
+        val state = androidx.compose.foundation.lazy.rememberLazyListState()
         LazyRow(
+            state = state,
+            modifier = Modifier.noSliverAtStart(state),
             contentPadding = PaddingValues(horizontal = EdgePadding, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             content = content,
