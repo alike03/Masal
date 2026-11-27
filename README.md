@@ -80,6 +80,12 @@ On the Shield the system's recommendations service then crashes repeatedly, sinc
 adb shell pm disable-user --user 0 com.google.android.tvrecommendations
 ```
 
+So that Masal comes back by itself when it crashes on screen, allow it to start from the background ("display over other apps"; Masal draws nothing over other apps). Android TV has no screen for this, so it is granted over ADB once; it stays through updates:
+
+```sh
+adb shell appops set com.alike.masal SYSTEM_ALERT_WINDOW allow
+```
+
 To go back, enable both again with `adb shell pm enable <package>`. Keep that command at hand: if the home screen fails to start, ADB is the way back. The device settings stay reachable through the "Android settings" tile and the button on Masal's Settings screen.
 
 ## Releases

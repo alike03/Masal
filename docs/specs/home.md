@@ -79,6 +79,30 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
 - The device settings are reachable through the "Android settings" app tile and the button on
   the Settings screen.
 
+## Restart after a crash
+- As the default home screen, Masal comes back by itself when its process dies while it is on
+  screen (Home, a page or the player): a Java crash, a native crash, or "Close app" in Android's
+  "not responding" dialog. It opens on Home's first row, first card, like after standby.
+  Without this, Android brings the app that was open before Masal to the front instead.
+- Only when Masal was on screen: when it dies in the background (another app in front, the
+  system freeing memory), nothing happens; the Home key starts it as usual.
+- Not after a force stop (Android settings, an install, `adb shell am force-stop`): that stops
+  every Masal process, the guard included.
+- Not as a normal app (another launcher is the home screen).
+- Needs "display over other apps" (`SYSTEM_ALERT_WINDOW`), granted once over ADB (README, "Home
+  screen"): from Android 10 on, Android blocks activity starts from the background, also for the
+  home screen, unless the app has this permission. Masal never draws over other apps with it.
+  Without it the guard only logs that it could not restart.
+- At most 3 restarts within 10 minutes; after that Masal stays closed until it is started
+  again, so a crash at start-up cannot loop.
+- How: a small guard service in its own process (`:guard`). While a Masal activity is started,
+  the app process is bound to it and hands it a binder; the guard watches that binder and,
+  when it dies, starts MainActivity. Leaving Masal normally unbinds first, so it is no restart.
+  Every restart (and every one skipped, with the reason) is logged under tag `MasalGuard`.
+- Incident 2026-11-26: the device's audio service hung, opening the player blocked in
+  `AudioManager.getDevices` (Media3 `DefaultAudioSink`), the "not responding" dialog was closed,
+  and the TV showed the YouTube app that had been open before.
+
 ## Remote keys
 - D-pad moves; OK opens a title, starts a channel or opens an app.
 - On an app: play/pause (or Menu) starts moving it, ◀ ▶ move, OK/Back/play/pause ends.
@@ -95,6 +119,10 @@ Start screen: what to watch next, live TV and the pinned apps, in Plex's layout.
 - With Masal as default home screen: Back in the menu on Home goes to the first app; as a normal
   app it leaves.
 - Start the device with the network cable out, plug it in: channels and Plex rows appear.
+- Restart: with Masal on screen, crash only the app process (`adb shell 'am crash $(pidof
+  com.alike.masal)'`; the shell may not `kill` app processes, and `am crash` with the package
+  name may hit the guard instead): Masal is back on Home within a few seconds. Same with another
+  app in front: nothing opens. Four crashes within 10 minutes: the fourth stays closed.
 
 ## Open points
 - None at the moment.

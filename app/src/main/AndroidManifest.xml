@@ -3,6 +3,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Granted once over ADB: lets the restart guard bring Masal back after a crash (docs/specs/home.md). -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
@@ -54,5 +56,11 @@
             android:exported="false"
             android:screenOrientation="landscape"
             android:configChanges="keyboard|keyboardHidden|navigation|screenSize|smallestScreenSize|screenLayout|orientation|uiMode" />
+
+        <!-- Restarts Masal when its process dies on screen (docs/specs/home.md, "Restart after a crash"). -->
+        <service
+            android:name=".GuardService"
+            android:exported="false"
+            android:process=":guard" />
     </application>
 </manifest>

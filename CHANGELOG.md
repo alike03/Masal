@@ -6,6 +6,9 @@ The release pipeline publishes each version's section as its GitHub release note
 
 ## [Unreleased]
 
+### Added
+- As the home screen, Masal opens again by itself when it crashes or is closed after "not responding" while on screen (at most 3 times in 10 minutes). It needs a one-time permission over ADB, see the README.
+
 ## [1.5.2] - 2026-11-25
 
 ### Fixed

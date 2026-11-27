@@ -19,8 +19,11 @@ class MasalApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // The restart guard's own process needs none of the app's data layer (Guard.kt).
+        if (isGuardProcess()) return
         com.alike.masal.data.Language.init(this)
         Graph.init(this)
+        GuardLink.install(this)
     }
 }
 
