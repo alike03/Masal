@@ -6,6 +6,8 @@ The release pipeline publishes each version's section as its GitHub release note
 
 ## [Unreleased]
 
+## [1.5.3] - 2026-11-27
+
 ### Added
 - As the home screen, Masal opens again by itself when it crashes or is closed after "not responding" while on screen (at most 3 times in 10 minutes). It needs a one-time permission over ADB, see the README.
 
@@ -108,7 +110,8 @@ The release pipeline publishes each version's section as its GitHub release note
 ### Added
 - First release: Home with Plex rows, IPTV live TV and pinned apps, Plex player, setup page on the phone, signed releases on GitHub.
 
-[Unreleased]: https://github.com/alike03/Masal/compare/v1.5.2...HEAD
+[Unreleased]: https://github.com/alike03/Masal/compare/v1.5.3...HEAD
+[1.5.3]: https://github.com/alike03/Masal/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/alike03/Masal/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/alike03/Masal/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/alike03/Masal/compare/v1.4.0...v1.5.0
